@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://conclave-mr.local/evento.schema.json",
+  "title": "Configuração de evento Conclave MR",
+  "type": "object",
+  "required": ["meta", "pesos", "medalhas", "igrejas", "provas"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["nome", "slug"],
+      "properties": {
+        "nome": { "type": "string", "minLength": 1 },
+        "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "data": { "type": "string", "description": "ISO date ou texto livre" },
+        "horarioInicio": { "type": "string", "description": "HH:MM (input time)" },
+        "horarioEncerramento": { "type": "string", "description": "HH:MM (input time)" },
+        "regulamentoUrl": { "type": "string" },
+        "tema": {
+          "type": "object",
+          "properties": {
+            "backgroundImage": { "type": "string" },
+            "accentColor": { "type": "string" }
+          }
+        }
+      }
+    },
+    "pesos": {
+      "type": "object",
+      "required": ["inscricao", "pontualidade", "uniforme", "biblia", "visitante", "animacao", "mau_comportamento"],
+      "properties": {
+        "inscricao": { "type": "number" },
+        "pontualidade": { "type": "number" },
+        "uniforme": { "type": "number" },
+        "biblia": { "type": "number" },
+        "visitante": { "type": "number" },
+        "animacao": { "type": "number" },
+        "mau_comportamento": { "type": "number" }
+      }
+    },
+    "categorias": {
+      "type": "array",
+      "description": "Categorias de provas (Junior, Adolescente, …); ordem define colunas no pódio",
+      "items": {
+        "type": "object",
+        "required": ["id", "nome", "ordem"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9_-]+$" },
+          "nome": { "type": "string", "minLength": 1 },
+          "ordem": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "medalhas": {
+      "type": "object",
+      "required": ["ou", "pt", "br"],
+      "properties": {
+        "ou": { "type": "number" },
+        "pt": { "type": "number" },
+        "br": { "type": "number" }
+      }
+    },
+    "igrejas": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "nome"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9_-]+$" },
+          "nome": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "provas": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "titulo", "ordem"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9_-]+$" },
+          "titulo": { "type": "string", "minLength": 1 },
+          "categoria": { "type": "string" },
+          "categoriaId": { "type": "string" },
+          "ordem": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

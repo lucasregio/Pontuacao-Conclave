@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-ui-theme="mr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conclave MR — Pontuação</title>
+  <link rel="stylesheet" href="web/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-main">
+      <div class="app-header-text">
+        <h1>Conclave MR — Pontuação</h1>
+        <p class="sub">Carregue um arquivo «.evento.json» ou um «projeto» completo (evento + dados). Com servidor local, o evento de exemplo é carregado automaticamente.</p>
+      </div>
+      <div class="app-header-actions">
+        <button type="button" class="header-action-btn" id="btn-regulamento" disabled title="Configure o regulamento em Configuração → Geral">Regulamento</button>
+        <div class="theme-toggle" role="group" aria-label="Tema visual">
+          <span class="theme-toggle-label">Tema</span>
+          <button type="button" class="theme-btn active" id="theme-mr" data-ui-theme="mr" title="MR: verde, amarelo e branco">MR</button>
+          <button type="button" class="theme-btn" id="theme-er" data-ui-theme="er" title="ER: azul, amarelo e branco; medalhas 500/300/150 e extras de participação +100 (pastor, pontualidade, uniforme, bíblia)">ER</button>
+        </div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <label class="file-btn">Carregar evento (.evento.json)<input type="file" id="file-evento" accept=".json,application/json"></label>
+      <label class="file-btn">Carregar projeto (.json)<input type="file" id="file-projeto" accept=".json,application/json"></label>
+      <button type="button" id="btn-novo-dados">Limpar dados do evento</button>
+      <button type="button" id="btn-export" class="primary">Exportar projeto</button>
+      <button type="button" id="btn-pres">Modo apresentação</button>
+      <button type="button" id="btn-print">Imprimir / PDF</button>
+      <span class="status-pill" id="status-pill"></span>
+    </div>
+    <p class="hint">Dica: na pasta do projeto, rode <code>python3 -m http.server 8765</code> e abra <code>http://localhost:8765/</code> para carregar <code>eventos/conclave-2026-1.evento.json</code> sem bloqueios do navegador.</p>
+  </header>
+
+  <button type="button" id="btn-exit-presentation" class="presentation-exit-btn">Sair da apresentação</button>
+
+  <main class="shell">
+    <div id="boot-hint" class="banner-warn" style="display: none;" role="status"></div>
+    <div id="errors"></div>
+    <div id="warnings"></div>
+    <nav class="tabs" id="tabs" aria-label="Secções principais"></nav>
+
+    <section id="panel-config" class="panel" role="tabpanel" aria-labelledby="tab-config" hidden aria-label="Configuração do evento"></section>
+    <section id="panel-participacao" class="panel active" role="tabpanel" aria-labelledby="tab-participacao" aria-label="Participação"></section>
+    <section id="panel-podio" class="panel" role="tabpanel" aria-labelledby="tab-podio" hidden aria-label="Pódio"></section>
+    <section id="panel-classificacao" class="panel" role="tabpanel" aria-labelledby="tab-classificacao" hidden aria-label="Classificação"></section>
+    <section id="panel-relatorios" class="panel" role="tabpanel" aria-labelledby="tab-relatorios" hidden aria-label="Relatórios"></section>
+  </main>
+
+  <footer class="app-footer">
+    <p class="app-footer-text">
+      Prefere uma única tabela sem configurar evento?
+      <a href="pontuacao_conclave.html">Pontuação rápida (planilha)</a>
+    </p>
+  </footer>
+
+  <script src="web/engine.js"></script>
+  <script src="web/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Projeto Conclave (config + dados preenchidos)",
+  "type": "object",
+  "required": ["evento", "dados"],
+  "properties": {
+    "evento": { "$ref": "evento.schema.json" },
+    "dados": {
+      "type": "object",
+      "required": ["participacao", "podium"],
+      "properties": {
+        "participacao": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "inscricao": { "type": "boolean" },
+              "pontualidade": { "type": "boolean" },
+              "mr_total": { "type": "number" },
+              "mr_camisa": { "type": "number" },
+              "mr_biblia": { "type": "number" },
+              "visitantes": { "type": "number" },
+              "animacao": { "type": "boolean" },
+              "mau_comportamento": { "type": "boolean" },
+              "pontuacao_extra": { "type": "number" }
+            }
+          }
+        },
+        "podium": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "ou": { "$ref": "#/$defs/medalEntry" },
+              "pt": { "$ref": "#/$defs/medalEntry" },
+              "br": { "$ref": "#/$defs/medalEntry" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "medalEntry": {
+      "type": "object",
+      "properties": {
+        "igrejaId": { "type": ["string", "null"] },
+        "competidor": { "type": "string" }
+      }
+    }
+  }
+}

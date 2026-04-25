@@ -1,0 +1,532 @@
+{
+  "evento": {
+    "meta": {
+      "nome": "Conclave MR 2026/1",
+      "slug": "conclave-2026-1",
+      "data": "2026-04-11",
+      "tema": {
+        "backgroundImage": "IMG_7105.PNG",
+        "accentColor": "#1b5e20"
+      }
+    },
+    "pesos": {
+      "inscricao": 100,
+      "pontualidade": 200,
+      "uniforme": 50,
+      "biblia": 50,
+      "visitante": 10,
+      "animacao": 150,
+      "mau_comportamento": -150
+    },
+    "medalhas": {
+      "ou": 300,
+      "pt": 200,
+      "br": 100
+    },
+    "igrejas": [
+      {
+        "id": "alianca",
+        "nome": "Primeira Igreja Batista Aliança"
+      },
+      {
+        "id": "ibes",
+        "nome": "Igreja Batista do Ibes"
+      },
+      {
+        "id": "gloria",
+        "nome": "Igreja Batista da Glória"
+      },
+      {
+        "id": "orla",
+        "nome": "Igreja da Orla"
+      },
+      {
+        "id": "vila-batista",
+        "nome": "Vila Batista"
+      },
+      {
+        "id": "aribiri",
+        "nome": "PIB Aribiri"
+      },
+      {
+        "id": "vila-garrido",
+        "nome": "Primeira Igreja Batista em Vila Garrido"
+      },
+      {
+        "id": "novo-mexico",
+        "nome": "Novo México"
+      },
+      {
+        "id": "santa-rita",
+        "nome": "Igreja Batista de Santa Rita"
+      },
+      {
+        "id": "23-maio",
+        "nome": "Primeira igreja Batista 23 de maio"
+      },
+      {
+        "id": "guarapari",
+        "nome": "batista Guaranhuns"
+      },
+      {
+        "id": "pibjg",
+        "nome": "Primeira Igreja Batista em João Goulart (PIBJG)"
+      },
+      {
+        "id": "brunellas",
+        "nome": "Primeira Igreja Batista em Brunellas"
+      },
+      {
+        "id": "cobilandia",
+        "nome": "Pib Cobilandia"
+      },
+      {
+        "id": "alvorada",
+        "nome": "Primeira igreja Batista em Alvorada"
+      },
+      {
+        "id": "cocal",
+        "nome": "Pib Cocal"
+      },
+      {
+        "id": "santa-monica",
+        "nome": "Igreja batista de Santa Mônica"
+      }
+    ],
+    "provas": [
+      {
+        "id": "esgrima-jun",
+        "titulo": "Esgrima bíblica — Junior",
+        "categoria": "Junior",
+        "ordem": 1
+      },
+      {
+        "id": "esgrima-adl",
+        "titulo": "Esgrima bíblica — Adolescente",
+        "categoria": "Adolescente",
+        "ordem": 2
+      },
+      {
+        "id": "esgrima-juv",
+        "titulo": "Esgrima bíblica — Juvenil",
+        "categoria": "Juvenil",
+        "ordem": 3
+      },
+      {
+        "id": "debate-jun",
+        "titulo": "Debate de versículos — Junior",
+        "categoria": "Junior",
+        "ordem": 4
+      },
+      {
+        "id": "debate-adl",
+        "titulo": "Debate de versículos — Adolescente",
+        "categoria": "Adolescente",
+        "ordem": 5
+      },
+      {
+        "id": "debate-juv",
+        "titulo": "Debate de versículos — Juvenil",
+        "categoria": "Juvenil",
+        "ordem": 6
+      },
+      {
+        "id": "esgrima-av-jun",
+        "titulo": "Esgrima avançada — Junior",
+        "categoria": "Junior",
+        "ordem": 7
+      },
+      {
+        "id": "esgrima-av-adl",
+        "titulo": "Esgrima avançada — Adolescente",
+        "categoria": "Adolescente",
+        "ordem": 8
+      },
+      {
+        "id": "esgrima-av-juv",
+        "titulo": "Esgrima avançada — Juvenil",
+        "categoria": "Juvenil",
+        "ordem": 9
+      },
+      {
+        "id": "escrita-jun",
+        "titulo": "Prova escrita — Junior",
+        "categoria": "Junior",
+        "ordem": 10
+      },
+      {
+        "id": "escrita-adl",
+        "titulo": "Prova escrita — Adolescente",
+        "categoria": "Adolescente",
+        "ordem": 11
+      },
+      {
+        "id": "escrita-juv",
+        "titulo": "Prova escrita — Juvenil",
+        "categoria": "Juvenil",
+        "ordem": 12
+      }
+    ]
+  },
+  "dados": {
+    "participacao": {
+      "alianca": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "ibes": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "gloria": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "orla": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "vila-batista": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "aribiri": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "vila-garrido": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "novo-mexico": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "santa-rita": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "23-maio": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "guarapari": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "pibjg": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "brunellas": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "cobilandia": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "alvorada": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "cocal": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      },
+      "santa-monica": {
+        "inscricao": true,
+        "pontualidade": true,
+        "mr_total": 0,
+        "mr_camisa": 0,
+        "mr_biblia": 0,
+        "visitantes": 0,
+        "animacao": false,
+        "mau_comportamento": false,
+        "pontuacao_extra": 0
+      }
+    },
+    "podium": {
+      "esgrima-jun": {
+        "ou": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "pt": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "br": {
+          "igrejaId": null,
+          "competidor": ""
+        }
+      },
+      "esgrima-adl": {
+        "ou": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "pt": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "br": {
+          "igrejaId": null,
+          "competidor": ""
+        }
+      },
+      "esgrima-juv": {
+        "ou": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "pt": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "br": {
+          "igrejaId": null,
+          "competidor": ""
+        }
+      },
+      "debate-jun": {
+        "ou": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "pt": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "br": {
+          "igrejaId": null,
+          "competidor": ""
+        }
+      },
+      "debate-adl": {
+        "ou": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "pt": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "br": {
+          "igrejaId": null,
+          "competidor": ""
+        }
+      },
+      "debate-juv": {
+        "ou": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "pt": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "br": {
+          "igrejaId": null,
+          "competidor": ""
+        }
+      },
+      "esgrima-av-jun": {
+        "ou": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "pt": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "br": {
+          "igrejaId": null,
+          "competidor": ""
+        }
+      },
+      "esgrima-av-adl": {
+        "ou": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "pt": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "br": {
+          "igrejaId": null,
+          "competidor": ""
+        }
+      },
+      "esgrima-av-juv": {
+        "ou": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "pt": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "br": {
+          "igrejaId": null,
+          "competidor": ""
+        }
+      },
+      "escrita-jun": {
+        "ou": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "pt": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "br": {
+          "igrejaId": null,
+          "competidor": ""
+        }
+      },
+      "escrita-adl": {
+        "ou": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "pt": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "br": {
+          "igrejaId": null,
+          "competidor": ""
+        }
+      },
+      "escrita-juv": {
+        "ou": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "pt": {
+          "igrejaId": null,
+          "competidor": ""
+        },
+        "br": {
+          "igrejaId": null,
+          "competidor": ""
+        }
+      }
+    }
+  }
+}

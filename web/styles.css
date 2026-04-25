@@ -1,0 +1,1318 @@
+:root {
+  --card: rgba(255, 253, 248, 0.94);
+  --card-solid: #fffef8;
+  --gold-mr: #fdd835;
+  --theme-text-main: #142016;
+  /* MR — verde, amarelo e branco */
+  --accent: #1b5e20;
+  --accent-light: #2e7d32;
+  --muted: #3d4a3e;
+  --border: rgba(46, 125, 50, 0.28);
+  --theme-header-gradient: linear-gradient(135deg, rgba(13, 79, 18, 0.94) 0%, rgba(27, 112, 32, 0.9) 50%, rgba(46, 125, 50, 0.88) 100%);
+  --theme-header-shadow: 0 4px 20px rgba(0, 40, 0, 0.25);
+  --theme-header-border-gold: rgba(255, 235, 59, 0.45);
+  --theme-body-fallback: #3d7c1f;
+  --theme-shell-bg: linear-gradient(180deg, rgba(255, 255, 252, 0.9) 0%, rgba(240, 253, 235, 0.85) 100%);
+  /* Área principal mais translúcida quando há imagem de fundo no body */
+  --theme-shell-bg-over-image: linear-gradient(180deg, rgba(255, 255, 252, 0.72) 0%, rgba(240, 253, 235, 0.62) 100%);
+  --theme-shell-shadow: 0 8px 32px rgba(20, 60, 20, 0.12);
+  --theme-toolbar-btn-shadow: 0 2px 6px rgba(27, 94, 32, 0.08);
+  --theme-primary-gradient: linear-gradient(180deg, #43a047 0%, #2e7d32 55%, #1b5e20 100%);
+  --theme-table-row-border: rgba(46, 125, 50, 0.15);
+  --theme-table-head-bg: rgba(232, 245, 233, 0.85);
+  --theme-podium-title-border: rgba(46, 125, 50, 0.28);
+  --theme-col-btn-hover-border: rgba(46, 125, 50, 0.35);
+  --theme-card-shadow: 0 2px 10px rgba(27, 94, 32, 0.06);
+  --theme-complete-border: rgba(46, 125, 50, 0.45);
+  --theme-complete-shadow: 0 2px 12px rgba(27, 94, 32, 0.1);
+  --theme-prova-head-bg: rgba(232, 245, 233, 0.35);
+  --theme-prova-head-border-b: rgba(46, 125, 50, 0.12);
+  --theme-prova-head-hover: rgba(232, 245, 233, 0.55);
+  --theme-badge-complete-bg: rgba(46, 125, 50, 0.14);
+  --theme-badge-complete-border: rgba(46, 125, 50, 0.4);
+  --theme-badge-complete-text: #1b5e20;
+  --theme-config-head-bg: rgba(232, 245, 233, 0.45);
+  --theme-config-head-hover: rgba(232, 245, 233, 0.65);
+}
+
+/* ER — azul, amarelo e branco */
+[data-ui-theme="er"] {
+  --accent: #0d47a1;
+  --accent-light: #1565c0;
+  --muted: #37474f;
+  --border: rgba(25, 118, 210, 0.32);
+  --theme-text-main: #0d2137;
+  --theme-header-gradient: linear-gradient(135deg, rgba(13, 71, 161, 0.95) 0%, rgba(21, 101, 192, 0.92) 50%, rgba(30, 136, 229, 0.88) 100%);
+  --theme-header-shadow: 0 4px 22px rgba(13, 40, 100, 0.28);
+  --theme-header-border-gold: rgba(255, 235, 59, 0.5);
+  --theme-body-fallback: #1565c0;
+  --theme-shell-bg: linear-gradient(180deg, rgba(255, 255, 252, 0.95) 0%, rgba(227, 242, 253, 0.88) 100%);
+  --theme-shell-bg-over-image: linear-gradient(180deg, rgba(255, 255, 252, 0.78) 0%, rgba(227, 242, 253, 0.65) 100%);
+  --theme-shell-shadow: 0 8px 32px rgba(13, 71, 161, 0.14);
+  --theme-toolbar-btn-shadow: 0 2px 6px rgba(13, 71, 161, 0.12);
+  --theme-primary-gradient: linear-gradient(180deg, #42a5f5 0%, #1976d2 52%, #0d47a1 100%);
+  --theme-table-row-border: rgba(25, 118, 210, 0.18);
+  --theme-table-head-bg: rgba(227, 242, 253, 0.9);
+  --theme-podium-title-border: rgba(25, 118, 210, 0.35);
+  --theme-col-btn-hover-border: rgba(25, 118, 210, 0.45);
+  --theme-card-shadow: 0 2px 10px rgba(13, 71, 161, 0.08);
+  --theme-complete-border: rgba(25, 118, 210, 0.5);
+  --theme-complete-shadow: 0 2px 12px rgba(25, 118, 210, 0.15);
+  --theme-prova-head-bg: rgba(227, 242, 253, 0.5);
+  --theme-prova-head-border-b: rgba(25, 118, 210, 0.22);
+  --theme-prova-head-hover: rgba(187, 222, 251, 0.65);
+  --theme-badge-complete-bg: rgba(25, 118, 210, 0.16);
+  --theme-badge-complete-border: rgba(13, 71, 161, 0.45);
+  --theme-badge-complete-text: #0d47a1;
+  --theme-config-head-bg: rgba(227, 242, 253, 0.55);
+  --theme-config-head-hover: rgba(187, 222, 251, 0.78);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--theme-text-main);
+  line-height: 1.45;
+  background: var(--theme-body-fallback) center center / cover no-repeat fixed;
+}
+
+body.has-bg {
+  background-color: var(--theme-body-fallback);
+  background-image: var(--bg-url);
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* O fundo da imagem ficava escondido atrás do main.shell opaco */
+body.has-bg main.shell {
+  background: var(--theme-shell-bg-over-image);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app-header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.app-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem 0.65rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.header-action-btn {
+  appearance: none;
+  padding: 0.32rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.2;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.header-action-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.header-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.header-action-btn:focus-visible {
+  outline: 2px solid var(--theme-header-border-gold);
+  outline-offset: 2px;
+}
+
+.theme-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.theme-toggle-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.88;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.theme-btn {
+  appearance: none;
+  padding: 0.32rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.2;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.theme-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.theme-btn:focus-visible {
+  outline: 2px solid var(--theme-header-border-gold);
+  outline-offset: 2px;
+}
+
+.theme-btn.active {
+  background: rgba(255, 235, 59, 0.38);
+  border-color: rgba(255, 235, 59, 0.75);
+  color: #fff;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.12);
+}
+
+header.app-header {
+  background: var(--theme-header-gradient);
+  color: #fff;
+  padding: 1rem 1.25rem;
+  border-bottom: 4px solid var(--theme-header-border-gold);
+  box-shadow: var(--theme-header-shadow);
+}
+
+header.app-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+header.app-header p.sub {
+  margin: 0.35rem 0 0;
+  opacity: 0.95;
+  font-size: 0.88rem;
+  max-width: 56rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  margin-top: 0.65rem;
+}
+
+.toolbar button,
+.toolbar label.file-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  color: var(--accent);
+  box-shadow: var(--theme-toolbar-btn-shadow);
+}
+
+.toolbar button.primary {
+  background: var(--theme-primary-gradient);
+  color: #fff;
+  border-color: rgba(255, 235, 59, 0.35);
+  font-weight: 650;
+}
+
+.toolbar input[type="file"] {
+  display: none;
+}
+
+.hint {
+  font-size: 0.82rem;
+  opacity: 0.9;
+  width: 100%;
+  margin-top: 0.35rem;
+}
+
+main.shell {
+  padding: 1rem 1rem 2.5rem;
+  max-width: 110rem;
+  margin: 0 auto;
+  background: var(--theme-shell-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 0 0 18px 18px;
+  box-shadow: var(--theme-shell-shadow);
+  min-height: 60vh;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.tabs button {
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.tabs button.active {
+  background: var(--card-solid);
+  border-color: var(--border);
+  border-bottom-color: var(--card-solid);
+  color: var(--accent);
+  margin-bottom: -1px;
+}
+
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: block;
+}
+
+.banner-error {
+  background: #ffebee;
+  border: 1px solid #e57373;
+  color: #b71c1c;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.banner-warn {
+  background: #fff8e1;
+  border: 1px solid #ffca28;
+  color: #5d4037;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+table.data th,
+table.data td {
+  border-bottom: 1px solid var(--theme-table-row-border);
+  padding: 0.45rem 0.5rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+table.data th {
+  background: var(--theme-table-head-bg);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+table.data.participacao-table th {
+  white-space: normal;
+  vertical-align: top;
+  min-width: 4.75rem;
+}
+
+table.data.participacao-table th.part-th--igreja {
+  min-width: 7rem;
+}
+
+.part-th-line {
+  font-weight: 650;
+}
+
+.part-th-peso {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--muted);
+  margin-top: 0.2rem;
+  line-height: 1.25;
+}
+
+.part-th-bool-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+
+button.part-bool-all {
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+  color: var(--theme-text-main);
+  cursor: pointer;
+}
+
+button.part-bool-all:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+table.data tr:hover td {
+  background: rgba(255, 253, 240, 0.65);
+}
+
+table.data input[type="number"] {
+  width: 4.2rem;
+  padding: 0.25rem 0.35rem;
+}
+
+table.data input[type="text"] {
+  min-width: 5rem;
+  max-width: 8rem;
+  padding: 0.25rem 0.35rem;
+}
+
+/* Configuração: inputs ocupam a célula (regra acima encolhe demais títulos) */
+table.data.config-table input[type="text"],
+table.data.config-table select {
+  max-width: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Pódio: uma coluna por categoria (Junior, Adolescente, …) */
+.podium-by-categoria {
+  display: grid;
+  grid-template-columns: repeat(var(--podium-cols, 1), minmax(0, 1fr));
+  gap: 0.65rem 0.85rem;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .podium-by-categoria {
+    grid-template-columns: 1fr;
+  }
+}
+
+.podium-col {
+  min-width: 0;
+}
+
+.podium-col-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.92rem;
+  font-weight: 750;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  padding-bottom: 0.3rem;
+  border-bottom: 2px solid var(--theme-podium-title-border);
+}
+
+.podium-col-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem;
+}
+
+.podium-col-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+  padding: 0.22rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--accent);
+  line-height: 1.2;
+}
+
+.podium-col-btn:hover {
+  filter: brightness(1.04);
+  border-color: var(--theme-col-btn-hover-border);
+}
+
+.podium-col-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.podium-col-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.prova-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0;
+  background: var(--card);
+  box-shadow: var(--theme-card-shadow);
+  overflow: hidden;
+}
+
+.prova-card.podium-complete {
+  border-color: var(--theme-complete-border);
+  box-shadow: var(--theme-complete-shadow);
+}
+
+.prova-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: var(--theme-prova-head-bg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  border-bottom: 1px solid transparent;
+}
+
+.prova-card:not(.is-collapsed) .prova-card-head {
+  border-bottom-color: var(--theme-prova-head-border-b);
+}
+
+.prova-card-head:hover {
+  background: var(--theme-prova-head-hover);
+}
+
+.prova-card-head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.prova-card-title-wrap {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.prova-card-title {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: var(--accent);
+}
+
+.prova-card-meta-line {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.prova-status-badge {
+  flex-shrink: 0;
+  font-size: 0.76rem;
+  font-weight: 650;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.prova-status-badge.complete {
+  background: var(--theme-badge-complete-bg);
+  border-color: var(--theme-badge-complete-border);
+  color: var(--theme-badge-complete-text);
+}
+
+.prova-status-badge.pending {
+  background: rgba(211, 47, 47, 0.1);
+  border-color: rgba(211, 47, 47, 0.38);
+  color: #c62828;
+  font-weight: 700;
+}
+
+.prova-card-chevron {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  opacity: 0.75;
+  transition: transform 0.18s ease;
+}
+
+.prova-card.is-collapsed .prova-card-chevron {
+  transform: rotate(-90deg);
+}
+
+.prova-card-body {
+  padding: 0.85rem 1rem 1rem;
+}
+
+.prova-card.is-collapsed .prova-card-body {
+  display: none;
+}
+
+/* Cartões mais compactos dentro das colunas de categoria */
+.prova-card--compact .prova-card-head {
+  padding: 0.45rem 0.55rem;
+  gap: 0.35rem 0.45rem;
+}
+
+.prova-card--compact .prova-card-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.prova-card--compact .prova-status-badge {
+  font-size: 0.65rem;
+  padding: 0.16rem 0.4rem;
+}
+
+.prova-card--compact .prova-card-body {
+  padding: 0.45rem 0.55rem 0.55rem;
+}
+
+.prova-card--compact .medal-row {
+  grid-template-columns: 4rem 1fr minmax(5rem, 9rem);
+  gap: 0.3rem 0.4rem;
+  margin-bottom: 0.32rem;
+}
+
+.prova-card--compact .medal-row label.medal {
+  font-size: 0.78rem;
+}
+
+.prova-card--compact .medal-row select,
+.prova-card--compact .medal-row input[type="text"],
+.prova-card--compact .medal-row .relatorio-read {
+  font-size: 0.8rem;
+  padding: 0.28rem 0.35rem;
+}
+
+/* Aba Relatórios — células de leitura (igreja / competidor), alinhadas ao grid do pódio */
+.medal-row .relatorio-read {
+  width: 100%;
+  min-height: 1.45rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.88rem;
+  line-height: 1.35;
+  color: var(--theme-text-main);
+  background: var(--card-solid);
+  box-sizing: border-box;
+}
+
+.medal-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr minmax(8rem, 14rem);
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.medal-row label.medal {
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.medal-row.ou label.medal {
+  color: #b8860b;
+}
+.medal-row.pt label.medal {
+  color: #78909c;
+}
+.medal-row.br label.medal {
+  color: #8d6e63;
+}
+
+.medal-row select,
+.medal-row input[type="text"],
+.medal-row .relatorio-read {
+  width: 100%;
+  padding: 0.35rem 0.45rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.rank-table .pos {
+  font-weight: 800;
+  width: 3rem;
+  text-align: center;
+}
+
+.rank-table .tot {
+  font-weight: 750;
+  text-align: right;
+}
+
+/* Pódio da classificação: 1.º / 2.º / 3.º */
+.rank-table tbody tr.rank-row {
+  transition: background 0.15s ease;
+}
+
+.rank-table tbody tr.rank-pos--1 {
+  background: linear-gradient(
+    105deg,
+    rgba(255, 193, 7, 0.42) 0%,
+    rgba(255, 248, 225, 0.58) 42%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  box-shadow: inset 4px 0 0 #ff9800;
+}
+
+.rank-table tbody tr.rank-pos--2 {
+  background: linear-gradient(
+    105deg,
+    rgba(176, 190, 197, 0.5) 0%,
+    rgba(236, 239, 241, 0.65) 45%,
+    rgba(255, 255, 255, 0.18) 100%
+  );
+  box-shadow: inset 4px 0 0 #78909c;
+}
+
+.rank-table tbody tr.rank-pos--3 {
+  background: linear-gradient(
+    105deg,
+    rgba(188, 170, 142, 0.48) 0%,
+    rgba(250, 240, 230, 0.58) 45%,
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  box-shadow: inset 4px 0 0 #8d6e63;
+}
+
+.rank-table tbody tr.rank-pos--1 .pos,
+.rank-table tbody tr.rank-pos--2 .pos,
+.rank-table tbody tr.rank-pos--3 .pos {
+  font-weight: 900;
+  font-size: 1.08em;
+}
+
+/* Aba Classificação — resumo do regulamento ER (largura da área útil, como a tabela) */
+.classificacao-er-premiacao {
+  display: block;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+  box-shadow: var(--theme-card-shadow);
+}
+
+.classificacao-er-title {
+  margin: 0 0 0.55rem;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+.classificacao-er-block {
+  margin: 0 0 0.5rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--theme-text-main);
+}
+
+.classificacao-er-block:last-child {
+  margin-bottom: 0;
+}
+
+.classificacao-er-block strong {
+  color: var(--accent);
+}
+
+.classificacao-desempate-hint {
+  margin: 0.75rem 0 0;
+  max-width: none;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.classificacao-desempate-hint strong {
+  color: var(--theme-text-main);
+}
+
+body.presentation-mode {
+  font-size: 1.35rem;
+}
+
+body.presentation-mode .app-header .toolbar,
+body.presentation-mode .tabs {
+  display: none;
+}
+
+body.presentation-mode .app-header .hint {
+  display: none;
+}
+
+.presentation-exit-btn {
+  display: none;
+  position: fixed;
+  top: 0.65rem;
+  left: 0.75rem;
+  z-index: 10002;
+  appearance: none;
+  padding: 0.45rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+  color: var(--accent);
+  font-size: 0.88rem;
+  font-weight: 750;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+}
+
+.presentation-exit-btn:hover {
+  filter: brightness(1.03);
+}
+
+.presentation-exit-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+body.presentation-mode .presentation-exit-btn {
+  display: inline-flex;
+  align-items: center;
+}
+
+body.presentation-mode main.shell {
+  max-width: 100%;
+  padding: 2rem;
+}
+
+body.presentation-mode .rank-table {
+  font-size: 1.5rem;
+}
+
+body.presentation-mode .rank-table th,
+body.presentation-mode .rank-table td {
+  padding: 0.65rem 0.75rem;
+}
+
+/* Aba Configuração do evento */
+.config-wrap {
+  max-width: 56rem;
+}
+
+/* Aba Relatórios — largura do shell (evita o max-width estreito da configuração) */
+.relatorio-wrap {
+  width: 100%;
+  max-width: none;
+}
+
+.config-section {
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.config-section:last-child {
+  border-bottom: none;
+}
+
+.config-section--collapsible {
+  padding-bottom: 1.1rem;
+}
+
+.config-section-head {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--theme-config-head-bg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+.config-section-head:hover {
+  background: var(--theme-config-head-hover);
+}
+
+.config-section-head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.config-section-head-title {
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: var(--accent);
+}
+
+.config-section-chevron {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  opacity: 0.8;
+  transition: transform 0.18s ease;
+}
+
+.config-section--collapsible.is-collapsed .config-section-chevron {
+  transform: rotate(-90deg);
+}
+
+.config-section--collapsible.is-collapsed .config-section-body {
+  display: none;
+}
+
+.config-section--collapsible.is-collapsed .config-section-head {
+  margin-bottom: 0;
+}
+
+.config-section-body > .config-subtitle:first-child {
+  margin-top: 0;
+}
+
+.config-section-title {
+  margin: 0 0 0.65rem;
+  font-size: 1.1rem;
+  font-weight: 750;
+  color: var(--accent);
+}
+
+.config-subtitle {
+  margin: 1rem 0 0.45rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.config-hint {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.65rem 1rem;
+}
+
+.config-horarios-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+  align-items: end;
+}
+
+@media (max-width: 520px) {
+  .config-horarios-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.config-field--full {
+  grid-column: 1 / -1;
+}
+
+/* Regulamento: prefixo static/ fixo; só se edita o nome do ficheiro */
+.config-regulamento-row {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  margin-top: 0.28rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-solid);
+  overflow: hidden;
+}
+
+.config-regulamento-prefix {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.55rem 0.4rem 0.65rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--theme-table-head-bg);
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.config-regulamento-row input[type="text"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+  background: transparent;
+  color: var(--theme-text-main);
+}
+
+.config-regulamento-row input[type="text"]:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.config-regulamento-row--external {
+  border-style: dashed;
+}
+
+.config-regulamento-row--external input[type="text"] {
+  width: 100%;
+}
+
+.config-grid--medalhas {
+  grid-template-columns: repeat(3, minmax(6rem, 1fr));
+  max-width: 28rem;
+}
+
+.config-grid--pesos {
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+}
+
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.config-field input {
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.config-table input[type="text"],
+.config-table input[type="number"],
+.config-table select {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.32rem 0.4rem;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.config-table td {
+  vertical-align: middle;
+}
+
+/* Igrejas na configuração: lista em flex (evita bug de largura em <table>) */
+.table-wrap.config-igrejas-wrap {
+  overflow: visible;
+  min-width: 0;
+}
+
+.config-igrejas-list-head {
+  padding: 0.55rem 0.75rem;
+  font-weight: 750;
+  font-size: 0.88rem;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  background: var(--theme-table-head-bg);
+}
+
+.config-igrejas-list {
+  min-width: 0;
+}
+
+.config-igreja-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--theme-table-row-border);
+  min-width: 0;
+}
+
+.config-igreja-row:last-child {
+  border-bottom: none;
+}
+
+.config-igreja-row .cfg-igreja-nome {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  min-height: 2.65rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+  color: var(--theme-text-main);
+}
+
+.config-igreja-row .config-danger-btn {
+  flex: 0 0 auto;
+}
+
+.config-igrejas-empty {
+  margin: 0.65rem 0.75rem 0.85rem;
+}
+
+/* Coluna de arrastar: mesma largura no <thead> e no <tbody> (sem flex no <td> — quebrava colunas) */
+.config-table--sortable {
+  table-layout: fixed;
+}
+
+.config-table--sortable .config-col-drag,
+.config-table--sortable td.config-drag-cell {
+  width: 2.65rem;
+  min-width: 2.65rem;
+  max-width: 2.65rem;
+  box-sizing: border-box;
+  text-align: center;
+  vertical-align: middle;
+  border-right: 1px solid var(--theme-table-row-border);
+}
+
+.config-table--sortable thead th.config-col-drag {
+  padding: 0.45rem 0.2rem !important;
+  background: var(--theme-table-head-bg);
+}
+
+.config-table--sortable td.config-drag-cell {
+  padding: 0.4rem 0.2rem !important;
+  user-select: none;
+  color: var(--muted);
+  cursor: grab;
+}
+
+.config-drag-cell:active {
+  cursor: grabbing;
+}
+
+.config-drag-grip {
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+  font-size: 1.05rem;
+  letter-spacing: -0.06em;
+}
+
+.config-table--sortable tbody tr[data-dragging] {
+  opacity: 0.65;
+}
+
+.config-code {
+  font-size: 0.78rem;
+  word-break: break-all;
+}
+
+.config-add-btn {
+  margin-top: 0.5rem;
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.config-bulk-textarea {
+  width: 100%;
+  min-height: 7rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-family: inherit;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.config-provas-bulk-wrap {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--theme-table-row-border);
+}
+
+.config-inline-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.35rem;
+}
+
+.config-inline-add input[type="text"] {
+  flex: 1 1 12rem;
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.config-danger-btn {
+  appearance: none;
+  border: 1px solid rgba(211, 47, 47, 0.35);
+  background: rgba(255, 235, 238, 0.6);
+  padding: 0.28rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: #b71c1c;
+}
+
+.config-danger-btn:hover {
+  background: rgba(255, 205, 210, 0.65);
+}
+
+body.presentation-mode .app-footer {
+  display: none;
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+  .toolbar,
+  .tabs,
+  .file-btn,
+  .app-footer {
+    display: none !important;
+  }
+  main.shell {
+    box-shadow: none;
+  }
+}
+
+.status-pill {
+  display: inline-block;
+  font-size: 0.78rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  margin-left: 0.35rem;
+}
+
+.app-footer {
+  max-width: 110rem;
+  margin: 0 auto;
+  padding: 0.75rem 1rem 1.5rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.app-footer-text {
+  margin: 0;
+}
+
+.app-footer a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.app-footer a:hover {
+  text-decoration: underline;
+}
+
+/* Participação: primeira coluna fixa ao deslocar horizontalmente */
+table.data.participacao-table thead th:first-child,
+table.data.participacao-table tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--card-solid);
+  box-shadow: 2px 0 6px rgba(20, 60, 20, 0.06);
+}
+
+table.data.participacao-table thead th:first-child {
+  z-index: 3;
+  background: var(--theme-table-head-bg);
+}
+
+[data-ui-theme="er"] table.data.participacao-table thead th:first-child {
+  background: var(--theme-table-head-bg);
+}
+
+.podium-igreja-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.sel-igreja-hint {
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #b71c1c;
+}
+
+.sel-igreja-hint:empty {
+  display: none;
+}
