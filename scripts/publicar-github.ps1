@@ -3,11 +3,11 @@
 #
 # Uso:
 #   .\scripts\publicar-github.ps1
-#   .\scripts\publicar-github.ps1 -Owner seu-usuario -Repo pontuacao-conclave
+#   .\scripts\publicar-github.ps1 -Owner seu-usuario -Repo Pontuacao-Conclave
 
 param(
-    [string]$Owner = "lregio",
-    [string]$Repo = "conclave-mr"
+    [string]$Owner = "lucasregio",
+    [string]$Repo = "Pontuacao-Conclave"
 )
 
 $ErrorActionPreference = "Stop"
