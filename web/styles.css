@@ -72,6 +72,15 @@
   --bronze: #ce8e44;
   --bronze-soft: #ffe0b2;
 
+  /* Medalhas no pódio (fundos de linha) */
+  --medal-ou-bg: #fff8e1;
+  --medal-pt-bg: #eceff1;
+  --medal-br-bg: #efebe9;
+  --medal-ou-border: #b8860b;
+  --medal-pt-border: #78909c;
+  --medal-br-border: #8d6e63;
+  --placeholder: rgba(79, 92, 80, 0.55);
+
   /* Estados semânticos */
   --info-bg: #e3f2fd;
   --info-border: #64b5f6;
@@ -1498,11 +1507,32 @@ table.data.config-table select {
   border-bottom: 2px solid var(--accent);
 }
 
+.podium-tipo-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.podium-tipo-head .podium-tipo-title {
+  flex: 1 1 12rem;
+  margin: 0;
+}
+
+.podium-tipo-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
 /* Pódio: uma coluna por categoria (Junior, Adolescente, …) */
 .podium-by-categoria {
   display: grid;
   grid-template-columns: repeat(var(--podium-cols, 1), minmax(0, 1fr));
-  gap: 0.65rem 0.85rem;
+  gap: 1rem 1rem;
   align-items: start;
 }
 
@@ -1516,14 +1546,39 @@ table.data.config-table select {
   min-width: 0;
 }
 
-.podium-col-title {
+.podium-col-title-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
   margin: 0 0 0.4rem;
-  font-size: 0.92rem;
-  font-weight: 750;
-  color: var(--accent);
-  letter-spacing: 0.02em;
   padding-bottom: 0.3rem;
   border-bottom: 2px solid var(--theme-podium-title-border);
+}
+
+.podium-col-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+}
+
+.podium-col-nome {
+  margin-right: 0.25rem;
+}
+
+.podium-col-idade {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.podium-col-progress,
+.podium-col-title-wrap .podium-fill-badge {
+  flex-shrink: 0;
 }
 
 .podium-col-tools {
@@ -1559,7 +1614,300 @@ table.data.config-table select {
 .podium-col-stack {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
+}
+
+.podium-col-stack .prova-card:not(:last-child) {
+  margin-bottom: 0.1rem;
+  box-shadow:
+    var(--theme-card-shadow),
+    0 1px 0 rgba(0, 0, 0, 0.04);
+}
+
+/* Toggle de layout na aba Pódio */
+.podio-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0 0 1rem;
+}
+
+.podio-layout-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+}
+
+.podio-filters-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+}
+
+.podio-filter-select,
+.podio-filter-search {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.28rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--on-surface);
+  min-width: 0;
+}
+
+.podio-filter-search {
+  flex: 1 1 8rem;
+  max-width: 14rem;
+}
+
+.podio-filter-select:focus-visible,
+.podio-filter-search:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.podio-filter-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  align-items: center;
+}
+
+.podio-filter-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  cursor: pointer;
+  user-select: none;
+}
+
+.podio-filter-check input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.podio-filter-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+  margin-left: auto;
+}
+
+.podio-filter-count {
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.podio-filter-clear-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.28rem 0.55rem;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--accent);
+  line-height: 1.2;
+}
+
+.podio-filter-clear-btn:hover {
+  border-color: var(--accent);
+}
+
+.podio-filter-clear-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.podio-filter-empty {
+  padding: 1.25rem 1rem;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  background: var(--card-solid);
+  text-align: center;
+}
+
+.podio-filter-empty p {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.podio-layout-label {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.podio-layout-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.3rem 0.65rem;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--on-surface);
+  line-height: 1.2;
+}
+
+.podio-layout-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.podio-layout-btn.active {
+  background: var(--brand-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.podio-layout-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Layout por tipo de prova */
+.podium-by-prova {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.podium-prova-section {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--theme-card-shadow);
+  overflow: hidden;
+}
+
+.podium-prova-section--complete {
+  border-color: var(--theme-complete-border);
+  box-shadow: var(--theme-complete-shadow);
+}
+
+.podium-prova-section--partial {
+  border-color: var(--warn-border);
+}
+
+.prova-card--no-title.is-collapsed .prova-card-body {
+  display: block;
+}
+
+.podium-prova-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border: none;
+  background: var(--theme-prova-head-bg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  border-bottom: 1px solid transparent;
+}
+
+.podium-prova-section:not(.is-collapsed) .podium-prova-head {
+  border-bottom-color: var(--theme-prova-head-border-b);
+}
+
+.podium-prova-head:hover {
+  background: var(--theme-prova-head-hover);
+}
+
+.podium-prova-head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.podium-prova-title-wrap {
+  flex: 1 1 12rem;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+}
+
+.podium-prova-title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+}
+
+.podium-prova-chevron {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  opacity: 0.75;
+  transition: transform 0.18s ease;
+}
+
+.podium-prova-section.is-collapsed .podium-prova-chevron {
+  transform: rotate(-90deg);
+}
+
+.podium-prova-body {
+  padding: 0.65rem 0.85rem 0.85rem;
+}
+
+.podium-prova-section.is-collapsed .podium-prova-body {
+  display: none;
+}
+
+.podium-by-categoria--prova-row {
+  gap: 0.75rem 0.85rem;
+}
+
+.podium-col--mini .podium-col-title-wrap {
+  margin-bottom: 0.3rem;
+}
+
+.podium-col--mini .podium-col-tools {
+  margin-bottom: 0.35rem;
+}
+
+.prova-card--no-title {
+  border-radius: 10px;
+}
+
+.prova-card--no-title .prova-card-body {
+  padding: 0.45rem 0.55rem 0.55rem;
+}
+
+.prova-card--no-title .prova-card-head {
+  display: none;
 }
 
 .prova-card {
@@ -1649,6 +1997,26 @@ table.data.config-table select {
   font-weight: 700;
 }
 
+.prova-status-badge.partial {
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+  color: var(--warn-on);
+  font-weight: 700;
+}
+
+.podium-fill-badge {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.podium-col-title-wrap .podium-fill-badge {
+  margin-left: auto;
+}
+
+.podium-prova-fill-badge {
+  flex-shrink: 0;
+}
+
 .prova-card-chevron {
   flex-shrink: 0;
   font-size: 0.75rem;
@@ -1679,6 +2047,7 @@ table.data.config-table select {
   font-weight: 700;
   line-height: 1.25;
   word-break: break-word;
+  color: var(--on-surface);
 }
 
 .prova-card--compact .prova-status-badge {
@@ -1691,9 +2060,46 @@ table.data.config-table select {
 }
 
 .prova-card--compact .medal-row {
-  grid-template-columns: 4rem 1fr minmax(5rem, 9rem);
+  grid-template-columns: 4.5rem 1fr minmax(6rem, 1.1fr);
   gap: 0.3rem 0.4rem;
   margin-bottom: 0.32rem;
+  padding: 0.28rem 0.35rem;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+}
+
+.prova-card--compact .medal-row.ou {
+  background: var(--medal-ou-bg);
+  border-left-color: var(--medal-ou-border);
+}
+
+.prova-card--compact .medal-row.pt {
+  background: var(--medal-pt-bg);
+  border-left-color: var(--medal-pt-border);
+}
+
+.prova-card--compact .medal-row.br {
+  background: var(--medal-br-bg);
+  border-left-color: var(--medal-br-border);
+}
+
+.prova-card--compact .medal-row-header {
+  background: transparent;
+  border-left: none;
+  padding: 0 0.35rem 0.15rem;
+  margin-bottom: 0.15rem;
+}
+
+.prova-card--compact .medal-row-header-cell {
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.prova-card--compact .medal-row-header-spacer {
+  display: block;
 }
 
 .prova-card--compact .medal-row label.medal {
@@ -1727,20 +2133,61 @@ table.data.config-table select {
   gap: 0.5rem 0.75rem;
   align-items: center;
   margin-bottom: 0.5rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
 }
 
-.medal-row label.medal {
+.medal-row.ou {
+  background: var(--medal-ou-bg);
+  border-left-color: var(--medal-ou-border);
+}
+
+.medal-row.pt {
+  background: var(--medal-pt-bg);
+  border-left-color: var(--medal-pt-border);
+}
+
+.medal-row.br {
+  background: var(--medal-br-bg);
+  border-left-color: var(--medal-br-border);
+}
+
+.medal-row-header {
+  background: transparent !important;
+  border-left: none !important;
+  padding: 0 0.45rem 0.2rem;
+  margin-bottom: 0.15rem;
+}
+
+.medal-row-header-cell {
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.medal-row-header-spacer {
+  display: block;
+}
+
+.medal-row label.medal,
+.medal-row .medal {
   font-weight: 700;
   font-size: 0.88rem;
 }
 
-.medal-row.ou label.medal {
+.medal-row.ou label.medal,
+.medal-row.ou .medal {
   color: #b8860b;
 }
-.medal-row.pt label.medal {
+.medal-row.pt label.medal,
+.medal-row.pt .medal {
   color: #78909c;
 }
-.medal-row.br label.medal {
+.medal-row.br label.medal,
+.medal-row.br .medal {
   color: #8d6e63;
 }
 
@@ -1752,6 +2199,11 @@ table.data.config-table select {
   border-radius: 8px;
   border: 1px solid var(--border);
   font-size: 0.88rem;
+}
+
+.medal-row input[type="text"]::placeholder {
+  color: var(--placeholder);
+  opacity: 1;
 }
 
 .rank-table .pos {
@@ -1910,9 +2362,9 @@ table.data.config-table select {
 }
 
 /* ============================================================
- * MODO APRESENTAÇÃO — scoreboard de estádio.
+ * MODO APRESENTAÇÃO — cerimônia de revelação (palco fullscreen).
  * Esconde sidebar, topbar, bottom-nav e conteúdo regular; mostra
- * #presentation-host em fullscreen com top 3 destacado.
+ * #presentation-host com revelação progressiva 5º→1º.
  * Esc continua saindo (registrado em JS).
  * ============================================================ */
 
@@ -1940,16 +2392,34 @@ body.presentation-mode #tabs {
   position: fixed;
   inset: 0;
   z-index: 10001;
-  background: var(--surface);
-  color: var(--on-surface);
   overflow: auto;
   padding: clamp(1rem, 2vw, 2.5rem);
+  padding-bottom: clamp(3.5rem, 6vw, 5rem);
+  cursor: pointer;
 }
 
 body.presentation-mode .presentation-host {
   display: flex;
   flex-direction: column;
   gap: clamp(0.75rem, 1.5vw, 1.5rem);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 0%, var(--brand-soft) 0%, transparent 55%),
+    radial-gradient(ellipse 90% 60% at 50% 100%, rgba(0, 0, 0, 0.08) 0%, transparent 50%),
+    linear-gradient(
+      165deg,
+      var(--surface-sunken) 0%,
+      var(--surface) 45%,
+      var(--surface-sunken) 100%
+    );
+  color: var(--on-surface);
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.06);
+}
+
+[data-ui-theme="er"] body.presentation-mode .presentation-host {
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 0%, var(--brand-soft) 0%, transparent 55%),
+    radial-gradient(ellipse 90% 60% at 50% 100%, rgba(0, 0, 0, 0.1) 0%, transparent 50%),
+    linear-gradient(165deg, #e8eef8 0%, var(--surface) 45%, #dce4f2 100%);
 }
 
 .presentation-host[hidden] {
@@ -1958,6 +2428,7 @@ body.presentation-mode .presentation-host {
 
 .scoreboard-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-4);
@@ -1967,30 +2438,98 @@ body.presentation-mode .presentation-host {
 
 .scoreboard-title {
   margin: 0;
-  font-size: clamp(1.25rem, 2.5vw, 2rem);
+  font-size: clamp(1.35rem, 2.8vw, 2.35rem);
   font-weight: 800;
-  letter-spacing: -0.01em;
-  color: var(--on-surface);
+  letter-spacing: -0.02em;
+  color: var(--brand);
 }
 
 .scoreboard-sub {
   margin: 0;
-  font-size: clamp(0.8rem, 1.4vw, 1.1rem);
+  font-size: clamp(0.75rem, 1.3vw, 1rem);
   color: var(--on-surface-muted);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
+}
+
+.scoreboard-intro {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-3);
+  min-height: min(50vh, 28rem);
+  padding: var(--space-6) var(--space-4);
+}
+
+.scoreboard-intro[hidden] {
+  display: none !important;
+}
+
+.scoreboard-intro-kicker {
+  margin: 0;
+  font-size: clamp(0.85rem, 1.5vw, 1.1rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--on-surface-muted);
+}
+
+.scoreboard-intro-lead {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--on-surface);
+}
+
+.scoreboard-intro-hint {
+  margin: var(--space-2) 0 0;
+  font-size: clamp(0.9rem, 1.6vw, 1.15rem);
+  color: var(--on-surface-muted);
+  font-weight: 600;
+}
+
+.scoreboard-status {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(1rem, 2vw, 1.45rem);
+  font-weight: 750;
+  color: var(--brand);
+  letter-spacing: 0.02em;
+  min-height: 1.5em;
+}
+
+.scoreboard--intro .scoreboard-status,
+.scoreboard--intro .scoreboard-midstrip,
+.scoreboard--intro .scoreboard-top3,
+.scoreboard--intro .scoreboard-rest {
+  display: none !important;
+}
+
+.scoreboard-midstrip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(0.75rem, 1.5vw, 1.25rem);
 }
 
 .scoreboard-top3 {
   display: grid;
   grid-template-columns: 1fr;
   gap: clamp(0.75rem, 1.5vw, 1.5rem);
+  flex: 1;
+  align-content: center;
 }
 
 @media (min-width: 768px) {
   .scoreboard-top3 {
     grid-template-columns: repeat(3, 1fr);
+    align-items: end;
   }
 }
 
@@ -2003,27 +2542,120 @@ body.presentation-mode .presentation-host {
   color: #0d2137;
   box-shadow: var(--shadow-lg);
   position: relative;
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.scoreboard-card.is-hidden {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.55) 0%, rgba(200, 210, 220, 0.35) 100%);
+  border: 2px dashed rgba(120, 130, 140, 0.35);
+  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.04);
+  color: var(--on-surface-muted);
+}
+
+.scoreboard-card.is-hidden .scoreboard-pos--placeholder {
+  font-size: clamp(3rem, 9vw, 6rem);
+  font-weight: 900;
+  opacity: 0.35;
+  line-height: 1;
+}
+
+.scoreboard-card.is-hidden .scoreboard-igreja--placeholder {
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-weight: 700;
+  opacity: 0.5;
+  font-style: italic;
+}
+
+.scoreboard-card.is-revealed-now {
+  animation: scoreboard-reveal 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes scoreboard-reveal {
+  0% {
+    opacity: 0.2;
+    transform: scale(0.92) translateY(1rem);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .scoreboard-card[data-medal="ou"] {
-  background: linear-gradient(135deg, #fff59d 0%, #fdd835 70%, #c8a005 100%);
+  background: linear-gradient(135deg, #fff59d 0%, #fdd835 55%, #c8a005 100%);
 }
+
+.scoreboard-card[data-medal="ou"].is-revealed {
+  box-shadow:
+    0 16px 40px rgba(200, 160, 5, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+}
+
+.scoreboard-card[data-medal="ou"].is-champion {
+  box-shadow:
+    0 20px 50px rgba(200, 160, 5, 0.45),
+    0 0 60px rgba(255, 215, 0, 0.25);
+}
+
 .scoreboard-card[data-medal="pt"] {
   background: linear-gradient(135deg, #f5f7f9 0%, #cfd8dc 70%, #90a4ae 100%);
 }
+
 .scoreboard-card[data-medal="br"] {
   background: linear-gradient(135deg, #ffe0b2 0%, #ce8e44 70%, #7c4f1b 100%);
   color: #1a0f06;
 }
 
+.scoreboard-card-compact {
+  flex: 1 1 min(100%, 18rem);
+  max-width: 22rem;
+  min-height: 7rem;
+}
+
+.scoreboard-card-compact[data-pos="5"] {
+  background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 70%, #9fa8da 100%);
+  color: #1a237e;
+}
+
+.scoreboard-card-compact[data-pos="4"] {
+  background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 70%, #80cbc4 100%);
+  color: #004d40;
+}
+
+.scoreboard-card-compact.is-hidden {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.55) 0%, rgba(200, 210, 220, 0.35) 100%);
+  color: var(--on-surface-muted);
+}
+
 @media (min-width: 768px) {
-  .scoreboard-card[data-medal="ou"] {
+  .scoreboard-card[data-medal="ou"].is-revealed {
     transform: translateY(-1rem);
+  }
+
+  .scoreboard-card[data-medal="ou"].is-revealed.is-revealed-now {
+    animation: scoreboard-reveal-gold 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@keyframes scoreboard-reveal-gold {
+  0% {
+    opacity: 0.2;
+    transform: scale(0.9) translateY(2rem);
+  }
+  60% {
+    transform: scale(1.03) translateY(-1.2rem);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(-1rem);
   }
 }
 
 .scoreboard-pos {
-  font-size: clamp(3rem, 9vw, 7rem);
+  font-size: clamp(2.5rem, 8vw, 6.5rem);
   font-weight: 900;
   line-height: 1;
   letter-spacing: -0.05em;
@@ -2031,7 +2663,7 @@ body.presentation-mode .presentation-host {
 }
 
 .scoreboard-igreja {
-  font-size: clamp(1.25rem, 3vw, 2.25rem);
+  font-size: clamp(1.15rem, 2.8vw, 2.1rem);
   font-weight: 800;
   line-height: var(--line-tight);
   overflow-wrap: anywhere;
@@ -2039,14 +2671,14 @@ body.presentation-mode .presentation-host {
 
 .scoreboard-pts {
   margin-top: auto;
-  font-size: clamp(1.5rem, 4vw, 3rem);
+  font-size: clamp(1.35rem, 3.5vw, 2.75rem);
   font-weight: 800;
   line-height: 1;
 }
 
 .scoreboard-pts-label {
   display: block;
-  font-size: clamp(0.7rem, 1.2vw, 0.95rem);
+  font-size: clamp(0.65rem, 1.1vw, 0.9rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -2055,13 +2687,25 @@ body.presentation-mode .presentation-host {
 }
 
 .scoreboard-rest {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
   overflow: auto;
   padding: var(--space-3);
-  background: var(--surface-sunken);
+  background: rgba(255, 255, 255, 0.72);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  animation: scoreboard-rest-in 0.5s ease;
+}
+
+@keyframes scoreboard-rest-in {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .scoreboard-rest table {
@@ -2103,6 +2747,57 @@ body.presentation-mode .presentation-host {
   font-size: var(--type-lg);
 }
 
+.scoreboard-hint {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  text-align: center;
+  font-size: clamp(0.8rem, 1.4vw, 1rem);
+  font-weight: 650;
+  color: var(--on-surface-muted);
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.95) 60%, transparent);
+  pointer-events: none;
+  z-index: 10001;
+}
+
+.scoreboard-hint[hidden] {
+  display: none !important;
+}
+
+.scoreboard-reveal-all-btn {
+  position: fixed;
+  bottom: var(--space-3);
+  right: var(--space-3);
+  z-index: 10003;
+  appearance: none;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--on-surface-muted);
+  font-size: var(--type-xs);
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.scoreboard-reveal-all-btn:hover {
+  color: var(--brand);
+  border-color: var(--brand);
+}
+
+.scoreboard-reveal-all-btn:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.scoreboard-reveal-all-btn[hidden] {
+  display: none !important;
+}
+
 .presentation-exit-btn {
   display: none;
   position: fixed;
@@ -2113,12 +2808,13 @@ body.presentation-mode .presentation-host {
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.92);
   color: var(--brand);
   font-size: var(--type-sm);
   font-weight: 700;
   cursor: pointer;
   box-shadow: var(--shadow-md);
+  backdrop-filter: blur(6px);
 }
 
 .presentation-exit-btn:hover {
@@ -2150,6 +2846,10 @@ body.presentation-mode .presentation-exit-btn {
 .relatorio-wrap {
   width: 100%;
   max-width: none;
+}
+
+.relatorio-podio-panel .podio-layout-toolbar {
+  margin-bottom: 0.85rem;
 }
 
 .config-section {
@@ -4074,6 +4774,14 @@ table.data.participacao-table thead th:first-child {
     --error-bg: #2d1010;
     --error-border: #c62828;
     --error-on: #ffcdd2;
+
+    --medal-ou-bg: rgba(255, 193, 7, 0.12);
+    --medal-pt-bg: rgba(176, 190, 197, 0.14);
+    --medal-br-bg: rgba(188, 170, 142, 0.14);
+    --medal-ou-border: #ffb300;
+    --medal-pt-border: #90a4ae;
+    --medal-br-border: #a1887f;
+    --placeholder: rgba(152, 160, 170, 0.75);
 
     /* Aliases legados — superfícies de glass viram quase-opaco */
     --card: rgba(26, 32, 41, 0.94);

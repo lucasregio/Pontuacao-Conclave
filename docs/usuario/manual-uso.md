@@ -165,6 +165,33 @@ Se a mesma igreja for selecionada em dois lugares da mesma prova (ex.: ouro e pr
 para a mesma igreja), aparece um aviso em `#warnings`. O cálculo continua, mas vale
 revisar.
 
+### Layout e filtros
+
+No topo da aba **Pódio por prova** há duas barras de ferramentas:
+
+**Ver por** (persiste no navegador):
+
+- **Faixa etária** — colunas por categoria (Junior, Adolescente, …).
+- **Tipo de prova** — blocos por título base (Esgrima, Debate, …) com mini-colunas
+  por faixa.
+
+**Filtrar** (persiste no navegador; combina entre si):
+
+- **Status** — Todas / Pendente (nenhuma medalha) / Parcial (alguma medalha, pódio
+  incompleto) / Completa (ouro, prata e bronze com igreja).
+- **Faixa etária** — Restringe a uma categoria.
+- **Buscar** — Título da prova, categoria, igreja ou competidor.
+- **Igreja** — Provas em que a igreja tem ouro, prata ou bronze.
+- **Com avisos** — Igreja repetida na mesma prova.
+- **Sem competidor** — Medalha preenchida sem nome do competidor.
+- **Desempate** — Provas usadas no critério de desempate da classificação.
+
+O contador `N de M provas` reflete os filtros ativos. **Limpar filtros** restaura o
+padrão. Se nada corresponder, aparece mensagem e botão para limpar.
+
+Os filtros valem **somente na aba Pódio** (edição). A consulta rápida em Relatórios
+continua mostrando todas as provas.
+
 ## Classificacao e desempate
 
 A aba **Classificação** mostra o ranking final ordenado por critérios em cascata:
@@ -255,7 +282,17 @@ Use os dois juntos: o `localStorage` te salva da queda do navegador e o
 
 ## Modo apresentacao
 
-- **Modo apresentação** (menu Mais): esconde menus e amplia tabelas para
-  exibir o ranking num projetor ou telão. Sair: clique em **Sair da apresentação**
-  ou pressione `Escape` (em algumas versões de iOS Safari, `Escape` pode não ser
-  capturado; nesse caso, use o botão).
+- **Modo apresentação** (menu Mais): abre um **palco fullscreen** para exibir a
+  classificação num projetor ou telão, com **cerimônia de revelação** do 5º ao 1º
+  lugar (ou do último lugar existente quando há menos de cinco igrejas).
+- Ao entrar, **nenhuma colocação aparece** — só o nome do evento e a pergunta
+  «Pronto para revelar?».
+- **Espaço**, **Enter** ou **clique** na tela revelam a próxima colocação, uma
+  de cada vez, do 5º lugar até o campeão. Colocações a partir do 6º aparecem
+  automaticamente na tabela após coroar o 1º lugar.
+- **Shift+Espaço** ou o botão discreto **Revelar tudo** (canto inferior direito)
+  pula direto para a classificação completa (útil em ensaio).
+- A classificação fica **congelada** enquanto a cerimônia não termina — ajustes
+  de pontuação na UI normal não alteram o palco até você sair e reentrar.
+- Sair: clique em **Sair da apresentação** ou pressione `Escape` (em algumas
+  versões de iOS Safari, `Escape` pode não ser capturado; nesse caso, use o botão).

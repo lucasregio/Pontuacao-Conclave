@@ -4,6 +4,7 @@
 (function () {
   var E = window.ConclaveEngine;
   var R = window.ConclaveRelatorio;
+  var PF = window.ConclavePodioFilters;
   var state = {
     evento: null,
     dados: null,
@@ -24,8 +25,10 @@
     confirmOnCancel: null,
     confirmLastFocus: null,
     eventosModalLastFocus: null,
-    /** { [provaId]: true } — true = seção colapsada */
+    /** { [provaId]: true } — true = card colapsado */
     podiumCollapsed: {},
+    /** { [tipo:slug]: true } — true = bloco de prova colapsado (layout por tipo) */
+    podiumProvaGroupCollapsed: {},
     /** { geral | categorias | provas: true } — true = colapsada */
     configSectionCollapsed: {},
     /** Relatórios: igreja | prova — true = seção colapsada */
@@ -38,7 +41,16 @@
     relatorioPreviewCollapsed: { resumo: false, completo: false },
     /** blob: URL temporária do PDF embutido aberto na sessão (revogada ao trocar). */
     regulamentoBlobUrl: null,
+    /** Cerimônia de revelação no modo apresentação (snapshot congelado). */
+    presentationCeremony: {
+      phase: "intro",
+      revealedUpTo: null,
+      snapshot: null,
+    },
   };
+
+  var presentationCeremonyClickHandler = null;
+  var presentationCeremonyKeyHandler = null;
 
   function $(sel) {
     return document.querySelector(sel);
@@ -398,7 +410,27 @@
   }
 
   function isProvaCollapsed(provaId) {
-    return !!state.podiumCollapsed[provaId];
+    if (state.podiumCollapsed[provaId] === true) return true;
+    if (state.podiumCollapsed[provaId] === false) return false;
+    if (!provaPodiumCompleto(provaId)) return false;
+    return true;
+  }
+
+  function provaGroupKey(tipo, tituloBase) {
+    return tipo + ":" + slugify(tituloBase);
+  }
+
+  function isPodiumProvaGroupCollapsed(groupKey) {
+    if (state.podiumProvaGroupCollapsed[groupKey] === true) return true;
+    if (state.podiumProvaGroupCollapsed[groupKey] === false) return false;
+    return false;
+  }
+
+  function provaGroupKeysForTipo(tipo) {
+    var grouped = groupProvasByTituloBase(tipo);
+    return grouped.order.map(function (tituloBase) {
+      return provaGroupKey(tipo, tituloBase);
+    });
   }
 
   /** Ouro, prata e bronze com igreja escolhida */
@@ -460,9 +492,43 @@
     return t + " - " + cat;
   }
 
+  function escapeRegex(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  /** Nome da categoria sem faixa etária, para remover sufixo do título da prova. */
+  function categoriaNomeCurto(p) {
+    if (state.evento && state.evento.categorias) {
+      var c = state.evento.categorias.find(function (x) {
+        return x.id === categoriaKey(p);
+      });
+      if (c && c.nome) return String(c.nome).trim();
+    }
+    var leg = p.categoria != null ? String(p.categoria).trim() : "";
+    return leg;
+  }
+
+  /** Título base da prova sem sufixo « — Categoria» (coluna já exibe a faixa etária). */
+  function tituloProvaBase(p) {
+    var t = (p.titulo != null ? String(p.titulo) : "").trim();
+    if (!t) return "";
+    var catNome = categoriaNomeCurto(p);
+    if (!catNome) return t;
+    var re = new RegExp("\\s*[—\\-–]\\s*" + escapeRegex(catNome) + "\\s*$", "i");
+    var stripped = t.replace(re, "").trim();
+    return stripped || t;
+  }
+
+  function labelCategoriaParts(key) {
+    var full = labelCategoria(key);
+    var m = full.match(/^(.+?)\s+\((.+)\)$/);
+    if (m) return { nome: m[1], idade: m[2] };
+    return { nome: full, idade: "" };
+  }
+
   /** Título do card de prova no pódio (coluna já exibe categoria e idade). */
   function tituloProvaCard(p) {
-    var t = (p.titulo != null ? String(p.titulo) : "").trim();
+    var t = tituloProvaBase(p);
     if (t) return t;
     if (state.evento && state.evento.categorias) {
       var c = state.evento.categorias.find(function (x) {
@@ -903,11 +969,12 @@
   }
 
   /** Ordem das colunas: ordem em categorias[]; provas sem lista caem no fim (legado). */
-  function orderedCategoryKeys() {
+  function orderedCategoryKeys(provaList) {
     var ev = state.evento;
     if (!ev) return [];
+    var source = provaList || sortedProvas();
     var inUse = {};
-    sortedProvas().forEach(function (p) {
+    source.forEach(function (p) {
       inUse[categoriaKey(p)] = true;
     });
     if (ev.categorias && ev.categorias.length) {
@@ -920,7 +987,7 @@
         .forEach(function (c) {
           if (inUse[c.id]) keys.push(c.id);
         });
-      sortedProvas().forEach(function (p) {
+      source.forEach(function (p) {
         var k = categoriaKey(p);
         if (inUse[k] && keys.indexOf(k) === -1) keys.push(k);
       });
@@ -928,7 +995,7 @@
     }
     var seen = {};
     var order = [];
-    sortedProvas().forEach(function (p) {
+    source.forEach(function (p) {
       var k = categoriaKeyLegacy(p);
       if (!seen[k]) {
         seen[k] = true;
@@ -938,13 +1005,14 @@
     return order;
   }
 
-  function groupProvasByCategoria(filterTipo) {
-    var order = orderedCategoryKeys();
+  function groupProvasByCategoria(filterTipo, provaList) {
+    var source = provaList || sortedProvas();
+    var order = orderedCategoryKeys(source);
     var groups = {};
     order.forEach(function (k) {
       groups[k] = [];
     });
-    sortedProvas().forEach(function (p) {
+    source.forEach(function (p) {
       if (filterTipo && p.tipo !== filterTipo) return;
       var k = categoriaKey(p);
       if (!groups[k]) {
@@ -954,6 +1022,108 @@
       groups[k].push(p);
     });
     return { order: order, groups: groups };
+  }
+
+  /** Agrupa provas pelo título base (sem faixa etária) dentro de uma modalidade. */
+  function groupProvasByTituloBase(filterTipo, provaList) {
+    var source = provaList || sortedProvas();
+    var catOrder = orderedCategoryKeys(source);
+    var groups = {};
+    var order = [];
+    source.forEach(function (p) {
+      if (filterTipo && p.tipo !== filterTipo) return;
+      var key = tituloProvaBase(p) || (p.titulo != null ? String(p.titulo).trim() : "") || p.id;
+      if (!groups[key]) {
+        groups[key] = {};
+        order.push(key);
+      }
+      groups[key][categoriaKey(p)] = p;
+    });
+    return { order: order, groups: groups, catOrder: catOrder };
+  }
+
+  function appendPodiumColTitle(col, catKey) {
+    var parts = labelCategoriaParts(catKey);
+    var colTitleWrap = document.createElement("div");
+    colTitleWrap.className = "podium-col-title-wrap";
+    var colTitle = document.createElement("h3");
+    colTitle.className = "podium-col-title";
+    var nomeSpan = document.createElement("span");
+    nomeSpan.className = "podium-col-nome";
+    nomeSpan.textContent = parts.nome;
+    colTitle.appendChild(nomeSpan);
+    if (parts.idade) {
+      var idadeSpan = document.createElement("span");
+      idadeSpan.className = "podium-col-idade";
+      idadeSpan.textContent = "(" + parts.idade + ")";
+      colTitle.appendChild(idadeSpan);
+    }
+    colTitleWrap.appendChild(colTitle);
+    col.appendChild(colTitleWrap);
+  }
+
+  function appendPodiumColProgress(col, list) {
+    var completeCount = list.filter(function (p) {
+      return provaPodiumCompleto(p.id);
+    }).length;
+    var titleWrap = col.querySelector(".podium-col-title-wrap");
+    titleWrap.appendChild(
+      createPodiumFillBadge(completeCount, list.length, {
+        unit: "provas",
+        completeTitle: "Todas as provas desta coluna estão completas",
+        partialTitle: "Provas com ouro, prata e bronze preenchidos",
+        pendingTitle: "Nenhuma prova completa nesta coluna",
+      })
+    );
+  }
+
+  /** Badge compacto de preenchimento (○ / 2/3 / ✓ Ok). */
+  function createPodiumFillBadge(completeCount, total, opts) {
+    opts = opts || {};
+    var badge = document.createElement("span");
+    var allComplete = total > 0 && completeCount === total;
+    var partial = completeCount > 0 && !allComplete;
+    badge.className =
+      "prova-status-badge podium-fill-badge" +
+      (allComplete ? " complete" : partial ? " partial" : " pending");
+    if (allComplete) {
+      badge.textContent = "✓ Ok";
+      badge.setAttribute("title", opts.completeTitle || "Preenchimento completo");
+    } else if (partial) {
+      badge.textContent = completeCount + "/" + total;
+      badge.setAttribute(
+        "title",
+        opts.partialTitle || completeCount + " de " + total + " completos"
+      );
+    } else {
+      badge.textContent = "○";
+      badge.setAttribute("title", opts.pendingTitle || "Nada preenchido");
+    }
+    return badge;
+  }
+
+  function appendPodiumColTools(col, list, catActionAttr) {
+    var provaIdsInCol = list.map(function (p) {
+      return p.id;
+    });
+    var idsAttr = provaIdsInCol.join(",");
+    var colTools = document.createElement("div");
+    colTools.className = "podium-col-tools";
+    var btnCollapseAll = document.createElement("button");
+    btnCollapseAll.type = "button";
+    btnCollapseAll.className = "podium-col-btn";
+    btnCollapseAll.setAttribute(catActionAttr, "collapse");
+    btnCollapseAll.setAttribute("data-prova-ids", idsAttr);
+    btnCollapseAll.textContent = "Recolher todas";
+    var btnExpandAll = document.createElement("button");
+    btnExpandAll.type = "button";
+    btnExpandAll.className = "podium-col-btn";
+    btnExpandAll.setAttribute(catActionAttr, "expand");
+    btnExpandAll.setAttribute("data-prova-ids", idsAttr);
+    btnExpandAll.textContent = "Expandir todas";
+    colTools.appendChild(btnCollapseAll);
+    colTools.appendChild(btnExpandAll);
+    col.appendChild(colTools);
   }
 
   /** Grid de colunas por categoria (Junior, Adolescente, …) dentro de uma modalidade. */
@@ -980,33 +1150,9 @@
       col.className = "podium-col";
       col.setAttribute("aria-label", labelCategoria(catKey));
 
-      var colTitle = document.createElement("h3");
-      colTitle.className = "podium-col-title";
-      colTitle.textContent = labelCategoria(catKey);
-      col.appendChild(colTitle);
-
-      var provaIdsInCol = list.map(function (p) {
-        return p.id;
-      });
-      var idsAttr = provaIdsInCol.join(",");
-
-      var colTools = document.createElement("div");
-      colTools.className = "podium-col-tools";
-      var btnCollapseAll = document.createElement("button");
-      btnCollapseAll.type = "button";
-      btnCollapseAll.className = "podium-col-btn";
-      btnCollapseAll.setAttribute(catActionAttr, "collapse");
-      btnCollapseAll.setAttribute("data-prova-ids", idsAttr);
-      btnCollapseAll.textContent = "Recolher todas";
-      var btnExpandAll = document.createElement("button");
-      btnExpandAll.type = "button";
-      btnExpandAll.className = "podium-col-btn";
-      btnExpandAll.setAttribute(catActionAttr, "expand");
-      btnExpandAll.setAttribute("data-prova-ids", idsAttr);
-      btnExpandAll.textContent = "Expandir todas";
-      colTools.appendChild(btnCollapseAll);
-      colTools.appendChild(btnExpandAll);
-      col.appendChild(colTools);
+      appendPodiumColTitle(col, catKey);
+      appendPodiumColProgress(col, list);
+      appendPodiumColTools(col, list, catActionAttr);
 
       var stack = document.createElement("div");
       stack.className = "podium-col-stack";
@@ -1019,13 +1165,134 @@
     return wrap;
   }
 
+  /** Grid por tipo de prova (Esgrima bíblica, Debate, …) com mini-colunas por faixa etária. */
+  function buildPodiumProvaGrid(grouped, opts) {
+    opts = opts || {};
+    var buildCard = opts.buildCard || buildProvaCardPodio;
+    var provaTipo = opts.provaTipo || "oral";
+    var catOrder = grouped.catOrder || orderedCategoryKeys();
+
+    if (!grouped.order.length) return null;
+
+    var wrap = document.createElement("div");
+    wrap.className = "podium-by-prova";
+
+    grouped.order.forEach(function (tituloBase) {
+      var byCat = grouped.groups[tituloBase] || {};
+      var list = catOrder
+        .map(function (k) {
+          return byCat[k];
+        })
+        .filter(Boolean);
+      if (!list.length) return;
+
+      var groupKey = provaGroupKey(provaTipo, tituloBase);
+      var groupCollapsed = isPodiumProvaGroupCollapsed(groupKey);
+      var completeCount = list.filter(function (p) {
+        return provaPodiumCompleto(p.id);
+      }).length;
+      var allComplete = completeCount === list.length && list.length > 0;
+      var partialComplete = completeCount > 0 && !allComplete;
+
+      var section = document.createElement("section");
+      section.className = "podium-prova-section";
+      if (groupCollapsed) section.classList.add("is-collapsed");
+      if (allComplete) section.classList.add("podium-prova-section--complete");
+      else if (partialComplete) section.classList.add("podium-prova-section--partial");
+      section.setAttribute("aria-label", tituloBase);
+      section.setAttribute("data-prova-group", groupKey);
+
+      var head = document.createElement("button");
+      head.type = "button";
+      head.className = "podium-prova-head";
+      head.setAttribute("data-prova-group-toggle", groupKey);
+      head.setAttribute("aria-expanded", groupCollapsed ? "false" : "true");
+      head.setAttribute(
+        "aria-label",
+        (groupCollapsed ? "Expandir " : "Recolher ") +
+          tituloBase +
+          (allComplete ? " — completo" : partialComplete ? " — parcial" : "")
+      );
+
+      var titleWrap = document.createElement("span");
+      titleWrap.className = "podium-prova-title-wrap";
+      var provaTitle = document.createElement("span");
+      provaTitle.className = "podium-prova-title";
+      provaTitle.textContent = tituloBase;
+      titleWrap.appendChild(provaTitle);
+
+      var fillBadge = createPodiumFillBadge(completeCount, list.length, {
+        unit: "faixas",
+        completeTitle: "Todas as faixas etárias desta prova estão completas",
+        partialTitle: "Faixas com ouro, prata e bronze preenchidos",
+        pendingTitle: "Nenhuma faixa completa nesta prova",
+      });
+      fillBadge.classList.add("podium-prova-fill-badge");
+
+      var chev = document.createElement("span");
+      chev.className = "podium-prova-chevron";
+      chev.setAttribute("aria-hidden", "true");
+      chev.textContent = "▼";
+
+      head.appendChild(titleWrap);
+      head.appendChild(fillBadge);
+      head.appendChild(chev);
+
+      var body = document.createElement("div");
+      body.className = "podium-prova-body";
+
+      var grid = document.createElement("div");
+      grid.className = "podium-by-categoria podium-by-categoria--prova-row";
+      grid.style.setProperty("--podium-cols", String(Math.max(1, catOrder.length)));
+
+      catOrder.forEach(function (catKey) {
+        var p = byCat[catKey];
+        if (!p) return;
+
+        var col = document.createElement("section");
+        col.className = "podium-col podium-col--mini";
+        col.setAttribute("aria-label", labelCategoria(catKey) + " — " + tituloBase);
+
+        appendPodiumColTitle(col, catKey);
+        appendPodiumColProgress(col, [p]);
+
+        var stack = document.createElement("div");
+        stack.className = "podium-col-stack";
+        stack.appendChild(
+          buildCard(p, {
+            hideTitle: true,
+          })
+        );
+        col.appendChild(stack);
+        grid.appendChild(col);
+      });
+
+      body.appendChild(grid);
+      section.appendChild(head);
+      section.appendChild(body);
+      wrap.appendChild(section);
+    });
+
+    return wrap.childElementCount ? wrap : null;
+  }
+
   /** Pódio e relatórios: seções «Prova oral» e «Prova escrita», cada uma com colunas por categoria. */
   function buildPodiumWithTipoSections(opts) {
+    opts = opts || {};
+    var layout = opts.layout || "categoria";
+    var provaList = opts.provaList || null;
     var container = document.createElement("div");
     container.className = "podium-by-tipo";
     PROVA_TIPO_ORDER.forEach(function (tipo) {
-      var grouped = groupProvasByCategoria(tipo);
-      var grid = buildPodiumCategoriaGrid(grouped, opts);
+      var grid;
+      if (layout === "prova") {
+        grid = buildPodiumProvaGrid(
+          groupProvasByTituloBase(tipo, provaList),
+          Object.assign({}, opts, { provaTipo: tipo })
+        );
+      } else {
+        grid = buildPodiumCategoriaGrid(groupProvasByCategoria(tipo, provaList), opts);
+      }
       if (!grid) return;
 
       var section = document.createElement("section");
@@ -1033,10 +1300,36 @@
       section.setAttribute("data-prova-tipo", tipo);
       section.setAttribute("aria-label", labelProvaTipo(tipo));
 
+      var titleRow = document.createElement("div");
+      titleRow.className = "podium-tipo-head";
       var title = document.createElement("h2");
       title.className = "podium-tipo-title";
       title.textContent = labelProvaTipo(tipo);
-      section.appendChild(title);
+      titleRow.appendChild(title);
+
+      if (layout === "prova") {
+        var tipoTools = document.createElement("div");
+        tipoTools.className = "podium-tipo-tools";
+        var groupKeys = provaGroupKeysForTipo(tipo);
+        var keysAttr = groupKeys.join(",");
+        var btnCollapseProvas = document.createElement("button");
+        btnCollapseProvas.type = "button";
+        btnCollapseProvas.className = "podium-col-btn";
+        btnCollapseProvas.setAttribute("data-prova-group-action", "collapse");
+        btnCollapseProvas.setAttribute("data-group-keys", keysAttr);
+        btnCollapseProvas.textContent = "Recolher provas";
+        var btnExpandProvas = document.createElement("button");
+        btnExpandProvas.type = "button";
+        btnExpandProvas.className = "podium-col-btn";
+        btnExpandProvas.setAttribute("data-prova-group-action", "expand");
+        btnExpandProvas.setAttribute("data-group-keys", keysAttr);
+        btnExpandProvas.textContent = "Expandir provas";
+        tipoTools.appendChild(btnCollapseProvas);
+        tipoTools.appendChild(btnExpandProvas);
+        titleRow.appendChild(tipoTools);
+      }
+
+      section.appendChild(titleRow);
       section.appendChild(grid);
       container.appendChild(section);
     });
@@ -3161,57 +3454,65 @@
     var places = state.dados.podium[p.id] || {};
     var completo = provaPodiumCompleto(p.id);
     var collapsed = !!opts.collapsed;
+    var provaTitulo = tituloProvaCard(p);
 
     var card = document.createElement("div");
     card.className = "prova-card prova-card--compact";
     if (completo) card.classList.add("podium-complete");
     if (collapsed) card.classList.add("is-collapsed");
+    if (opts.hideTitle) card.classList.add("prova-card--no-title");
 
-    var head = document.createElement("button");
-    head.type = "button";
-    head.className = "prova-card-head";
-    head.setAttribute(opts.toggleAttr, p.id);
-    head.setAttribute("aria-expanded", collapsed ? "false" : "true");
-    head.setAttribute(
-      "aria-label",
-      (collapsed ? "Expandir " : "Recolher ") +
-        tituloProvaCard(p) +
-        (completo ? " — pódio completo" : "")
-    );
+    if (!opts.hideTitle) {
+      var head = document.createElement("button");
+      head.type = "button";
+      head.className = "prova-card-head";
+      head.setAttribute(opts.toggleAttr, p.id);
+      head.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      head.setAttribute(
+        "aria-label",
+        (collapsed ? "Expandir " : "Recolher ") +
+          provaTitulo +
+          (completo ? " — pódio completo" : "")
+      );
 
-    var titleWrap = document.createElement("span");
-    titleWrap.className = "prova-card-title-wrap";
-    var h = document.createElement("span");
-    h.className = "prova-card-title";
-    h.textContent = tituloProvaCard(p);
-    titleWrap.appendChild(h);
+      var titleWrap = document.createElement("span");
+      titleWrap.className = "prova-card-title-wrap";
+      var h = document.createElement("span");
+      h.className = "prova-card-title";
+      h.textContent = provaTitulo;
+      titleWrap.appendChild(h);
 
-    var statusBadge = document.createElement("span");
-    statusBadge.className = "prova-status-badge" + (completo ? " complete" : " pending");
-    statusBadge.textContent = completo ? "✓ Ok" : "○";
-    statusBadge.setAttribute(
-      "title",
-      completo ? "Ouro, prata e bronze com igreja" : "Falta definir alguma medalha"
-    );
+      var statusBadge = document.createElement("span");
+      statusBadge.className = "prova-status-badge" + (completo ? " complete" : " pending");
+      statusBadge.textContent = completo ? "✓ Ok" : "○";
+      statusBadge.setAttribute(
+        "title",
+        completo ? "Ouro, prata e bronze com igreja" : "Falta definir alguma medalha"
+      );
 
-    var chev = document.createElement("span");
-    chev.className = "prova-card-chevron";
-    chev.setAttribute("aria-hidden", "true");
-    chev.textContent = "▼";
+      var chev = document.createElement("span");
+      chev.className = "prova-card-chevron";
+      chev.setAttribute("aria-hidden", "true");
+      chev.textContent = "▼";
 
-    head.appendChild(titleWrap);
-    head.appendChild(statusBadge);
-    head.appendChild(chev);
+      head.appendChild(titleWrap);
+      head.appendChild(statusBadge);
+      head.appendChild(chev);
+      card.appendChild(head);
+    }
 
     var body = document.createElement("div");
     body.className = "prova-card-body";
 
+    if (opts.showFieldHeaders) {
+      body.appendChild(buildMedalRowHeader());
+    }
+
     ["ou", "pt", "br"].forEach(function (mk) {
       var ent = places[mk] || { igrejaId: null, competidor: "" };
-      body.appendChild(opts.renderMedalRow(p, mk, ent));
+      body.appendChild(opts.renderMedalRow(p, mk, ent, provaTitulo));
     });
 
-    card.appendChild(head);
     card.appendChild(body);
     return card;
   }
@@ -3220,17 +3521,41 @@
     return mk === "ou" ? "Ouro" : mk === "pt" ? "Prata" : "Bronze";
   }
 
+  function medalRankTitle(mk) {
+    return mk === "ou" ? "1.º lugar" : mk === "pt" ? "2.º lugar" : "3.º lugar";
+  }
+
+  function buildMedalRowHeader() {
+    var row = document.createElement("div");
+    row.className = "medal-row medal-row-header";
+    row.setAttribute("aria-hidden", "true");
+    var spacer = document.createElement("span");
+    spacer.className = "medal-row-header-spacer";
+    var ig = document.createElement("span");
+    ig.className = "medal-row-header-cell";
+    ig.textContent = "Igreja";
+    var comp = document.createElement("span");
+    comp.className = "medal-row-header-cell";
+    comp.textContent = "Competidor";
+    row.appendChild(spacer);
+    row.appendChild(ig);
+    row.appendChild(comp);
+    return row;
+  }
+
   /** Linha de medalha editável (aba "Pódio por prova"). */
-  function buildMedalRowEditor(p, mk, ent) {
+  function buildMedalRowEditor(p, mk, ent, provaTitulo) {
+    provaTitulo = provaTitulo || tituloProvaCard(p);
     var displayNome = "";
     if (ent.igrejaId) displayNome = igrejaNome(ent.igrejaId) || "";
     else if (ent.nomeLivre != null && String(ent.nomeLivre).trim() !== "")
       displayNome = String(ent.nomeLivre);
     var row = document.createElement("div");
     row.className = "medal-row " + mk;
-    var label = document.createElement("label");
+    var label = document.createElement("span");
     label.className = "medal";
     label.textContent = medalLabel(mk);
+    label.setAttribute("title", medalRankTitle(mk));
     var inpIg = document.createElement("input");
     inpIg.type = "text";
     inpIg.className = "sel-igreja";
@@ -3238,7 +3563,8 @@
     inpIg.setAttribute("autocomplete", "off");
     inpIg.setAttribute("data-prova", p.id);
     inpIg.setAttribute("data-medal", mk);
-    inpIg.placeholder = "Igreja…";
+    inpIg.setAttribute("aria-label", medalLabel(mk) + " — Igreja — " + provaTitulo);
+    inpIg.placeholder = "…";
     inpIg.value = displayNome;
     var hint = document.createElement("span");
     hint.className = "sel-igreja-hint";
@@ -3251,10 +3577,11 @@
     cellIg.appendChild(hint);
     var inp = document.createElement("input");
     inp.type = "text";
-    inp.placeholder = "Competidor";
+    inp.placeholder = "…";
     inp.className = "inp-comp";
     inp.setAttribute("data-prova", p.id);
     inp.setAttribute("data-medal", mk);
+    inp.setAttribute("aria-label", medalLabel(mk) + " — Competidor — " + provaTitulo);
     inp.value = ent.competidor || "";
     row.appendChild(label);
     row.appendChild(cellIg);
@@ -3266,9 +3593,10 @@
   function buildMedalRowReport(_p, mk, ent) {
     var row = document.createElement("div");
     row.className = "medal-row " + mk;
-    var label = document.createElement("label");
+    var label = document.createElement("span");
     label.className = "medal";
     label.textContent = medalLabel(mk);
+    label.setAttribute("title", medalRankTitle(mk));
     var cellI = document.createElement("div");
     cellI.className = "relatorio-read";
     cellI.textContent = ent.igrejaId
@@ -3285,33 +3613,54 @@
     return row;
   }
 
-  function buildProvaCardPodio(p) {
+  function buildProvaCardPodio(p, cardOpts) {
+    cardOpts = cardOpts || {};
+    var hideTitle = !!cardOpts.hideTitle;
     return buildProvaCardBase(p, {
       toggleAttr: "data-prova-toggle",
-      collapsed: isProvaCollapsed(p.id),
+      collapsed: hideTitle ? false : isProvaCollapsed(p.id),
       renderMedalRow: buildMedalRowEditor,
+      showFieldHeaders: true,
+      hideTitle: hideTitle,
     });
   }
 
   /** Pódio em leitura para a aba Relatórios (mesmo layout que «Pódio por prova») */
-  function buildProvaCardPodioReport(p) {
+  function buildProvaCardPodioReport(p, cardOpts) {
+    cardOpts = cardOpts || {};
+    var hideTitle = !!cardOpts.hideTitle;
     return buildProvaCardBase(p, {
       toggleAttr: "data-relatorio-prova-toggle",
-      collapsed: isRelatorioProvaCollapsed(p.id),
+      collapsed: hideTitle ? false : isRelatorioProvaCollapsed(p.id),
       renderMedalRow: buildMedalRowReport,
+      hideTitle: hideTitle,
     });
   }
 
   function createRelatorioPodioWrap() {
-    return buildPodiumWithTipoSections({
-      buildCard: buildProvaCardPodioReport,
-      catActionAttr: "data-relatorio-cat-action",
-    });
+    var container = document.createElement("div");
+    container.className = "relatorio-podio-panel";
+    container.appendChild(buildPodioLayoutToolbar());
+    container.appendChild(
+      buildPodiumWithTipoSections({
+        buildCard: buildProvaCardPodioReport,
+        catActionAttr: "data-relatorio-cat-action",
+        layout: getPodioLayout(),
+      })
+    );
+    return container;
   }
 
   function renderPodio() {
     var host = $("#panel-podio");
     if (!host) return;
+    var searchFocus = null;
+    var searchSel = null;
+    var active = document.activeElement;
+    if (active && active.id === "podio-filter-q") {
+      searchFocus = true;
+      searchSel = active.selectionStart;
+    }
     host.innerHTML = "";
     if (!state.evento || !state.dados) {
       host.textContent = "Carregue um evento para registrar o pódio.";
@@ -3326,12 +3675,51 @@
     });
     host.appendChild(datalist);
 
+    var filters = getPodioFilters();
+    var allProvas = sortedProvas();
+    var filteredProvas = getFilteredProvasForPodio();
     host.appendChild(
-      buildPodiumWithTipoSections({
-        buildCard: buildProvaCardPodio,
-        catActionAttr: "data-cat-action",
+      buildPodioEditorToolbar({
+        filters: filters,
+        shown: filteredProvas.length,
+        total: allProvas.length,
       })
     );
+
+    if (filteredProvas.length === 0 && PF.isActivePodioFilters(filters)) {
+      var empty = document.createElement("div");
+      empty.className = "podio-filter-empty";
+      empty.setAttribute("role", "status");
+      var msg = document.createElement("p");
+      msg.textContent = "Nenhuma prova corresponde aos filtros.";
+      empty.appendChild(msg);
+      var btnClear = document.createElement("button");
+      btnClear.type = "button";
+      btnClear.className = "podio-filter-clear-btn";
+      btnClear.id = "podio-filter-clear";
+      btnClear.textContent = "Limpar filtros";
+      empty.appendChild(btnClear);
+      host.appendChild(empty);
+    } else {
+      host.appendChild(
+        buildPodiumWithTipoSections({
+          buildCard: buildProvaCardPodio,
+          catActionAttr: "data-cat-action",
+          layout: getPodioLayout(),
+          provaList: filteredProvas,
+        })
+      );
+    }
+
+    if (searchFocus) {
+      var searchEl = $("#podio-filter-q");
+      if (searchEl) {
+        searchEl.focus();
+        if (searchSel != null && typeof searchEl.setSelectionRange === "function") {
+          searchEl.setSelectionRange(searchSel, searchSel);
+        }
+      }
+    }
   }
 
   function renderClassificacao() {
@@ -3812,9 +4200,7 @@
       var title = document.createElement("h2");
       title.className = "relatorio-doc-block__title";
       title.textContent =
-        perfil === "resumo"
-          ? "Resumo (divulgação)"
-          : "Oficial completo (auditoria)";
+        perfil === "resumo" ? "Resumo (divulgação)" : "Oficial completo (auditoria)";
       block.appendChild(title);
 
       var desc = document.createElement("p");
@@ -3832,8 +4218,7 @@
       btnGerar.type = "button";
       btnGerar.className = "pill-btn pill-btn--primary";
       btnGerar.id = "btn-relatorio-gerar-" + perfil;
-      btnGerar.textContent =
-        perfil === "resumo" ? "Gerar resumo" : "Gerar oficial completo";
+      btnGerar.textContent = perfil === "resumo" ? "Gerar resumo" : "Gerar oficial completo";
 
       var btnPrint = document.createElement("button");
       btnPrint.type = "button";
@@ -3929,6 +4314,42 @@
           reactivatePanel();
         });
       });
+
+    host.querySelectorAll(".podio-layout-btn[data-podio-layout]").forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        handlePodioLayoutChange(btn.getAttribute("data-podio-layout"));
+      });
+    });
+
+    host.querySelectorAll("[data-prova-group-action]").forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        var action = btn.getAttribute("data-prova-group-action");
+        var raw = btn.getAttribute("data-group-keys") || "";
+        raw.split(",").forEach(function (key) {
+          key = key.trim();
+          if (!key) return;
+          if (action === "collapse") state.podiumProvaGroupCollapsed[key] = true;
+          else state.podiumProvaGroupCollapsed[key] = false;
+        });
+        renderRelatorios();
+        wireRelatorios();
+        reactivatePanel();
+      });
+    });
+
+    host.querySelectorAll(".podium-prova-head[data-prova-group-toggle]").forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        var key = btn.getAttribute("data-prova-group-toggle");
+        if (!key) return;
+        state.podiumProvaGroupCollapsed[key] = !isPodiumProvaGroupCollapsed(key);
+        renderRelatorios();
+        wireRelatorios();
+        reactivatePanel();
+      });
+    });
 
     host.querySelectorAll("[data-relatorio-cat-action]").forEach(function (btn) {
       btn.addEventListener("click", function (ev) {
@@ -4535,6 +4956,57 @@
 
   function wirePodio(root) {
     root = root || document;
+    root
+      .querySelectorAll("#panel-podio .podio-layout-btn[data-podio-layout]")
+      .forEach(function (btn) {
+        btn.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          handlePodioLayoutChange(btn.getAttribute("data-podio-layout"));
+        });
+      });
+    root.querySelectorAll("#panel-podio #podio-filter-status").forEach(function (el) {
+      el.addEventListener("change", function () {
+        handlePodioFilterChange({ status: el.value });
+      });
+    });
+    root.querySelectorAll("#panel-podio #podio-filter-categoria").forEach(function (el) {
+      el.addEventListener("change", function () {
+        handlePodioFilterChange({ categoriaId: el.value });
+      });
+    });
+    root.querySelectorAll("#panel-podio #podio-filter-igreja").forEach(function (el) {
+      el.addEventListener("change", function () {
+        handlePodioFilterChange({ igrejaId: el.value });
+      });
+    });
+    root.querySelectorAll("#panel-podio #podio-filter-q").forEach(function (el) {
+      el.addEventListener("input", function () {
+        if (podioSearchDebounce) clearTimeout(podioSearchDebounce);
+        var value = el.value;
+        podioSearchDebounce = setTimeout(function () {
+          podioSearchDebounce = null;
+          handlePodioFilterChange({ q: value });
+        }, 200);
+      });
+      el.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") ev.preventDefault();
+      });
+    });
+    root.querySelectorAll("#panel-podio input[data-podio-filter-toggle]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        var key = el.getAttribute("data-podio-filter-toggle");
+        if (!key) return;
+        var patch = {};
+        patch[key] = el.checked;
+        handlePodioFilterChange(patch);
+      });
+    });
+    root.querySelectorAll("#panel-podio #podio-filter-clear").forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        clearPodioFilters();
+      });
+    });
     root.querySelectorAll("#panel-podio .podium-col-btn[data-cat-action]").forEach(function (btn) {
       btn.addEventListener("click", function (ev) {
         ev.preventDefault();
@@ -4544,13 +5016,44 @@
           id = id.trim();
           if (!id) return;
           if (action === "collapse") state.podiumCollapsed[id] = true;
-          else delete state.podiumCollapsed[id];
+          else state.podiumCollapsed[id] = false;
         });
         renderPodio();
         wirePodio();
         reactivatePanel();
       });
     });
+    root
+      .querySelectorAll("#panel-podio .podium-col-btn[data-prova-group-action]")
+      .forEach(function (btn) {
+        btn.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          var action = btn.getAttribute("data-prova-group-action");
+          var raw = btn.getAttribute("data-group-keys") || "";
+          raw.split(",").forEach(function (key) {
+            key = key.trim();
+            if (!key) return;
+            if (action === "collapse") state.podiumProvaGroupCollapsed[key] = true;
+            else state.podiumProvaGroupCollapsed[key] = false;
+          });
+          renderPodio();
+          wirePodio();
+          reactivatePanel();
+        });
+      });
+    root
+      .querySelectorAll("#panel-podio .podium-prova-head[data-prova-group-toggle]")
+      .forEach(function (btn) {
+        btn.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          var key = btn.getAttribute("data-prova-group-toggle");
+          if (!key) return;
+          state.podiumProvaGroupCollapsed[key] = !isPodiumProvaGroupCollapsed(key);
+          renderPodio();
+          wirePodio();
+          reactivatePanel();
+        });
+      });
     root
       .querySelectorAll("#panel-podio .prova-card-head[data-prova-toggle]")
       .forEach(function (btn) {
@@ -4630,7 +5133,11 @@
       renderPanels();
       if (document.body.classList.contains("presentation-mode")) {
         var presHost = document.getElementById("presentation-host");
-        if (presHost && !presHost.hidden) renderScoreboard(presHost);
+        if (presHost && !presHost.hidden) {
+          if (state.presentationCeremony.phase !== "complete") {
+            updateScoreboardHeader(presHost);
+          }
+        }
       }
     });
   }
@@ -4889,6 +5396,7 @@
     if (isErUiTheme()) applyErClassificationPreset(state.evento);
     state.autoLoadFailed = false;
     state.podiumCollapsed = {};
+    state.podiumProvaGroupCollapsed = {};
     state.configSectionCollapsed = {};
     state.relatorioSectionCollapsed = {};
     state.relatorioPodiumCollapsed = {};
@@ -5073,6 +5581,7 @@
         });
         state.dados = E.emptyDadosTemplate(ids, pids);
         state.podiumCollapsed = {};
+        state.podiumProvaGroupCollapsed = {};
         resetRelatorioOficialGerado();
         scheduleSave();
         render();
@@ -5084,6 +5593,258 @@
   }
 
   var UI_THEME_KEY = "conclave-ui-theme";
+  var PODIO_LAYOUT_KEY = "conclave.podioLayout";
+  var PODIO_FILTERS_KEY = "conclave.podioFilters";
+  var podioSearchDebounce = null;
+
+  function getPodioFilters() {
+    if (!PF) return { status: "all", categoriaId: "", q: "" };
+    try {
+      var raw = localStorage.getItem(PODIO_FILTERS_KEY);
+      if (!raw) return PF.defaultPodioFilters();
+      return PF.normalizePodioFilters(JSON.parse(raw));
+    } catch (_e) {
+      return PF.defaultPodioFilters();
+    }
+  }
+
+  function setPodioFilters(filters) {
+    if (!PF) return;
+    try {
+      localStorage.setItem(PODIO_FILTERS_KEY, JSON.stringify(PF.normalizePodioFilters(filters)));
+    } catch (_e) {
+      /* localStorage indisponível */
+    }
+  }
+
+  function buildPodioFilterCtx() {
+    return {
+      podium: (state.dados && state.dados.podium) || {},
+      categoriaKey: categoriaKey,
+      categoriaLabel: function (p) {
+        return labelCategoria(categoriaKey(p));
+      },
+      igrejaNome: igrejaNome,
+      tiebreakProvaBucket: E.tiebreakProvaBucket,
+    };
+  }
+
+  function getFilteredProvasForPodio() {
+    if (!PF || !state.evento) return sortedProvas();
+    return PF.filterProvas(sortedProvas(), getPodioFilters(), buildPodioFilterCtx());
+  }
+
+  function handlePodioFilterChange(partial) {
+    if (!PF) return;
+    var next = PF.normalizePodioFilters(Object.assign({}, getPodioFilters(), partial));
+    setPodioFilters(next);
+    renderPodio();
+    wirePodio();
+    reactivatePanel();
+  }
+
+  function clearPodioFilters() {
+    if (!PF) return;
+    setPodioFilters(PF.defaultPodioFilters());
+    renderPodio();
+    wirePodio();
+    reactivatePanel();
+  }
+
+  function getPodioLayout() {
+    try {
+      var v = localStorage.getItem(PODIO_LAYOUT_KEY);
+      return v === "prova" ? "prova" : "categoria";
+    } catch (_e) {
+      return "categoria";
+    }
+  }
+
+  function setPodioLayout(layout) {
+    var v = layout === "prova" ? "prova" : "categoria";
+    try {
+      localStorage.setItem(PODIO_LAYOUT_KEY, v);
+    } catch (_e) {
+      /* localStorage indisponível */
+    }
+  }
+
+  function handlePodioLayoutChange(mode) {
+    if (!mode || mode === getPodioLayout()) return;
+    setPodioLayout(mode);
+    renderPodio();
+    wirePodio();
+    renderRelatorios();
+    wireRelatorios();
+    reactivatePanel();
+  }
+
+  function buildPodioLayoutToolbar() {
+    var layout = getPodioLayout();
+    var bar = document.createElement("div");
+    bar.className = "podio-layout-toolbar";
+    bar.setAttribute("role", "group");
+    bar.setAttribute("aria-label", "Visualização do pódio");
+
+    var label = document.createElement("span");
+    label.className = "podio-layout-label";
+    label.textContent = "Ver por:";
+    bar.appendChild(label);
+
+    [
+      { id: "categoria", text: "Faixa etária" },
+      { id: "prova", text: "Tipo de prova" },
+    ].forEach(function (def) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "podio-layout-btn" + (layout === def.id ? " active" : "");
+      btn.setAttribute("data-podio-layout", def.id);
+      btn.setAttribute("aria-pressed", layout === def.id ? "true" : "false");
+      btn.textContent = def.text;
+      bar.appendChild(btn);
+    });
+
+    return bar;
+  }
+
+  function buildPodioFiltersToolbar(stats) {
+    stats = stats || { filters: PF.defaultPodioFilters(), shown: 0, total: 0 };
+    var filters = stats.filters;
+    var bar = document.createElement("div");
+    bar.className = "podio-filters-toolbar";
+    bar.setAttribute("role", "search");
+    bar.setAttribute("aria-label", "Filtrar provas do pódio");
+
+    var label = document.createElement("span");
+    label.className = "podio-layout-label";
+    label.textContent = "Filtrar:";
+    bar.appendChild(label);
+
+    var statusSel = document.createElement("select");
+    statusSel.id = "podio-filter-status";
+    statusSel.className = "podio-filter-select";
+    statusSel.setAttribute("aria-label", "Status de preenchimento");
+    [
+      { id: "all", text: "Todas" },
+      { id: "pending", text: "Pendente" },
+      { id: "partial", text: "Parcial" },
+      { id: "complete", text: "Completa" },
+    ].forEach(function (def) {
+      var opt = document.createElement("option");
+      opt.value = def.id;
+      opt.textContent = def.text;
+      if (filters.status === def.id) opt.selected = true;
+      statusSel.appendChild(opt);
+    });
+    bar.appendChild(statusSel);
+
+    var catSel = document.createElement("select");
+    catSel.id = "podio-filter-categoria";
+    catSel.className = "podio-filter-select";
+    catSel.setAttribute("aria-label", "Faixa etária");
+    var catAll = document.createElement("option");
+    catAll.value = "";
+    catAll.textContent = "Todas as faixas";
+    if (!filters.categoriaId) catAll.selected = true;
+    catSel.appendChild(catAll);
+    orderedCategoryKeys().forEach(function (catKey) {
+      var opt = document.createElement("option");
+      opt.value = catKey;
+      opt.textContent = labelCategoria(catKey);
+      if (filters.categoriaId === catKey) opt.selected = true;
+      catSel.appendChild(opt);
+    });
+    bar.appendChild(catSel);
+
+    var search = document.createElement("input");
+    search.type = "search";
+    search.id = "podio-filter-q";
+    search.className = "podio-filter-search";
+    search.setAttribute("aria-label", "Buscar prova, igreja ou competidor");
+    search.placeholder = "Buscar…";
+    search.value = filters.q || "";
+    search.autocomplete = "off";
+    bar.appendChild(search);
+
+    var igrejaSel = document.createElement("select");
+    igrejaSel.id = "podio-filter-igreja";
+    igrejaSel.className = "podio-filter-select";
+    igrejaSel.setAttribute("aria-label", "Filtrar por igreja");
+    var igAll = document.createElement("option");
+    igAll.value = "";
+    igAll.textContent = "Todas as igrejas";
+    if (!filters.igrejaId) igAll.selected = true;
+    igrejaSel.appendChild(igAll);
+    (state.evento.igrejas || []).forEach(function (g) {
+      var opt = document.createElement("option");
+      opt.value = g.id;
+      opt.textContent = g.nome || g.id;
+      if (filters.igrejaId === g.id) opt.selected = true;
+      igrejaSel.appendChild(opt);
+    });
+    bar.appendChild(igrejaSel);
+
+    var toggles = document.createElement("div");
+    toggles.className = "podio-filter-toggles";
+    [
+      { id: "comAvisos", label: "Com avisos", title: "Igreja repetida na mesma prova" },
+      {
+        id: "semCompetidor",
+        label: "Sem competidor",
+        title: "Medalha preenchida sem nome do competidor",
+      },
+      {
+        id: "desempate",
+        label: "Desempate",
+        title: "Provas usadas no critério de desempate da classificação",
+      },
+    ].forEach(function (def) {
+      var lbl = document.createElement("label");
+      lbl.className = "podio-filter-check";
+      lbl.title = def.title;
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.id = "podio-filter-" + def.id;
+      cb.setAttribute("data-podio-filter-toggle", def.id);
+      cb.checked = !!filters[def.id];
+      lbl.appendChild(cb);
+      var span = document.createElement("span");
+      span.textContent = def.label;
+      lbl.appendChild(span);
+      toggles.appendChild(lbl);
+    });
+    bar.appendChild(toggles);
+
+    var meta = document.createElement("div");
+    meta.className = "podio-filter-meta";
+
+    var count = document.createElement("span");
+    count.id = "podio-filter-count";
+    count.className = "podio-filter-count";
+    count.setAttribute("aria-live", "polite");
+    count.textContent = stats.shown + " de " + stats.total + " provas";
+    meta.appendChild(count);
+
+    if (PF.isActivePodioFilters(filters)) {
+      var btnClear = document.createElement("button");
+      btnClear.type = "button";
+      btnClear.className = "podio-filter-clear-btn";
+      btnClear.id = "podio-filter-clear";
+      btnClear.textContent = "Limpar filtros";
+      meta.appendChild(btnClear);
+    }
+
+    bar.appendChild(meta);
+    return bar;
+  }
+
+  function buildPodioEditorToolbar(stats) {
+    var wrap = document.createElement("div");
+    wrap.className = "podio-toolbar";
+    wrap.appendChild(buildPodioLayoutToolbar());
+    wrap.appendChild(buildPodioFiltersToolbar(stats));
+    return wrap;
+  }
 
   function getStoredUiTheme() {
     try {
@@ -5316,10 +6077,174 @@
     });
   }
 
+  /** Sequência de colocações reveladas na cerimônia (5º→1º ou menos se &lt;5 igrejas). */
+  function getCeremonyRevealSequence(teamCount) {
+    var n = Math.max(0, Number(teamCount) || 0);
+    if (!n) return [];
+    var start = Math.min(5, n);
+    var seq = [];
+    for (var p = start; p >= 1; p--) seq.push(p);
+    return seq;
+  }
+
+  /** true quando a colocação `pos` já foi revelada na cerimônia. */
+  function isPositionRevealed(ceremony, pos) {
+    if (!ceremony) return false;
+    if (ceremony.phase === "complete") return true;
+    if (ceremony.phase === "intro" || ceremony.revealedUpTo == null) return false;
+    return pos >= ceremony.revealedUpTo;
+  }
+
+  /** Avança o estado da cerimônia (função pura — retorna novo objeto). */
+  function advanceCeremonyState(ceremony, teamCount) {
+    var seq = getCeremonyRevealSequence(teamCount);
+    if (!ceremony || !seq.length || ceremony.phase === "complete") return ceremony;
+    if (ceremony.phase === "intro") {
+      var first = seq[0];
+      return {
+        phase: first === 1 ? "complete" : "reveal",
+        revealedUpTo: first,
+        snapshot: ceremony.snapshot,
+      };
+    }
+    var idx = seq.indexOf(ceremony.revealedUpTo);
+    if (idx >= 0 && idx < seq.length - 1) {
+      var next = seq[idx + 1];
+      return {
+        phase: next === 1 ? "complete" : "reveal",
+        revealedUpTo: next,
+        snapshot: ceremony.snapshot,
+      };
+    }
+    return {
+      phase: "complete",
+      revealedUpTo: 1,
+      snapshot: ceremony.snapshot,
+    };
+  }
+
+  /** Pula direto para o fim da cerimônia. */
+  function revealAllCeremonyState(ceremony) {
+    if (!ceremony || !ceremony.snapshot || !ceremony.snapshot.length) return ceremony;
+    return {
+      phase: "complete",
+      revealedUpTo: 1,
+      snapshot: ceremony.snapshot,
+    };
+  }
+
+  function resetPresentationCeremony() {
+    var out = compute();
+    var ord =
+      out && state.evento
+        ? E.classificacaoOrdenada(out.detalhes, out.ranks, out.tiebreakByIgreja)
+        : [];
+    state.presentationCeremony = {
+      phase: ord.length ? "intro" : "complete",
+      revealedUpTo: null,
+      snapshot: ord.length ? JSON.parse(JSON.stringify(ord)) : [],
+    };
+  }
+
+  function clearPresentationCeremony() {
+    state.presentationCeremony = {
+      phase: "intro",
+      revealedUpTo: null,
+      snapshot: null,
+    };
+  }
+
+  function getCeremonyOrd() {
+    return (state.presentationCeremony && state.presentationCeremony.snapshot) || [];
+  }
+
+  function getRowByPosition(ord, posicao) {
+    for (var i = 0; i < ord.length; i++) {
+      if (ord[i].posicao === posicao) return ord[i];
+    }
+    return null;
+  }
+
+  function ceremonyStatusText(ceremony, teamCount) {
+    if (!ceremony || ceremony.phase === "complete") return "";
+    if (ceremony.phase === "intro") return "Pronto para revelar?";
+    var seq = getCeremonyRevealSequence(teamCount);
+    var idx = seq.indexOf(ceremony.revealedUpTo);
+    if (idx >= 0 && idx < seq.length - 1) {
+      return "Revelando o " + seq[idx + 1] + "º lugar…";
+    }
+    if (ceremony.revealedUpTo === 1) return "Campeã revelada!";
+    return "Revelando o " + ceremony.revealedUpTo + "º lugar";
+  }
+
+  function bindPresentationCeremonyHandlers() {
+    unbindPresentationCeremonyHandlers();
+    var host = document.getElementById("presentation-host");
+    if (!host) return;
+
+    presentationCeremonyClickHandler = function (ev) {
+      if (
+        ev.target.closest(".presentation-exit-btn") ||
+        ev.target.closest(".scoreboard-reveal-all-btn")
+      ) {
+        return;
+      }
+      advancePresentationCeremony();
+    };
+
+    presentationCeremonyKeyHandler = function (ev) {
+      if (!document.body.classList.contains("presentation-mode")) return;
+      var confirmEl = document.getElementById("modal-confirm");
+      if (confirmEl && confirmEl.classList.contains("open")) return;
+
+      var isSpace = ev.key === " " || ev.code === "Space";
+      var isEnter = ev.key === "Enter";
+
+      if (isSpace && ev.shiftKey) {
+        ev.preventDefault();
+        revealAllPresentationCeremony();
+        return;
+      }
+      if (isSpace || isEnter) {
+        if (ev.target.closest(".presentation-exit-btn, .scoreboard-reveal-all-btn")) return;
+        ev.preventDefault();
+        advancePresentationCeremony();
+      }
+    };
+
+    host.addEventListener("click", presentationCeremonyClickHandler);
+    document.addEventListener("keydown", presentationCeremonyKeyHandler);
+  }
+
+  function unbindPresentationCeremonyHandlers() {
+    var host = document.getElementById("presentation-host");
+    if (host && presentationCeremonyClickHandler) {
+      host.removeEventListener("click", presentationCeremonyClickHandler);
+    }
+    if (presentationCeremonyKeyHandler) {
+      document.removeEventListener("keydown", presentationCeremonyKeyHandler);
+    }
+    presentationCeremonyClickHandler = null;
+    presentationCeremonyKeyHandler = null;
+  }
+
+  function advancePresentationCeremony() {
+    var ord = getCeremonyOrd();
+    if (!ord.length) return;
+    state.presentationCeremony = advanceCeremonyState(state.presentationCeremony, ord.length);
+    var host = document.getElementById("presentation-host");
+    if (host && !host.hidden) updateScoreboardReveal(host);
+  }
+
+  function revealAllPresentationCeremony() {
+    state.presentationCeremony = revealAllCeremonyState(state.presentationCeremony);
+    var host = document.getElementById("presentation-host");
+    if (host && !host.hidden) updateScoreboardReveal(host);
+  }
+
   /** Alterna o modo apresentação garantindo aria-pressed e foco coerentes.
-   *  Quando ligado, popula `#presentation-host` com o scoreboard (top 3 em
-   *  cards gigantes + lista compacta abaixo) e esconde toda a UI regular
-   *  via `body.presentation-mode`. Quando desligado, restaura. */
+   *  Quando ligado, popula `#presentation-host` com a cerimônia de revelação
+   *  (5º→1º) e esconde toda a UI regular via `body.presentation-mode`. */
   function setPresentationMode(on) {
     var was = document.body.classList.contains("presentation-mode");
     document.body.classList.toggle("presentation-mode", !!on);
@@ -5329,13 +6254,23 @@
     var host = document.getElementById("presentation-host");
 
     if (on) {
+      resetPresentationCeremony();
       if (host) {
-        renderScoreboard(host);
+        renderScoreboard(host, { force: true });
         host.hidden = false;
         host.setAttribute("aria-hidden", "false");
+        host.setAttribute("tabindex", "0");
       }
-      // Foco no botão de sair (alvo óbvio para teclado/projetor).
-      if (exit) {
+      bindPresentationCeremonyHandlers();
+      /* Foco no palco (não no botão Sair): Espaço/Enter revelam a próxima colocação.
+       *  «Sair da apresentação» continua acessível via Tab ou Escape. */
+      if (host) {
+        try {
+          host.focus();
+        } catch (_e) {
+          /* best-effort */
+        }
+      } else if (exit) {
         try {
           exit.focus();
         } catch (_e) {
@@ -5343,13 +6278,16 @@
         }
       }
     } else {
+      unbindPresentationCeremonyHandlers();
+      clearPresentationCeremony();
       if (host) {
         host.hidden = true;
         host.setAttribute("aria-hidden", "true");
+        host.removeAttribute("tabindex");
         host.innerHTML = "";
+        delete host.dataset.ceremonyBuilt;
       }
       if (was && pres) {
-        // Devolve o foco ao botão que abriu, evitando "foco perdido no body".
         try {
           pres.focus();
         } catch (_e) {
@@ -5359,17 +6297,7 @@
     }
   }
 
-  /** Renderiza o scoreboard de apresentação em `host`. Layout:
-   *  - cabeçalho com nome do evento + data;
-   *  - top 3 em cards gigantes (ouro/prata/bronze, ouro um pouco elevado);
-   *  - lista das demais classificadas em tabela compacta abaixo.
-   *  Se não houver dados, exibe mensagem amigável. */
-  function renderScoreboard(host) {
-    host.innerHTML = "";
-    var ev = state.evento;
-    var meta = (ev && ev.meta) || {};
-    var out = compute();
-
+  function buildScoreboardHeader(meta) {
     var header = document.createElement("header");
     header.className = "scoreboard-header";
     var titulo = document.createElement("h1");
@@ -5381,80 +6309,233 @@
     sub.textContent = [meta.data, meta.local].filter(Boolean).join(" · ");
     header.appendChild(titulo);
     if (sub.textContent) header.appendChild(sub);
-    host.appendChild(header);
+    return header;
+  }
 
-    if (!ev || !out) {
+  function updateScoreboardHeader(host) {
+    if (!host || !host.dataset.ceremonyBuilt) return;
+    var ev = state.evento;
+    var meta = (ev && ev.meta) || {};
+    var titulo = host.querySelector("#presentation-title");
+    var sub = host.querySelector(".scoreboard-sub");
+    if (titulo) titulo.textContent = (meta.nome || "Evento sem nome") + " — Classificação";
+    if (sub) sub.textContent = [meta.data, meta.local].filter(Boolean).join(" · ");
+  }
+
+  function fillScoreboardCard(card, row, posLabel) {
+    if (!row) {
+      card.classList.add("is-hidden");
+      card.classList.remove("is-revealed", "is-revealed-now");
+      card.innerHTML =
+        '<span class="scoreboard-pos scoreboard-pos--placeholder" aria-hidden="true">?</span>' +
+        '<span class="scoreboard-igreja scoreboard-igreja--placeholder">Aguardando…</span>';
+      return;
+    }
+    card.classList.remove("is-hidden");
+    card.classList.add("is-revealed");
+    card.innerHTML =
+      '<span class="scoreboard-pos">' +
+      posLabel +
+      "º</span>" +
+      '<span class="scoreboard-igreja">' +
+      escapeHtml(row.igreja) +
+      "</span>" +
+      '<span class="scoreboard-pts">' +
+      '<span class="scoreboard-pts-label">Total</span>' +
+      fmt(row.total) +
+      "</span>";
+  }
+
+  function updateScoreboardReveal(host) {
+    if (!host || !host.dataset.ceremonyBuilt) {
+      renderScoreboard(host, { force: true });
+      return;
+    }
+
+    var ceremony = state.presentationCeremony;
+    var ord = getCeremonyOrd();
+    var teamCount = ord.length;
+
+    host.classList.toggle("scoreboard--intro", ceremony.phase === "intro");
+    host.classList.toggle("scoreboard--complete", ceremony.phase === "complete");
+
+    var intro = host.querySelector(".scoreboard-intro");
+    if (intro) intro.hidden = ceremony.phase !== "intro";
+
+    var status = host.querySelector(".scoreboard-status");
+    if (status) status.textContent = ceremonyStatusText(ceremony, teamCount);
+
+    var hint = host.querySelector(".scoreboard-hint");
+    if (hint) hint.hidden = ceremony.phase === "complete";
+
+    var revealAllBtn = host.querySelector(".scoreboard-reveal-all-btn");
+    if (revealAllBtn) revealAllBtn.hidden = ceremony.phase === "complete";
+
+    var medals = [
+      { medal: "pt", pos: 2 },
+      { medal: "ou", pos: 1 },
+      { medal: "br", pos: 3 },
+    ];
+    medals.forEach(function (m) {
+      var card = host.querySelector('.scoreboard-card[data-medal="' + m.medal + '"]');
+      if (!card) return;
+      var revealed = isPositionRevealed(ceremony, m.pos);
+      var row = revealed ? getRowByPosition(ord, m.pos) : null;
+      var wasHidden = card.classList.contains("is-hidden");
+      fillScoreboardCard(card, row, m.pos);
+      if (revealed && wasHidden) {
+        card.classList.add("is-revealed-now");
+        window.setTimeout(function () {
+          card.classList.remove("is-revealed-now");
+        }, 800);
+      }
+      if (m.medal === "ou" && revealed)
+        card.classList.toggle("is-champion", ceremony.phase === "complete");
+    });
+
+    [4, 5].forEach(function (pos) {
+      var card = host.querySelector('.scoreboard-card-compact[data-pos="' + pos + '"]');
+      if (!card) return;
+      if (teamCount < pos) {
+        card.hidden = true;
+        return;
+      }
+      card.hidden = false;
+      var revealed = isPositionRevealed(ceremony, pos);
+      var row = revealed ? getRowByPosition(ord, pos) : null;
+      var wasHidden = card.classList.contains("is-hidden");
+      fillScoreboardCard(card, row, pos);
+      if (revealed && wasHidden) {
+        card.classList.add("is-revealed-now");
+        window.setTimeout(function () {
+          card.classList.remove("is-revealed-now");
+        }, 800);
+      }
+    });
+
+    var rest = host.querySelector(".scoreboard-rest");
+    if (rest) {
+      var showRest = ceremony.phase === "complete" && ord.length > 5;
+      rest.hidden = !showRest;
+      if (showRest) {
+        var tbody = rest.querySelector("tbody");
+        if (tbody) {
+          tbody.innerHTML = "";
+          ord.slice(5).forEach(function (r) {
+            var tr = document.createElement("tr");
+            tr.innerHTML =
+              '<td class="pos">' +
+              r.posicao +
+              "º</td>" +
+              "<td>" +
+              escapeHtml(r.igreja) +
+              "</td>" +
+              '<td class="tot">' +
+              fmt(r.total) +
+              "</td>";
+            tbody.appendChild(tr);
+          });
+        }
+      }
+    }
+  }
+
+  /** Renderiza o palco de apresentação com cerimônia de revelação 5º→1º. */
+  function renderScoreboard(host, opts) {
+    opts = opts || {};
+    if (!host) return;
+    if (host.dataset.ceremonyBuilt && !opts.force) {
+      updateScoreboardReveal(host);
+      return;
+    }
+
+    host.innerHTML = "";
+    delete host.dataset.ceremonyBuilt;
+
+    var ev = state.evento;
+    var meta = (ev && ev.meta) || {};
+    host.className = "presentation-host scoreboard-stage";
+
+    host.appendChild(buildScoreboardHeader(meta));
+
+    if (!ev || !getCeremonyOrd().length) {
       var empty = document.createElement("p");
       empty.className = "scoreboard-empty";
-      empty.textContent = "Carregue um evento para visualizar a classificação.";
+      empty.textContent = ev
+        ? "Sem dados para classificar ainda."
+        : "Carregue um evento para visualizar a classificação.";
       host.appendChild(empty);
       return;
     }
 
-    var ord = E.classificacaoOrdenada(out.detalhes, out.ranks, out.tiebreakByIgreja);
-    if (!ord || !ord.length) {
-      var noData = document.createElement("p");
-      noData.className = "scoreboard-empty";
-      noData.textContent = "Sem dados para classificar ainda.";
-      host.appendChild(noData);
-      return;
-    }
+    var intro = document.createElement("div");
+    intro.className = "scoreboard-intro";
+    intro.innerHTML =
+      '<p class="scoreboard-intro-kicker">Classificação final</p>' +
+      '<p class="scoreboard-intro-lead">Pronto para revelar?</p>' +
+      '<p class="scoreboard-intro-hint">Espaço ou clique para começar</p>';
+    host.appendChild(intro);
 
-    // Top 3 em cards (ordem visual: prata, ouro, bronze para destacar o ouro no centro)
+    var status = document.createElement("p");
+    status.className = "scoreboard-status";
+    status.setAttribute("aria-live", "polite");
+    host.appendChild(status);
+
+    var midstrip = document.createElement("section");
+    midstrip.className = "scoreboard-midstrip";
+    midstrip.setAttribute("aria-label", "Colocações intermediárias");
+    [5, 4].forEach(function (pos) {
+      var card = document.createElement("article");
+      card.className = "scoreboard-card scoreboard-card-compact is-hidden";
+      card.setAttribute("data-pos", String(pos));
+      midstrip.appendChild(card);
+    });
+    host.appendChild(midstrip);
+
     var top3 = document.createElement("section");
     top3.className = "scoreboard-top3";
-    top3.setAttribute("aria-label", "Top 3 do evento");
-    var medals = ["pt", "ou", "br"];
-    medals.forEach(function (mk) {
-      var idx = mk === "ou" ? 0 : mk === "pt" ? 1 : 2;
-      var r = ord[idx];
-      if (!r) return;
+    top3.setAttribute("aria-label", "Pódio do evento");
+    [
+      { medal: "pt", pos: 2 },
+      { medal: "ou", pos: 1 },
+      { medal: "br", pos: 3 },
+    ].forEach(function (m) {
       var card = document.createElement("article");
-      card.className = "scoreboard-card";
-      card.setAttribute("data-medal", mk);
-      card.innerHTML =
-        '<span class="scoreboard-pos">' +
-        (idx + 1) +
-        "º</span>" +
-        '<span class="scoreboard-igreja">' +
-        escapeHtml(r.igreja) +
-        "</span>" +
-        '<span class="scoreboard-pts">' +
-        '<span class="scoreboard-pts-label">Total</span>' +
-        fmt(r.total) +
-        "</span>";
+      card.className = "scoreboard-card is-hidden";
+      card.setAttribute("data-medal", m.medal);
+      card.setAttribute("data-pos", String(m.pos));
       top3.appendChild(card);
     });
     host.appendChild(top3);
 
-    // Demais
-    if (ord.length > 3) {
-      var rest = document.createElement("section");
-      rest.className = "scoreboard-rest";
-      rest.setAttribute("aria-label", "Demais classificadas");
-      var table = document.createElement("table");
-      table.innerHTML =
-        '<thead><tr><th scope="col">#</th><th scope="col">Igreja</th>' +
-        '<th scope="col" style="text-align:right;">Total</th></tr></thead>';
-      var tbody = document.createElement("tbody");
-      ord.slice(3).forEach(function (r) {
-        var tr = document.createElement("tr");
-        tr.innerHTML =
-          '<td class="pos">' +
-          r.posicao +
-          "º</td>" +
-          "<td>" +
-          escapeHtml(r.igreja) +
-          "</td>" +
-          '<td class="tot">' +
-          fmt(r.total) +
-          "</td>";
-        tbody.appendChild(tr);
-      });
-      table.appendChild(tbody);
-      rest.appendChild(table);
-      host.appendChild(rest);
-    }
+    var rest = document.createElement("section");
+    rest.className = "scoreboard-rest";
+    rest.hidden = true;
+    rest.setAttribute("aria-label", "Demais classificadas");
+    var table = document.createElement("table");
+    table.innerHTML =
+      '<thead><tr><th scope="col">#</th><th scope="col">Igreja</th>' +
+      '<th scope="col" style="text-align:right;">Total</th></tr></thead><tbody></tbody>';
+    rest.appendChild(table);
+    host.appendChild(rest);
+
+    var hint = document.createElement("p");
+    hint.className = "scoreboard-hint";
+    hint.textContent = "Espaço ou clique para revelar a próxima colocação";
+    host.appendChild(hint);
+
+    var revealAllBtn = document.createElement("button");
+    revealAllBtn.type = "button";
+    revealAllBtn.className = "scoreboard-reveal-all-btn";
+    revealAllBtn.textContent = "Revelar tudo";
+    revealAllBtn.addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      revealAllPresentationCeremony();
+    });
+    host.appendChild(revealAllBtn);
+
+    host.dataset.ceremonyBuilt = "1";
+    updateScoreboardReveal(host);
   }
 
   /** Tenta carregar o evento de exemplo. Prioriza `window.ConclaveDefaultEvento`

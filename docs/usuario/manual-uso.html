@@ -119,6 +119,25 @@
 <li><code>nomeLivre</code>: texto livre para identificar o ganhador quando a igreja <strong>não está</strong> cadastrada em <code>evento.igrejas[]</code>. Útil para registros visuais e relatórios; é ignorado pelo motor de pontuação (não soma medalhas).</li>
 </ul>
 <p>Se a mesma igreja for selecionada em dois lugares da mesma prova (ex.: ouro e prata para a mesma igreja), aparece um aviso em <code>#warnings</code>. O cálculo continua, mas vale revisar.</p>
+<h3 id="layout-e-filtros">Layout e filtros</h3>
+<p>No topo da aba <strong>Pódio por prova</strong> há duas barras de ferramentas:</p>
+<p><strong>Ver por</strong> (persiste no navegador):</p>
+<ul>
+<li><strong>Faixa etária</strong> — colunas por categoria (Junior, Adolescente, …).</li>
+<li><strong>Tipo de prova</strong> — blocos por título base (Esgrima, Debate, …) com mini-colunas por faixa.</li>
+</ul>
+<p><strong>Filtrar</strong> (persiste no navegador; combina entre si):</p>
+<ul>
+<li><strong>Status</strong> — Todas / Pendente (nenhuma medalha) / Parcial (alguma medalha, pódio incompleto) / Completa (ouro, prata e bronze com igreja).</li>
+<li><strong>Faixa etária</strong> — Restringe a uma categoria.</li>
+<li><strong>Buscar</strong> — Título da prova, categoria, igreja ou competidor.</li>
+<li><strong>Igreja</strong> — Provas em que a igreja tem ouro, prata ou bronze.</li>
+<li><strong>Com avisos</strong> — Igreja repetida na mesma prova.</li>
+<li><strong>Sem competidor</strong> — Medalha preenchida sem nome do competidor.</li>
+<li><strong>Desempate</strong> — Provas usadas no critério de desempate da classificação.</li>
+</ul>
+<p>O contador <code>N de M provas</code> reflete os filtros ativos. <strong>Limpar filtros</strong> restaura o padrão. Se nada corresponder, aparece mensagem e botão para limpar.</p>
+<p>Os filtros valem <strong>somente na aba Pódio</strong> (edição). A consulta rápida em Relatórios continua mostrando todas as provas.</p>
 <h2 id="classificacao-e-desempate">Classificacao e desempate</h2>
 <p>A aba <strong>Classificação</strong> mostra o ranking final ordenado por critérios em cascata:</p>
 <ol>
@@ -168,7 +187,12 @@
 <p>Use os dois juntos: o <code>localStorage</code> te salva da queda do navegador e o <code>.projeto.json</code> te salva da troca de máquina ou da limpeza de cache.</p>
 <h2 id="modo-apresentacao">Modo apresentacao</h2>
 <ul>
-<li><strong>Modo apresentação</strong> (menu Mais): esconde menus e amplia tabelas para exibir o ranking num projetor ou telão. Sair: clique em <strong>Sair da apresentação</strong> ou pressione <code>Escape</code> (em algumas versões de iOS Safari, <code>Escape</code> pode não ser capturado; nesse caso, use o botão).</li>
+<li><strong>Modo apresentação</strong> (menu Mais): abre um <strong>palco fullscreen</strong> para exibir a classificação num projetor ou telão, com <strong>cerimônia de revelação</strong> do 5º ao 1º lugar (ou do último lugar existente quando há menos de cinco igrejas).</li>
+<li>Ao entrar, <strong>nenhuma colocação aparece</strong> — só o nome do evento e a pergunta «Pronto para revelar?».</li>
+<li><strong>Espaço</strong>, <strong>Enter</strong> ou <strong>clique</strong> na tela revelam a próxima colocação, uma de cada vez, do 5º lugar até o campeão. Colocações a partir do 6º aparecem automaticamente na tabela após coroar o 1º lugar.</li>
+<li><strong>Shift+Espaço</strong> ou o botão discreto <strong>Revelar tudo</strong> (canto inferior direito) pula direto para a classificação completa (útil em ensaio).</li>
+<li>A classificação fica <strong>congelada</strong> enquanto a cerimônia não termina — ajustes de pontuação na UI normal não alteram o palco até você sair e reentrar.</li>
+<li>Sair: clique em <strong>Sair da apresentação</strong> ou pressione <code>Escape</code> (em algumas versões de iOS Safari, <code>Escape</code> pode não ser capturado; nesse caso, use o botão).</li>
 </ul>
       </article>
     </main>

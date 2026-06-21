@@ -342,6 +342,8 @@
     emptyDadosTemplate: emptyDadosTemplate,
     avisosPodiumDuplicado: avisosPodiumDuplicado,
     contarMedalhasPorIgreja: contarMedalhasPorIgreja,
+    normalizeMatchTitle: normalizeMatchTitle,
+    tiebreakProvaBucket: tiebreakProvaBucket,
     // Helpers expostos para reuso por integrações externas, evitando
     // reimplementação divergente das regras de pontuação/punição.
     pontosParticipacao: pontosParticipacao,
