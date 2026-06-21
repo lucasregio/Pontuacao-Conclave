@@ -457,6 +457,19 @@
     return t + " - " + cat;
   }
 
+  /** Título do card de prova no pódio (coluna já exibe categoria e idade). */
+  function tituloProvaCard(p) {
+    var t = (p.titulo != null ? String(p.titulo) : "").trim();
+    if (t) return t;
+    if (state.evento && state.evento.categorias) {
+      var c = state.evento.categorias.find(function (x) {
+        return x.id === categoriaKey(p);
+      });
+      if (c) return c.nome;
+    }
+    return labelCategoria(categoriaKey(p));
+  }
+
   function syncCategoriaNomes(ev) {
     var map = {};
     (ev.categorias || []).forEach(function (c) {
@@ -2966,7 +2979,7 @@
     head.setAttribute(
       "aria-label",
       (collapsed ? "Expandir " : "Recolher ") +
-        nomeProvaExibicao(p) +
+        tituloProvaCard(p) +
         (completo ? " — pódio completo" : "")
     );
 
@@ -2974,7 +2987,7 @@
     titleWrap.className = "prova-card-title-wrap";
     var h = document.createElement("span");
     h.className = "prova-card-title";
-    h.textContent = nomeProvaExibicao(p);
+    h.textContent = tituloProvaCard(p);
     titleWrap.appendChild(h);
 
     var statusBadge = document.createElement("span");
