@@ -3,7 +3,8 @@
     "schemaVersion": 2,
     "nome": "Conclave MR 2026/1",
     "slug": "conclave-2026-1",
-    "data": "2026-04-11"
+    "data": "2026-04-11",
+    "regulamentoUrl": "regulamento-2026.pdf"
   },
   "pesos": {
     "inscricao": 100,

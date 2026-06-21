@@ -64,14 +64,15 @@ em `eventos/conclave-2026-1.*`.
 
 ## Comandos
 
-| Tarefa | Comando |
-| --- | --- |
-| Lint | `npm run lint` |
-| Testes | `npm test` |
-| Formatação | `npm run format:check` / `npm run format` |
-| Servir local | `npm run serve` |
-| Embedded pen-drive | `npm run build:embedded` |
-| Qualidade sem npm | `node scripts/quality-check.mjs` |
+| Tarefa             | Comando                                                  |
+| ------------------ | -------------------------------------------------------- |
+| Lint               | `npm run lint`                                           |
+| Testes             | `npm test`                                               |
+| Formatação         | `npm run format:check` / `npm run format`                |
+| Servir local       | `npm run serve`                                          |
+| Embedded pen-drive | `npm run build:embedded`                                 |
+| Qualidade sem npm  | `node scripts/quality-check.mjs`                         |
+| Publicar no GitHub | `.\scripts\publicar-github.ps1` (requer `gh auth login`) |
 
 CI (Node 22): lint + test + format:check. Checklist de release:
 [`docs/operacional/release-checklist.md`](docs/operacional/release-checklist.md).
@@ -83,6 +84,12 @@ CI (Node 22): lint + test + format:check. Checklist de release:
 ├── index.html                 # Entrada (Dashboard, Config, …)
 ├── manifest.webmanifest
 ├── sw.js
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── LICENSE
+├── package.json               # scripts npm (lint, test, build:embedded)
+├── eslint.config.js
+├── .prettierrc.json
 ├── web/                       # engine.js, app.js, styles.css
 ├── icons/
 ├── schema/                    # evento.schema.json, projeto.schema.json
@@ -94,7 +101,7 @@ CI (Node 22): lint + test + format:check. Checklist de release:
 │   └── operacional/           # metrics, performance-budget, release
 ├── referencia/                # planilhas/docx legados (não deployado)
 ├── pen-drive/
-├── scripts/                   # build-embedded.mjs, quality-check.mjs
+├── scripts/                   # build-embedded.mjs, quality-check.mjs, publicar-github.ps1
 ├── tests/                     # engine, roundtrip, escape, schema, embedded, perf
 └── .github/workflows/         # ci.yml, pages.yml, lighthouse.yml
 ```
@@ -108,7 +115,7 @@ CI (Node 22): lint + test + format:check. Checklist de release:
     "igrejas": [{ "id": "central", "nome": "Igreja Central" }],
     "categorias": [{ "id": "junior", "nome": "Junior", "idade": "10–13" }],
     "provas": [
-      { "id": "biblia-jr", "titulo": "Conhecimentos Gerais da Bíblia", "categoriaId": "junior" }
+      { "id": "biblia-jr", "titulo": "Conhecimentos Gerais da Bíblia", "categoriaId": "junior" },
     ],
     "pesos": {
       "inscricao": 5,
@@ -117,9 +124,9 @@ CI (Node 22): lint + test + format:check. Checklist de release:
       "biblia": 4,
       "visitante": 1,
       "animacao": 2,
-      "mau_comportamento": -3
+      "mau_comportamento": -3,
     },
-    "medalhas": { "ou": 5, "pt": 3, "br": 1 }
+    "medalhas": { "ou": 5, "pt": 3, "br": 1 },
   },
   "dados": {
     "participacao": {
@@ -128,13 +135,13 @@ CI (Node 22): lint + test + format:check. Checklist de release:
         "mr_total": 12,
         "mr_camisa": 12,
         "mr_biblia": 10,
-        "pontuacao_extra": 0
-      }
+        "pontuacao_extra": 0,
+      },
     },
     "podium": {
-      "biblia-jr": { "ou": { "igrejaId": "central" } }
-    }
-  }
+      "biblia-jr": { "ou": { "igrejaId": "central" } },
+    },
+  },
 }
 ```
 
@@ -160,7 +167,13 @@ o service worker.
 
 ## Deploy (GitHub Pages)
 
+Repositório: [github.com/lucasregio/Pontuacao-Conclave](https://github.com/lucasregio/Pontuacao-Conclave)
+
+App publicado em: [lucasregio.github.io/Pontuacao-Conclave/](https://lucasregio.github.io/Pontuacao-Conclave/)
+
 `pages.yml` publica após CI passar; exclui `referencia/`, `tests/`, `scripts/`, etc.
+Setup inicial (remote + push + Pages): `.\scripts\publicar-github.ps1` (requer
+[`gh`](https://cli.github.com/) autenticado).
 
 ## Convenções de contribuição
 

@@ -21,12 +21,29 @@ existem para preservar essa simplicidade enquanto a base cresce.
 1. Tenha **Node.js 22+** instalado (o CI usa Node 22).
 2. Clone o repositório e instale dependências de desenvolvimento:
    ```bash
+   git clone https://github.com/lucasregio/Pontuacao-Conclave.git
+   cd Pontuacao-Conclave
    npm install
    ```
 3. Para validar tudo localmente sem `npm install`, use:
    ```bash
    node scripts/quality-check.mjs
    ```
+
+## Identidade Git
+
+Configure nome e e-mail antes do primeiro commit neste clone:
+
+```bash
+git config user.name "Seu Nome"
+git config user.email "seu@email.com"
+```
+
+Use UTF-8 no terminal ao escrever mensagens de commit (no PowerShell:
+`chcp 65001`) para evitar caracteres corrompidos nos logs.
+
+A pasta `.cursor/` é ignorada pelo Git — configuração local do editor Cursor,
+não versionada.
 
 ## Fluxo de trabalho
 

@@ -1,20 +1,19 @@
 /**
  * Gerado automaticamente por scripts/build-embedded.mjs.
  * NÃO EDITE À MÃO. Reedite eventos/conclave-2026-1.evento.json e
- * rode 
-pm run build:embedded (ou 
-ode scripts/build-embedded.mjs).
+ * rode `npm run build:embedded` (ou `node scripts/build-embedded.mjs`).
  *
- * Este arquivo expõe o evento de exemplo como window.ConclaveDefaultEvento
- * para que o app funcione sem etch() (cenário típico de uso via
- * ile://, por exemplo a partir de um pen-drive).
+ * Este arquivo expõe o evento de exemplo como `window.ConclaveDefaultEvento`
+ * para que o app funcione sem `fetch()` (cenário típico de uso via
+ * `file://`, por exemplo a partir de um pen-drive).
  */
 window.ConclaveDefaultEvento = {
   "meta": {
     "schemaVersion": 2,
     "nome": "Conclave MR 2026/1",
     "slug": "conclave-2026-1",
-    "data": "2026-04-11"
+    "data": "2026-04-11",
+    "regulamentoUrl": "regulamento-2026.pdf"
   },
   "pesos": {
     "inscricao": 100,
