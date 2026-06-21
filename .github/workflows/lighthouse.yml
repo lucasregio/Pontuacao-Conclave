@@ -9,7 +9,7 @@ name: Lighthouse CI
 # Lighthouse para `index.html`.
 on:
   pull_request:
-    branches: ["main"]
+    branches: ["main", "develop"]
   workflow_dispatch:
 
 permissions:

@@ -74,10 +74,13 @@ Em `index.html` servido via `http(s)://` (preferir; `file://` desativa SW):
 
 ## 5. Publicação
 
+- [ ] Release mergeada em `main` (via branch `release/*` no Gitflow).
 - [ ] Push em `main` aciona o workflow `pages.yml` (Settings → Pages →
       Source: GitHub Actions já configurado).
-- [ ] CI verde nos dois workflows (`ci.yml` e `pages.yml`).
+- [ ] CI verde nos workflows (`ci.yml`; `pages.yml` só em `main`).
 - [ ] URL do GitHub Pages abre `index.html` corretamente.
+- [ ] Tag anotada `vX.Y.Z` criada no commit de release (quando aplicável).
+- [ ] Branch `release/*` mergeada de volta em `develop`.
 - [ ] Service worker registra (DevTools → Application → Service Workers).
 
 ## 6. Pós-release

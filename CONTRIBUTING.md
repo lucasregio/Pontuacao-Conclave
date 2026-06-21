@@ -45,13 +45,21 @@ Use UTF-8 no terminal ao escrever mensagens de commit (no PowerShell:
 A pasta `.cursor/` é ignorada pelo Git — configuração local do editor Cursor,
 não versionada.
 
-## Fluxo de trabalho
+## Fluxo de trabalho (Gitflow)
 
-1. Crie uma branch a partir de `main`. Sugestão de nomenclatura:
-   `fix/...`, `feat/...`, `docs/...`, `refactor/...`.
+Branches permanentes: **`main`** (produção + Pages) e **`develop`** (integração).
+
+1. Atualize `develop` e crie uma branch temporária a partir dela:
+   ```bash
+   git checkout develop
+   git pull origin develop
+   git checkout -b feature/minha-mudanca
+   ```
+   Prefixos: `feature/` (novidades), `release/` (preparar versão), `hotfix/`
+   (correção urgente a partir de `main`).
 2. Faça mudanças pequenas e focadas — prefira PRs reviewables (≤ ~400 linhas
    alteradas).
-3. Antes de abrir o PR, rode **localmente**:
+3. Antes de abrir o PR para **`develop`**, rode **localmente**:
    ```bash
    npm run lint
    npm test
@@ -59,7 +67,11 @@ não versionada.
    ```
 4. Se a mudança envolve UI/dados, faça smoke test manual em `index.html`.
    A checklist completa está em [`docs/operacional/release-checklist.md`](docs/operacional/release-checklist.md).
-5. Abra o PR usando o template — ele já lista o mínimo a revisar.
+5. Abra o PR usando o template — destino **`develop`**, exceto releases/hotfixes
+   (ver [`docs/operacional/gitflow.md`](docs/operacional/gitflow.md)).
+
+Releases mergeiam `release/*` → `main` (dispara deploy) e depois → `develop`.
+Hotfixes mergeiam `hotfix/*` → `main` e depois → `develop`.
 
 ## Convenções
 

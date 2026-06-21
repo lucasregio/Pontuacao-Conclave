@@ -43,6 +43,14 @@ The `.cursor/` folder is gitignored (local Cursor IDE config only).
 
 Before finalizing changes in `web/`, `tests/`, or configs: **lint + test + format:check**. CI (Node 22) runs the same.
 
+## Gitflow
+
+- **`main`** — production; GitHub Pages deploys on push here.
+- **`develop`** — integration branch; default target for feature PRs.
+- Prefixes: `feature/`, `release/`, `hotfix/` (see [`docs/operacional/gitflow.md`](docs/operacional/gitflow.md)).
+
+Agents: branch from `develop`, open PRs to `develop` unless doing a release/hotfix.
+
 ## Required conventions
 
 - **No native dialogs** in `web/app.js` — use modal-confirm / feedback banners.
