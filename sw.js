@@ -12,13 +12,22 @@
  * caches antigos automaticamente.
  */
 
-const CACHE_VERSION = "pontuacao-conclave-v2";
+const CACHE_VERSION = "pontuacao-conclave-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./docs/index.html",
+  "./docs/changelog.html",
+  "./docs/sobre.html",
+  "./docs/usuario/manual-uso.html",
+  "./docs/usuario/faq.html",
+  "./docs/usuario/glossario.html",
+  "./docs/usuario/troubleshooting.html",
+  "./docs/usuario/atalhos-teclado.html",
+  "./docs/usuario/regulamento-mapeado.html",
   "./web/styles.css",
   "./web/engine.js",
+  "./web/relatorio.js",
   "./web/app.js",
   "./eventos/conclave-2026-1.evento.embedded.js",
   "./manifest.webmanifest",

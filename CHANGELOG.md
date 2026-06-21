@@ -13,11 +13,21 @@ GitHub Pages.
 
 ### Removido
 
+- **Imprimir / Salvar PDF** genérico do menu «Mais ações» (`#btn-print`).
+  O único caminho de PDF passa a ser o relatório oficial na aba Relatórios.
+
 - Campo **Imagem de fundo** em Configuração → Geral e toda a lógica CSS/JS
   associada (`meta.tema.backgroundImage`, `body.has-bg`). O fundo fixo do tema
   MR/ER permanece.
 
 ### Adicionado
+
+- **Relatório oficial** com perfis **Resumo** e **Completo** (`web/relatorio.js` +
+  `renderRelatorioOficial()`): capa institucional com local, texto de encerramento,
+  bloco de assinaturas, numeração de páginas na impressão e nome sugerido do PDF
+  via `document.title`. Consulta rápida (medalhas/pódio na tela) separada do
+  documento oficial.
+- Testes em `tests/relatorio.test.js` para perfis e helpers do relatório.
 
 - Campo **`tipo`** em cada prova (`oral` | `escrita`): coluna em Configuração,
   seções separadas no pódio/relatórios e coluna «Tipo» no CSV do pódio.

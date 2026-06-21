@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pt-BR" data-ui-theme="mr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Troubleshooting — Pontuação Conclave</title>
+    <meta name="description" content="Troubleshooting — documentação da Pontuação Conclave." />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+    <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="../../icons/icon.svg" />
+    <link rel="stylesheet" href="../../web/styles.css" />
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <header class="docs-header">
+      <p class="docs-eyebrow"><a href="../../index.html">← Voltar ao app</a> · <a href="../index.html">Documentação</a></p>
+      <h1>Troubleshooting</h1>
+    </header>
+    <main id="conteudo" tabindex="-1" class="docs-main docs-prose">
+      <article class="docs-article">
+<p>Sintomas e soluções rápidas para problemas comuns no dia do evento. O formato é sempre <strong>sintoma → causa provável → o que fazer</strong>.</p>
+<h2 id="sumario">Sumário</h2>
+<ul>
+<li><a href="#importei-um-json-e-nada-aconteceu">Importei um JSON e nada aconteceu</a></li>
+<li><a href="#vejo-dados-antigos-no-celular-apos-atualizacao">Vejo dados antigos no celular apos atualizacao</a></li>
+<li><a href="#o-navegador-diz-que-o-localstorage-esta-cheio">O navegador diz que o localStorage esta cheio</a></li>
+<li><a href="#imprimi-e-saiu-cortado">Imprimi e saiu cortado</a></li>
+<li><a href="#atalho-escape-nao-sai-do-modo-apresentacao">Atalho Escape nao sai do modo apresentacao</a></li>
+<li><a href="#pwa-nao-instala">PWA nao instala</a></li>
+</ul>
+<h2 id="importei-um-json-e-nada-aconteceu">Importei um JSON e nada aconteceu</h2>
+<p><strong>Sintoma</strong>: clicou em <strong>Carregar evento</strong> ou <strong>Carregar projeto</strong>, escolheu o arquivo, e a interface não mudou — ou apareceu um banner vermelho em <code>#errors</code>.</p>
+<p><strong>Causa provável</strong>: o JSON é inválido (sintaxe quebrada) ou está faltando alguma chave obrigatória do schema. O motor recusa a carga em vez de aceitar dados parciais.</p>
+<p><strong>O que fazer</strong>:</p>
+<ol>
+<li>Leia a mensagem em <code>#errors</code> (vermelho) ou <code>#warnings</code> (amarelo) no topo do conteúdo principal — ela indica o motivo da recusa (ex.: &quot;Falta chave: pesos&quot;, &quot;IDs de igrejas duplicados&quot;).</li>
+<li>Abra o arquivo num editor de texto e valide-o contra o schema:<ul>
+<li><code>schema/evento.schema.json</code> para <code>.evento.json</code>.</li>
+<li><code>schema/projeto.schema.json</code> para <code>.projeto.json</code>.</li>
+</ul></li>
+<li>Verifique especialmente:<ul>
+<li>JSON válido (sem vírgula sobrando, aspas duplas em todas as strings).</li>
+<li>As 7 chaves de <code>pesos</code> (<code>inscricao</code>, <code>pontualidade</code>, <code>uniforme</code>, <code>biblia</code>, <code>visitante</code>, <code>animacao</code>, <code>mau_comportamento</code>).</li>
+<li>As 3 chaves de <code>medalhas</code> (<code>ou</code>, <code>pt</code>, <code>br</code> — não <code>ouro</code>/<code>prata</code>/<code>bronze</code>).</li>
+<li>IDs em <code>igrejas[]</code> e <code>provas[]</code> únicos e no formato <code>^[a-z0-9_-]+$</code>.</li>
+</ul></li>
+<li>Corrija o arquivo e tente carregar de novo.</li>
+</ol>
+<h2 id="vejo-dados-antigos-no-celular-apos-atualizacao">Vejo dados antigos no celular apos atualizacao</h2>
+<p><strong>Sintoma</strong>: você atualizou o app (novo deploy ou nova versão do <code>.projeto.json</code>), mas o celular continua mostrando o estado anterior.</p>
+<p><strong>Causa provável</strong>: o service worker (<code>sw.js</code>) está servindo a versão em cache. É o comportamento esperado do PWA para funcionar offline, mas atrapalha quando você quer forçar o refresh.</p>
+<p><strong>O que fazer</strong> (Chrome/Edge no Android, Safari no iOS é semelhante):</p>
+<ol>
+<li>Abra DevTools (no desktop) → aba <strong>Application</strong> → <strong>Service Workers</strong>.</li>
+<li>Marque <strong>Update on reload</strong> e recarregue a página.</li>
+<li>Se persistir, clique em <strong>Unregister</strong> e recarregue.</li>
+<li>No celular, alternativa rápida: desinstale o atalho do PWA e reinstale a partir da página atualizada. O cache antigo é descartado.</li>
+<li>Em último caso, limpe o site nos ajustes do navegador (cuidado: também apaga o <code>localStorage</code> — exporte um <code>.projeto.json</code> antes).</li>
+</ol>
+<h2 id="o-navegador-diz-que-o-localstorage-esta-cheio">O navegador diz que o localStorage esta cheio</h2>
+<p><strong>Sintoma</strong>: aparece um banner vermelho avisando que não foi possível salvar localmente. A mensagem em <code>#errors</code> cita falha de <code>localStorage</code>.</p>
+<p><strong>Causa provável</strong>: o navegador limita o <code>localStorage</code> a 5–10 MB por origem, e você acumulou muitos eventos salvos (cada projeto pode ter centenas de KB com todas as provas e igrejas).</p>
+<p><strong>O que fazer</strong>:</p>
+<ol>
+<li>Abra <strong>Eventos salvos</strong> na toolbar.</li>
+<li>Para cada evento que você não usa mais:<ul>
+<li>Clique em <strong>Exportar</strong> primeiro (gera um <code>.projeto.json</code> para arquivo) — assim você não perde o histórico, só tira do navegador.</li>
+<li>Em seguida, clique em <strong>Remover</strong> (modal-confirm acessível).</li>
+</ul></li>
+<li>Repita até o banner vermelho desaparecer e o salvamento automático voltar.</li>
+</ol>
+<p>Se mesmo após limpar a lista o aviso continuar, pode ser que outro site na mesma origem esteja consumindo a cota. Em PWA isolada, isso é raro.</p>
+<h2 id="imprimi-o-relatorio-oficial-e-saiu-cortado">Imprimi o relatorio oficial e saiu cortado</h2>
+<p><strong>Sintoma</strong>: ao gerar o PDF do <strong>relatório oficial</strong> (aba Relatórios → Gerar → Imprimir / Salvar PDF), colunas ficaram cortadas ou alguma seção saiu parcial.</p>
+<p><strong>Causa provável</strong>: o navegador ajustou a escala automaticamente e a tabela ficou mais larga do que cabe na orientação retrato — comum no perfil <strong>Completo</strong>.</p>
+<p><strong>O que fazer</strong>: no diálogo de impressão do navegador:</p>
+<ol>
+<li>Mude <strong>Orientação</strong> para <strong>Paisagem</strong> se o perfil Completo tiver tabelas largas.</li>
+<li>Em <strong>Mais configurações</strong> → <strong>Escala</strong>, escolha <strong>Padrão</strong> ou <strong>Ajustar à página</strong> (em vez de <strong>100%</strong>).</li>
+<li>Confira <strong>Margens</strong>: padrão funciona para a maioria dos casos; em tabelas muito largas, escolha <strong>Mínimas</strong>.</li>
+<li>Habilite <strong>Gráficos de fundo</strong> se quiser preservar fundos coloridos.</li>
+</ol>
+<p>O <code>@media print</code> do relatório oficial esconde a interface e formata o documento em A4; a paginação física é responsabilidade do navegador.</p>
+<h2 id="atalho-escape-nao-sai-do-modo-apresentacao">Atalho Escape nao sai do modo apresentacao</h2>
+<p><strong>Sintoma</strong>: você entrou em <strong>Modo apresentação</strong> e <code>Escape</code> não devolve a UI normal.</p>
+<p><strong>Causa provável</strong>: o foco do teclado pode ter saído da página (clicou fora, ou um overlay capturou a tecla). Em algumas versões do <strong>iOS Safari</strong>, <code>Escape</code> em teclados externos não chega ao JavaScript.</p>
+<p><strong>O que fazer</strong>:</p>
+<ol>
+<li>Clique no botão grande <strong>Sair da apresentação</strong> (canto da tela). Ele sempre funciona, mesmo sem foco no teclado.</li>
+<li>Em seguida, clique novamente em qualquer parte da página para devolver o foco.</li>
+<li>Se quiser deixar <code>Escape</code> funcional para a próxima vez, clique no fundo da apresentação primeiro (para garantir foco) antes de pressionar a tecla.</li>
+</ol>
+<h2 id="pwa-nao-instala">PWA nao instala</h2>
+<p><strong>Sintoma</strong>: nenhum ícone de instalação aparece no navegador, ou o botão &quot;Adicionar à tela inicial&quot; não cria atalho funcional.</p>
+<p><strong>Causa provável</strong>: a PWA exige uma origem segura. O navegador só oferece a instalação quando a página é servida via <code>https://</code> (qualquer host) ou <code>http://</code> em <strong>localhost</strong>. Abrir como <code>file://</code> ou via IP em rede local sem HTTPS bloqueia a instalação.</p>
+<p><strong>O que fazer</strong>:</p>
+<ol>
+<li>Confirme que a URL da barra começa com <code>https://</code> (ou <code>http://localhost:...</code>).</li>
+<li>Em DevTools → <strong>Application</strong> → <strong>Manifest</strong>, confira:<ul>
+<li>O <code>manifest.webmanifest</code> foi carregado sem erro.</li>
+<li>O service worker está registrado e ativo (aba <strong>Service Workers</strong>).</li>
+<li>Os ícones em <code>icons/</code> estão acessíveis.</li>
+</ul></li>
+<li>Se estiver rodando localmente, sirva com qualquer servidor HTTP simples (ex.: extensão &quot;Live Server&quot;, <code>python3 -m http.server</code>, ou similar) e acesse via <code>localhost</code>.</li>
+<li>Force um refresh duro (<code>Ctrl+Shift+R</code> / <code>Cmd+Shift+R</code>) para o navegador reavaliar o manifesto.</li>
+</ol>
+      </article>
+    </main>
+    <footer class="docs-footer">
+      <p>
+        <a href="../../index.html">Abrir o app</a> ·
+        <a href="../index.html">Índice</a> ·
+        <a href="../changelog.html">Changelog</a>
+      </p>
+    </footer>
+  </body>
+</html>

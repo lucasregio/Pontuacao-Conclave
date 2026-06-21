@@ -3,6 +3,7 @@
  */
 (function () {
   var E = window.ConclaveEngine;
+  var R = window.ConclaveRelatorio;
   var state = {
     evento: null,
     dados: null,
@@ -31,10 +32,12 @@
     relatorioSectionCollapsed: {},
     /** Relatório «Por prova»: colapso por prova (igual ideia ao pódio) */
     relatorioPodiumCollapsed: {},
-    /** true → o "Relatório oficial" já foi gerado nesta sessão (mantém-se
-     *  visível em re-renders de Relatórios; resetado ao trocar de evento ou
-     *  limpar dados). */
-    relatorioOficialGerado: false,
+    /** { resumo: boolean, completo: boolean } — PDFs já gerados nesta sessão */
+    relatorioOficialGeradoPerfil: { resumo: false, completo: false },
+    /** { resumo: boolean, completo: boolean } — pré-visualização colapsada */
+    relatorioPreviewCollapsed: { resumo: false, completo: false },
+    /** blob: URL temporária do PDF embutido aberto na sessão (revogada ao trocar). */
+    regulamentoBlobUrl: null,
   };
 
   function $(sel) {
@@ -78,8 +81,8 @@
   }
 
   /** Popula `#kpi-strip` na topbar com chips compactos (igrejas, provas,
-   *  % pódios e líder atual). Vazio quando não há evento — o CSS esconde
-   *  o container automaticamente via `.kpi-strip:not(:empty)`. */
+   *  % pódios). Vazio quando não há evento — o CSS esconde o container
+   *  automaticamente via `.kpi-strip:not(:empty)`. */
   function renderKpiStrip() {
     var strip = $("#kpi-strip");
     if (!strip) return;
@@ -687,31 +690,117 @@
     return cand;
   }
 
+  /** Limite prático para PDF embutido (localStorage + export JSON). */
+  var REGULAMENTO_MAX_BYTES = 4 * 1024 * 1024;
+
+  function isRegulamentoEmbedded(url) {
+    return (
+      String(url || "")
+        .trim()
+        .indexOf("data:") === 0
+    );
+  }
+
+  function isRegulamentoExternal(url) {
+    var s = String(url || "").trim();
+    return s.indexOf("http://") === 0 || s.indexOf("https://") === 0 || s.indexOf("//") === 0;
+  }
+
+  function revokeRegulamentoBlobUrl() {
+    if (state.regulamentoBlobUrl) {
+      URL.revokeObjectURL(state.regulamentoBlobUrl);
+      state.regulamentoBlobUrl = null;
+    }
+  }
+
+  /** Converte data URL (PDF embutido) em Blob — necessário porque window.open(data:…) falha com URLs longas. */
+  function dataUrlToBlob(dataUrl) {
+    try {
+      var s = String(dataUrl || "");
+      var comma = s.indexOf(",");
+      if (comma < 0) return null;
+      var header = s.slice(0, comma);
+      var b64 = s.slice(comma + 1);
+      var mime = "application/pdf";
+      var mimeMatch = header.match(/^data:([^;,]+)/);
+      if (mimeMatch) mime = mimeMatch[1];
+      var binary = atob(b64);
+      var len = binary.length;
+      var bytes = new Uint8Array(len);
+      for (var i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+      return new Blob([bytes], { type: mime });
+    } catch (e) {
+      console.warn(e);
+      return null;
+    }
+  }
+
+  function openRegulamentoViaAnchor(href) {
+    var a = document.createElement("a");
+    a.href = href;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  /** Abre o regulamento numa nova aba (PDF embutido, URL externa ou static/). */
+  function openRegulamentoUrl(url) {
+    var u = String(url || "").trim();
+    if (!u) return;
+
+    if (isRegulamentoEmbedded(u)) {
+      var blob = dataUrlToBlob(u);
+      if (!blob) {
+        showFeedback("Não foi possível abrir o PDF carregado.", "error");
+        return;
+      }
+      revokeRegulamentoBlobUrl();
+      state.regulamentoBlobUrl = URL.createObjectURL(blob);
+      var opened = window.open(state.regulamentoBlobUrl, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        openRegulamentoViaAnchor(state.regulamentoBlobUrl);
+        showFeedback(
+          "Se o PDF não abriu, permita pop-ups para esta página e tente novamente.",
+          "warn"
+        );
+      }
+      return;
+    }
+
+    var resolved = resolveAssetUrl(u);
+    var win = window.open(resolved, "_blank", "noopener,noreferrer");
+    if (!win) {
+      openRegulamentoViaAnchor(resolved);
+      if (isRegulamentoExternal(u)) {
+        showFeedback(
+          "Se o link não abriu, verifique pop-ups bloqueados ou a URL informada.",
+          "warn"
+        );
+      } else {
+        showFeedback(
+          "Se o PDF não abriu, confirme que o arquivo existe em static/ ou carregue-o pelo computador.",
+          "warn"
+        );
+      }
+    }
+  }
+
   function resolveAssetUrl(path) {
     var p = String(path || "").trim();
     if (!p) return "";
+    if (p.indexOf("data:") === 0 || p.indexOf("blob:") === 0) return p;
     if (p.indexOf("http://") === 0 || p.indexOf("https://") === 0 || p.indexOf("//") === 0)
       return p;
     return encodeURI(p);
   }
 
-  /** Valor mostrado no campo (sem o prefixo static/ quando for ficheiro local) */
-  function regulamentoDisplayFromStored(stored) {
-    var s = String(stored || "").trim();
-    if (!s) return "";
-    if (s.indexOf("http://") === 0 || s.indexOf("https://") === 0 || s.indexOf("//") === 0) {
-      return s;
-    }
-    if (s.indexOf("static/") === 0) {
-      return s.slice(7);
-    }
-    return s;
-  }
-
-  /** Monta meta.regulamentoUrl a partir do texto do utilizador */
+  /** Monta meta.regulamentoUrl a partir de URL externa ou caminho legado em static/. */
   function regulamentoUrlFromInput(raw) {
     var s = String(raw || "").trim();
     if (!s) return "";
+    if (s.indexOf("data:") === 0) return s;
     if (s.indexOf("http://") === 0 || s.indexOf("https://") === 0 || s.indexOf("//") === 0) {
       return s;
     }
@@ -720,6 +809,81 @@
       return path;
     }
     return "static/" + path;
+  }
+
+  function regulamentoLabelFromMeta(meta) {
+    meta = meta || {};
+    var u = String(meta.regulamentoUrl || "").trim();
+    if (!u) return "Nenhum arquivo selecionado";
+    if (isRegulamentoEmbedded(u)) return meta.regulamentoNome || "PDF carregado";
+    if (isRegulamentoExternal(u)) return u;
+    if (u.indexOf("static/") === 0) return u;
+    return "static/" + u;
+  }
+
+  function clearRegulamentoMeta() {
+    if (!state.evento || !state.evento.meta) return;
+    delete state.evento.meta.regulamentoUrl;
+    delete state.evento.meta.regulamentoNome;
+  }
+
+  function refreshRegulamentoConfigUI() {
+    var nameEl = $("#cfg-regulamento-filename");
+    var urlInp = $("#cfg-regulamento-url");
+    var clearBtn = $("#cfg-regulamento-clear");
+    if (!state.evento || !state.evento.meta) return;
+    var meta = state.evento.meta;
+    var hasReg = !!(meta.regulamentoUrl && String(meta.regulamentoUrl).trim());
+    if (nameEl) {
+      nameEl.textContent = regulamentoLabelFromMeta(meta);
+      nameEl.classList.toggle("config-regulamento-filename--empty", !hasReg);
+    }
+    if (urlInp) {
+      var u = String(meta.regulamentoUrl || "").trim();
+      urlInp.value = isRegulamentoExternal(u) ? u : "";
+    }
+    if (clearBtn) clearBtn.disabled = !hasReg;
+  }
+
+  function afterRegulamentoChange() {
+    scheduleSave();
+    validate();
+    refreshDerivedPanels();
+    setHeader();
+    updateRegulamentoButton();
+    refreshRegulamentoConfigUI();
+  }
+
+  function onFileRegulamento(file) {
+    if (!file || !state.evento) return;
+    var isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name || "");
+    if (!isPdf) {
+      showFeedback("Selecione um arquivo PDF (.pdf).", "error");
+      return;
+    }
+    if (file.size > REGULAMENTO_MAX_BYTES) {
+      showFeedback(
+        "O PDF excede o limite de " +
+          Math.round(REGULAMENTO_MAX_BYTES / (1024 * 1024)) +
+          " MB. Escolha um arquivo menor ou use uma URL externa.",
+        "error"
+      );
+      return;
+    }
+    var r = new FileReader();
+    r.onload = function () {
+      if (!state.evento.meta) state.evento.meta = {};
+      state.evento.meta.regulamentoUrl = r.result;
+      state.evento.meta.regulamentoNome = file.name || "regulamento.pdf";
+      var urlInp = $("#cfg-regulamento-url");
+      if (urlInp) urlInp.value = "";
+      afterRegulamentoChange();
+      showFeedback("Regulamento «" + (file.name || "PDF") + "» carregado.", "info");
+    };
+    r.onerror = function () {
+      showFeedback("Falha ao ler o PDF. Tente novamente.", "error");
+    };
+    r.readAsDataURL(file);
   }
 
   function updateRegulamentoButton() {
@@ -735,7 +899,7 @@
     btn.disabled = !ok;
     btn.title = ok
       ? "Abrir regulamento (PDF) numa nova aba"
-      : "Configure o link ou caminho do PDF em Configuração → Geral";
+      : "Configure o regulamento em Configuração → Geral";
   }
 
   /** Ordem das colunas: ordem em categorias[]; provas sem lista caem no fim (legado). */
@@ -1548,8 +1712,7 @@
   /** Calcula KPIs derivados do estado atual para o Dashboard e topbar:
    *  - igrejas: total cadastrado;
    *  - provas: total cadastrado;
-   *  - podiosPct: % de provas com ao menos 1 medalha atribuída;
-   *  - top1: { igreja, total } ou null se não computável. */
+   *  - podiosPct: % de provas com ao menos 1 medalha atribuída. */
   function computeKpis() {
     var ev = state.evento;
     var dados = state.dados || {};
@@ -1569,18 +1732,11 @@
       if (algum) preenchidas++;
     });
     var podiosPct = provas ? Math.round((preenchidas / provas) * 100) : 0;
-    var top1 = null;
-    var out = compute();
-    if (out) {
-      var ord = E.classificacaoOrdenada(out.detalhes, out.ranks, out.tiebreakByIgreja);
-      if (ord && ord.length) top1 = { igreja: ord[0].igreja, total: ord[0].total };
-    }
     return {
       igrejas: igrejas,
       provas: provas,
       podiosPreenchidos: preenchidas,
       podiosPct: podiosPct,
-      top1: top1,
     };
   }
 
@@ -1654,7 +1810,7 @@
       wrap.appendChild(docs);
     } else {
       // -------------- Resumo (com evento) --------------
-      var kpis = computeKpis() || { igrejas: 0, provas: 0, podiosPct: 0, top1: null };
+      var kpis = computeKpis() || { igrejas: 0, provas: 0, podiosPct: 0 };
       var meta = ev.meta || {};
 
       var summary = document.createElement("section");
@@ -1682,11 +1838,6 @@
           kpis.podiosPreenchidos + " de " + kpis.provas + " preenchidos"
         )
       );
-      if (kpis.top1) {
-        kpiGrid.appendChild(
-          buildKpiCard("Líder atual", escapeHtml(kpis.top1.igreja), fmt(kpis.top1.total) + " pts")
-        );
-      }
       wrap.appendChild(kpiGrid);
 
       var actions = document.createElement("section");
@@ -1854,7 +2005,7 @@
         goToTab("relatorios");
         // Após render(), dispara o "Gerar relatório oficial" se existir.
         setTimeout(function () {
-          var bg = document.getElementById("btn-relatorio-oficial-gerar");
+          var bg = document.getElementById("btn-relatorio-gerar-resumo");
           if (bg) bg.click();
         }, 0);
       });
@@ -1922,42 +2073,68 @@
       '" /></label>' +
       "</div>";
 
-    var storedReg = meta.regulamentoUrl || "";
-    var regTrim = String(storedReg).trim();
-    var isExternal =
-      regTrim.indexOf("http://") === 0 ||
-      regTrim.indexOf("https://") === 0 ||
-      regTrim.indexOf("//") === 0;
-    var regLab = document.createElement("label");
-    regLab.className = "config-field config-field--full";
+    var regBlock = document.createElement("div");
+    regBlock.className = "config-field config-field--full config-regulamento-block";
     var spReg = document.createElement("span");
     spReg.textContent = "Regulamento (PDF)";
-    regLab.appendChild(spReg);
-    var regRow = document.createElement("div");
-    regRow.className =
-      "config-regulamento-row" + (isExternal ? " config-regulamento-row--external" : "");
-    if (!isExternal) {
-      var pref = document.createElement("span");
-      pref.className = "config-regulamento-prefix";
-      pref.textContent = "static/";
-      pref.setAttribute("title", "Ficheiros na pasta static/ na raiz do projeto");
-      regRow.appendChild(pref);
-    }
-    var regInp = document.createElement("input");
-    regInp.type = "text";
-    regInp.id = "cfg-regulamento-input";
-    regInp.setAttribute("spellcheck", "false");
-    regInp.placeholder = isExternal ? "https://…" : "ex.: regulamento.pdf";
-    regInp.value = isExternal ? regTrim : regulamentoDisplayFromStored(storedReg);
-    regRow.appendChild(regInp);
-    regLab.appendChild(regRow);
-    gridGeral.appendChild(regLab);
+    regBlock.appendChild(spReg);
+
+    var picker = document.createElement("div");
+    picker.className = "config-regulamento-picker";
+
+    var nameEl = document.createElement("span");
+    nameEl.id = "cfg-regulamento-filename";
+    nameEl.className = "config-regulamento-filename";
+    var hasReg = !!(meta.regulamentoUrl && String(meta.regulamentoUrl).trim());
+    if (!hasReg) nameEl.classList.add("config-regulamento-filename--empty");
+    nameEl.textContent = regulamentoLabelFromMeta(meta);
+    picker.appendChild(nameEl);
+
+    var actions = document.createElement("div");
+    actions.className = "config-regulamento-actions";
+
+    var loadLab = document.createElement("label");
+    loadLab.className = "config-add-btn config-regulamento-load";
+    loadLab.textContent = "Carregar arquivo";
+    var fileInp = document.createElement("input");
+    fileInp.type = "file";
+    fileInp.id = "cfg-regulamento-file";
+    fileInp.accept = ".pdf,application/pdf";
+    loadLab.appendChild(fileInp);
+    actions.appendChild(loadLab);
+
+    var clearBtn = document.createElement("button");
+    clearBtn.type = "button";
+    clearBtn.id = "cfg-regulamento-clear";
+    clearBtn.className = "config-danger-btn";
+    clearBtn.textContent = "Remover";
+    clearBtn.disabled = !hasReg;
+    actions.appendChild(clearBtn);
+
+    picker.appendChild(actions);
+    regBlock.appendChild(picker);
+
+    var urlLab = document.createElement("label");
+    urlLab.className = "config-field config-regulamento-url-field";
+    var urlSp = document.createElement("span");
+    urlSp.textContent = "URL externa (opcional)";
+    urlLab.appendChild(urlSp);
+    var urlInp = document.createElement("input");
+    urlInp.type = "text";
+    urlInp.id = "cfg-regulamento-url";
+    urlInp.setAttribute("spellcheck", "false");
+    urlInp.placeholder = "https://…";
+    var regTrim = String(meta.regulamentoUrl || "").trim();
+    urlInp.value = isRegulamentoExternal(regTrim) ? regTrim : "";
+    urlLab.appendChild(urlInp);
+    regBlock.appendChild(urlLab);
+
+    gridGeral.appendChild(regBlock);
 
     gridGeral.insertAdjacentHTML(
       "beforeend",
       '<p class="config-hint config-field--full" style="margin-top: -0.25rem">' +
-        "Regulamento: coloque o PDF em <code>static/</code> e escreva só o nome do ficheiro (ou cole uma URL completa). " +
-        "O botão «Regulamento» abre o documento.</p>"
+        "Selecione um PDF do computador ou informe um link. O botão «Regulamento» abre o documento.</p>"
     );
 
     return [gridGeral];
@@ -2341,24 +2518,43 @@
       });
     });
 
-    var cfgRegInp = $("#cfg-regulamento-input");
-    if (cfgRegInp) {
-      function syncRegulamento() {
+    var cfgRegFile = $("#cfg-regulamento-file");
+    if (cfgRegFile) {
+      cfgRegFile.addEventListener("change", function () {
+        var f = cfgRegFile.files[0];
+        if (f) onFileRegulamento(f);
+        cfgRegFile.value = "";
+      });
+    }
+
+    var cfgRegClear = $("#cfg-regulamento-clear");
+    if (cfgRegClear) {
+      cfgRegClear.addEventListener("click", function () {
+        if (!state.evento || !state.evento.meta) return;
+        clearRegulamentoMeta();
+        afterRegulamentoChange();
+      });
+    }
+
+    var cfgRegUrl = $("#cfg-regulamento-url");
+    if (cfgRegUrl) {
+      function syncRegulamentoUrl() {
         if (!state.evento.meta) state.evento.meta = {};
-        var v = cfgRegInp.value.trim();
-        state.evento.meta.regulamentoUrl = regulamentoUrlFromInput(v);
-        var row = cfgRegInp.closest(".config-regulamento-row");
-        var pref = row && row.querySelector(".config-regulamento-prefix");
-        var ext = v.length > 0 && (/^https?:\/\//i.test(v) || v.indexOf("//") === 0);
-        if (row) row.classList.toggle("config-regulamento-row--external", ext);
-        if (pref) pref.style.display = ext ? "none" : "";
-        scheduleSave();
-        validate();
-        refreshDerivedPanels();
-        setHeader();
+        var v = cfgRegUrl.value.trim();
+        if (!v) {
+          var cur = String(state.evento.meta.regulamentoUrl || "").trim();
+          if (isRegulamentoExternal(cur)) {
+            delete state.evento.meta.regulamentoUrl;
+            delete state.evento.meta.regulamentoNome;
+          }
+        } else {
+          state.evento.meta.regulamentoUrl = regulamentoUrlFromInput(v);
+          delete state.evento.meta.regulamentoNome;
+        }
+        afterRegulamentoChange();
       }
-      cfgRegInp.addEventListener("change", syncRegulamento);
-      cfgRegInp.addEventListener("input", syncRegulamento);
+      cfgRegUrl.addEventListener("change", syncRegulamentoUrl);
+      cfgRegUrl.addEventListener("input", syncRegulamentoUrl);
     }
 
     host.querySelectorAll(".cfg-cat-nome").forEach(function (inp) {
@@ -3478,6 +3674,120 @@
     );
   }
 
+  var RELATORIO_PERFIS = ["resumo", "completo"];
+
+  function relatorioHostId(perfil) {
+    return "relatorio-oficial-host-" + R.normalizePerfil(perfil);
+  }
+
+  function resetRelatorioOficialGerado() {
+    state.relatorioOficialGeradoPerfil = { resumo: false, completo: false };
+    state.relatorioPreviewCollapsed = { resumo: false, completo: false };
+  }
+
+  function isRelatorioPreviewCollapsed(perfil) {
+    var map = state.relatorioPreviewCollapsed;
+    if (!map) return false;
+    return !!map[R.normalizePerfil(perfil)];
+  }
+
+  function appendRelatorioPreviewCollapsible(block, perfil) {
+    var previewSection = document.createElement("section");
+    previewSection.className =
+      "config-section config-section--collapsible relatorio-doc-preview-section";
+    if (isRelatorioPreviewCollapsed(perfil)) {
+      previewSection.classList.add("is-collapsed");
+    }
+
+    var previewHead = document.createElement("button");
+    previewHead.type = "button";
+    previewHead.className = "config-section-head";
+    previewHead.setAttribute("data-relatorio-preview-toggle", perfil);
+    previewHead.setAttribute(
+      "aria-expanded",
+      isRelatorioPreviewCollapsed(perfil) ? "false" : "true"
+    );
+    previewHead.setAttribute("aria-controls", "relatorio-preview-body-" + perfil);
+    var previewTitle = document.createElement("span");
+    previewTitle.className = "config-section-head-title";
+    previewTitle.textContent = "Pré-visualização";
+    var previewChev = document.createElement("span");
+    previewChev.className = "config-section-chevron";
+    previewChev.setAttribute("aria-hidden", "true");
+    previewChev.textContent = "▼";
+    previewHead.appendChild(previewTitle);
+    previewHead.appendChild(previewChev);
+
+    var previewBody = document.createElement("div");
+    previewBody.className = "config-section-body";
+    previewBody.id = "relatorio-preview-body-" + perfil;
+
+    var oficialHost = document.createElement("div");
+    oficialHost.id = relatorioHostId(perfil);
+    oficialHost.className = "relatorio-oficial-host";
+    renderRelatorioOficial(oficialHost, { perfil: perfil });
+    previewBody.appendChild(oficialHost);
+
+    previewSection.appendChild(previewHead);
+    previewSection.appendChild(previewBody);
+    block.appendChild(previewSection);
+  }
+
+  function isRelatorioPerfilGerado(perfil) {
+    return !!state.relatorioOficialGeradoPerfil[R.normalizePerfil(perfil)];
+  }
+
+  function gerarRelatorioOficial(perfil) {
+    perfil = R.normalizePerfil(perfil);
+    state.relatorioOficialGeradoPerfil[perfil] = true;
+    var host = document.getElementById(relatorioHostId(perfil));
+    if (host) {
+      renderRelatorioOficial(host, { perfil: perfil });
+    }
+    return host;
+  }
+
+  function ensureRelatorioDom(perfil) {
+    perfil = R.normalizePerfil(perfil);
+    state.relatorioOficialGeradoPerfil[perfil] = true;
+    var host = document.getElementById(relatorioHostId(perfil));
+    if (!host) {
+      renderRelatorios();
+      wireRelatorios();
+      host = document.getElementById(relatorioHostId(perfil));
+    }
+    if (host) {
+      renderRelatorioOficial(host, { perfil: perfil });
+    }
+    return host;
+  }
+
+  function imprimirRelatorioOficial(perfil) {
+    if (typeof window === "undefined" || typeof window.print !== "function") return;
+    perfil = R.normalizePerfil(perfil);
+    ensureRelatorioDom(perfil);
+    var meta = state.evento && state.evento.meta ? state.evento.meta : {};
+    var prevTitle = document.title;
+    document.title = R.buildRelatorioDocumentTitle(meta.slug, perfil);
+    document.body.classList.add("relatorio-print-mode");
+    document.body.setAttribute("data-relatorio-print-perfil", perfil);
+    showFeedback(
+      "Abrindo a impressão do " +
+        R.relatorioPerfilLabel(perfil) +
+        ". No diálogo, selecione «Salvar como PDF» se quiser gerar um arquivo.",
+      "info"
+    );
+    function cleanupPrint() {
+      document.body.classList.remove("relatorio-print-mode");
+      document.body.removeAttribute("data-relatorio-print-perfil");
+      document.title = prevTitle;
+    }
+    window.addEventListener("afterprint", cleanupPrint, { once: true });
+    setTimeout(function () {
+      window.print();
+    }, 80);
+  }
+
   function renderRelatorios() {
     var host = $("#panel-relatorios");
     if (!host) return;
@@ -3490,20 +3800,68 @@
     var outer = document.createElement("div");
     outer.className = "relatorio-wrap";
 
-    // Ações do Relatório oficial — markup acordado com o web-design-specialist.
-    var acoes = document.createElement("div");
-    acoes.className = "relatorio-acoes";
-    var btnGerar = document.createElement("button");
-    btnGerar.type = "button";
-    btnGerar.id = "btn-relatorio-oficial-gerar";
-    btnGerar.className = "pill-btn pill-btn--primary";
-    btnGerar.textContent = "Gerar relatório oficial";
-    var btnPrint = document.createElement("button");
-    btnPrint.type = "button";
-    btnPrint.id = "btn-relatorio-oficial-print";
-    btnPrint.className = "pill-btn";
-    btnPrint.textContent = "Imprimir / Salvar PDF";
-    btnPrint.hidden = true;
+    // Documentos PDF — Resumo e Oficial completo (geração e impressão independentes).
+    var docsWrap = document.createElement("div");
+    docsWrap.className = "relatorio-docs";
+
+    RELATORIO_PERFIS.forEach(function (perfil) {
+      var block = document.createElement("section");
+      block.className = "relatorio-doc-block";
+      block.setAttribute("data-perfil", perfil);
+
+      var title = document.createElement("h2");
+      title.className = "relatorio-doc-block__title";
+      title.textContent =
+        perfil === "resumo"
+          ? "Resumo (divulgação)"
+          : "Oficial completo (auditoria)";
+      block.appendChild(title);
+
+      var desc = document.createElement("p");
+      desc.className = "relatorio-doc-block__desc hint";
+      desc.textContent =
+        perfil === "resumo"
+          ? "Capa, Top 3, pódio por prova e encerramento com assinaturas — ideal para divulgar."
+          : "Tudo do resumo mais classificação, participação, avisos e critérios — para arquivo e auditoria.";
+      block.appendChild(desc);
+
+      var blockAcoes = document.createElement("div");
+      blockAcoes.className = "relatorio-doc-block__acoes";
+
+      var btnGerar = document.createElement("button");
+      btnGerar.type = "button";
+      btnGerar.className = "pill-btn pill-btn--primary";
+      btnGerar.id = "btn-relatorio-gerar-" + perfil;
+      btnGerar.textContent =
+        perfil === "resumo" ? "Gerar resumo" : "Gerar oficial completo";
+
+      var btnPrint = document.createElement("button");
+      btnPrint.type = "button";
+      btnPrint.id = "btn-relatorio-print-" + perfil;
+      btnPrint.className = "pill-btn";
+      btnPrint.textContent = "Imprimir / Salvar PDF";
+      btnPrint.hidden = !isRelatorioPerfilGerado(perfil);
+
+      blockAcoes.appendChild(btnGerar);
+      blockAcoes.appendChild(btnPrint);
+      block.appendChild(blockAcoes);
+
+      if (isRelatorioPerfilGerado(perfil)) {
+        appendRelatorioPreviewCollapsible(block, perfil);
+      }
+
+      docsWrap.appendChild(block);
+    });
+
+    outer.appendChild(docsWrap);
+
+    var consultaHead = document.createElement("h2");
+    consultaHead.className = "relatorio-consulta-title";
+    consultaHead.textContent = "Consulta rápida";
+    outer.appendChild(consultaHead);
+
+    var consultaAcoes = document.createElement("div");
+    consultaAcoes.className = "relatorio-consulta-acoes";
     var btnCsvPodio = document.createElement("button");
     btnCsvPodio.type = "button";
     btnCsvPodio.id = "btn-export-podio-csv";
@@ -3517,21 +3875,9 @@
     btnCopyMd.textContent = "Copiar resumo";
     btnCopyMd.title =
       "Copia um resumo em Markdown (top 3 + vencedoras por prova) para colar em mensagens.";
-    acoes.appendChild(btnGerar);
-    acoes.appendChild(btnPrint);
-    acoes.appendChild(btnCsvPodio);
-    acoes.appendChild(btnCopyMd);
-    outer.appendChild(acoes);
-
-    var oficialHost = document.createElement("div");
-    oficialHost.id = "relatorio-oficial-host";
-    outer.appendChild(oficialHost);
-
-    // Se já foi gerado nesta sessão, re-render mantém visível e atualizado.
-    if (state.relatorioOficialGerado) {
-      renderRelatorioOficial(oficialHost);
-      btnPrint.hidden = false;
-    }
+    consultaAcoes.appendChild(btnCsvPodio);
+    consultaAcoes.appendChild(btnCopyMd);
+    outer.appendChild(consultaAcoes);
 
     var wrap1 = document.createElement("div");
     wrap1.className = "table-wrap";
@@ -3613,35 +3959,52 @@
       });
     });
 
-    // Relatório oficial: gerar (renderiza dentro do host) e imprimir/salvar PDF.
-    var btnGerar = $("#btn-relatorio-oficial-gerar");
-    var btnPrint = $("#btn-relatorio-oficial-print");
-    var oficialHost = $("#relatorio-oficial-host");
-    if (btnGerar && oficialHost) {
-      btnGerar.addEventListener("click", function () {
-        renderRelatorioOficial(oficialHost);
-        state.relatorioOficialGerado = true;
-        if (btnPrint) {
-          btnPrint.hidden = false;
-          try {
-            btnPrint.focus();
-          } catch (_e) {
-            /* foco best-effort; alguns navegadores recusam focar botões recém-revelados */
+    RELATORIO_PERFIS.forEach(function (perfil) {
+      var btnGerar = $("#btn-relatorio-gerar-" + perfil);
+      var btnPrint = $("#btn-relatorio-print-" + perfil);
+      if (btnGerar) {
+        btnGerar.addEventListener("click", function () {
+          state.relatorioOficialGeradoPerfil[perfil] = true;
+          state.relatorioPreviewCollapsed[perfil] = false;
+          renderRelatorios();
+          wireRelatorios();
+          reactivatePanel();
+          var btnPrintAfter = $("#btn-relatorio-print-" + perfil);
+          if (btnPrintAfter) {
+            btnPrintAfter.hidden = false;
+            try {
+              btnPrintAfter.focus();
+            } catch (_e) {
+              /* foco best-effort */
+            }
           }
-        }
-        showFeedback(
-          "Relatório oficial gerado. Use «Imprimir / Salvar PDF» para arquivar.",
-          "info"
-        );
+          showFeedback(
+            R.relatorioPerfilLabel(perfil) + " gerado. Use «Imprimir / Salvar PDF» para arquivar.",
+            "info"
+          );
+        });
+      }
+      if (btnPrint) {
+        btnPrint.addEventListener("click", function () {
+          imprimirRelatorioOficial(perfil);
+        });
+      }
+    });
+
+    host
+      .querySelectorAll(".config-section-head[data-relatorio-preview-toggle]")
+      .forEach(function (btn) {
+        btn.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          var perfil = btn.getAttribute("data-relatorio-preview-toggle");
+          if (!perfil) return;
+          perfil = R.normalizePerfil(perfil);
+          state.relatorioPreviewCollapsed[perfil] = !isRelatorioPreviewCollapsed(perfil);
+          renderRelatorios();
+          wireRelatorios();
+          reactivatePanel();
+        });
       });
-    }
-    if (btnPrint) {
-      btnPrint.addEventListener("click", function () {
-        if (typeof window !== "undefined" && typeof window.print === "function") {
-          window.print();
-        }
-      });
-    }
 
     var btnCsvPodio = $("#btn-export-podio-csv");
     if (btnCsvPodio) {
@@ -3664,7 +4027,7 @@
    * (sem `innerHTML` com input do usuário) para evitar XSS via nomes de
    * igrejas/provas vindos de JSON importado.
    */
-  function renderRelatorioOficial(host) {
+  function renderRelatorioOficial(host, opts) {
     if (!host) return;
     host.innerHTML = "";
     var ev = state.evento;
@@ -3685,14 +4048,17 @@
       return;
     }
 
-    function el(tag, opts) {
+    var perfil = R.normalizePerfil(opts && opts.perfil);
+    var blocos = R.getRelatorioBlocos(perfil);
+
+    function el(tag, elOpts) {
       var node = document.createElement(tag);
-      if (opts) {
-        if (opts.className) node.className = opts.className;
-        if (opts.text != null) node.textContent = String(opts.text);
-        if (opts.attrs) {
-          Object.keys(opts.attrs).forEach(function (k) {
-            node.setAttribute(k, opts.attrs[k]);
+      if (elOpts) {
+        if (elOpts.className) node.className = elOpts.className;
+        if (elOpts.text != null) node.textContent = String(elOpts.text);
+        if (elOpts.attrs) {
+          Object.keys(elOpts.attrs).forEach(function (k) {
+            node.setAttribute(k, elOpts.attrs[k]);
           });
         }
       }
@@ -3752,17 +4118,61 @@
       tableWrap.appendChild(table);
       parent.appendChild(tableWrap);
     }
+    function appendBlocoPodio(parent) {
+      parent.appendChild(el("h3", { text: "Pódio por prova" }));
+      var algumaProva = false;
+      PROVA_TIPO_ORDER.forEach(function (tipo) {
+        var grouped = groupProvasByCategoria(tipo);
+        var listTipo = [];
+        grouped.order.forEach(function (catKey) {
+          var list = grouped.groups[catKey] || [];
+          list.forEach(function (p) {
+            listTipo.push({ catKey: catKey, p: p });
+          });
+        });
+        if (!listTipo.length) return;
+        algumaProva = true;
+        parent.appendChild(el("h4", { text: labelProvaTipo(tipo) }));
+        listTipo.forEach(function (item) {
+          var p = item.p;
+          var card = el("div", {
+            className: "relatorio-oficial__prova",
+            attrs: { "data-prova": p.id },
+          });
+          card.appendChild(
+            el("p", {
+              className: "relatorio-oficial__prova-titulo",
+              text: labelCategoria(item.catKey) + " — " + nomeProvaExibicao(p),
+            })
+          );
+          var ol = el("ol", { className: "relatorio-oficial__podio" });
+          var places = (dados.podium && dados.podium[p.id]) || {};
+          ["ou", "pt", "br"].forEach(function (mk) {
+            var ent = places[mk] || {};
+            var li = document.createElement("li");
+            li.setAttribute("data-medalha", mk);
+            var nome;
+            if (ent.igrejaId) nome = igrejaNome(ent.igrejaId) || "—";
+            else if (ent.nomeLivre && String(ent.nomeLivre).trim())
+              nome = String(ent.nomeLivre).trim();
+            else nome = "—";
+            var comp = ent.competidor ? String(ent.competidor).trim() : "";
+            var txt = medalLabel(mk) + " — " + nome;
+            if (comp) txt += " (" + comp + ")";
+            li.textContent = txt;
+            ol.appendChild(li);
+          });
+          card.appendChild(ol);
+          parent.appendChild(card);
+        });
+      });
+      if (!algumaProva) {
+        parent.appendChild(el("p", { text: "Nenhuma prova cadastrada." }));
+      }
+    }
 
     var meta = ev.meta || {};
     var schemaVersion = meta.schemaVersion || CURRENT_SCHEMA_VERSION;
-    var slug = meta.slug || "";
-    var horarioInicio = meta.horarioInicio || "";
-    var horarioFim = meta.horarioEncerramento || "";
-    var horarioTxt;
-    if (horarioInicio && horarioFim) horarioTxt = horarioInicio + " — " + horarioFim;
-    else if (horarioInicio) horarioTxt = horarioInicio;
-    else if (horarioFim) horarioTxt = horarioFim;
-    else horarioTxt = "—";
     var temaTexto = isErUiTheme() ? "ER" : "MR";
     var agora = new Date();
     var agoraTxt = fmtDataHora(agora);
@@ -3786,307 +4196,304 @@
 
     var doc = el("section", {
       className: "relatorio-oficial",
-      attrs: { "aria-label": "Relatório oficial" },
+      attrs: {
+        "aria-label": "Relatório oficial",
+        "data-perfil": perfil,
+      },
     });
 
-    // 1) Capa
-    var blocoCapa = el("section", {
-      className: "relatorio-oficial__bloco relatorio-oficial__capa",
-      attrs: { "data-bloco": "capa" },
-    });
-    blocoCapa.appendChild(
-      el("p", { className: "relatorio-oficial__eyebrow", text: "Pontuação Conclave" })
-    );
-    blocoCapa.appendChild(
-      el("h2", { className: "relatorio-oficial__titulo", text: "Relatório oficial" })
-    );
-    blocoCapa.appendChild(
-      el("p", { className: "relatorio-oficial__evento", text: meta.nome || "—" })
-    );
-    var dlMeta = el("dl", { className: "relatorio-oficial__meta" });
-    defRow(dlMeta, "Slug", slug);
-    defRow(dlMeta, "Data", meta.data || "");
-    defRow(dlMeta, "Horário", horarioTxt);
-    defRow(dlMeta, "Tema", temaTexto);
-    defRow(dlMeta, "Schema", "v" + schemaVersion);
-    defRow(dlMeta, "Gerado em", agoraTxt);
-    blocoCapa.appendChild(dlMeta);
-    doc.appendChild(blocoCapa);
-
-    // 2) Sumário executivo
-    var blocoSumario = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "sumario" },
-    });
-    blocoSumario.appendChild(el("h3", { text: "Sumário executivo" }));
-    var sumarioUl = el("ul", { className: "relatorio-oficial__sumario" });
-    function podiumLi(label, det) {
-      var li = document.createElement("li");
-      var strong = document.createElement("strong");
-      strong.textContent = label + ":";
-      li.appendChild(strong);
-      if (det) {
-        li.appendChild(document.createTextNode(" " + det.igreja + " (" + fmt(det.total) + " pts)"));
-      } else {
-        li.appendChild(document.createTextNode(" —"));
-      }
-      return li;
-    }
-    function infoLi(label, valor) {
-      var li = document.createElement("li");
-      var strong = document.createElement("strong");
-      strong.textContent = label + ":";
-      li.appendChild(strong);
-      li.appendChild(document.createTextNode(" " + valor));
-      return li;
-    }
-    sumarioUl.appendChild(podiumLi("Vencedora", top1));
-    sumarioUl.appendChild(podiumLi("2º lugar", top2));
-    sumarioUl.appendChild(podiumLi("3º lugar", top3));
-    var nIgrejas = Array.isArray(ev.igrejas) ? ev.igrejas.length : 0;
-    var nProvas = Array.isArray(ev.provas) ? ev.provas.length : 0;
-    sumarioUl.appendChild(infoLi("Igrejas participantes", String(nIgrejas)));
-    sumarioUl.appendChild(infoLi("Provas", String(nProvas)));
-    sumarioUl.appendChild(
-      infoLi(
-        "Medalhas distribuídas",
-        "ouro " + totalOu + " · prata " + totalPt + " · bronze " + totalBr
-      )
-    );
-    blocoSumario.appendChild(sumarioUl);
-    doc.appendChild(blocoSumario);
-
-    // 3) Classificação geral
-    var blocoClass = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "classificacao" },
-    });
-    blocoClass.appendChild(el("h3", { text: "Classificação geral" }));
-    var classRows = ord.map(function (r) {
-      return [
-        String(r.posicao),
-        r.igreja,
-        fmt(r.participacao),
-        fmt(r.punicoes),
-        fmt(r.gincana),
-        fmt(r.pontuacao_extra),
-        fmt(r.total),
-      ];
-    });
-    var top3Classes = ord.map(function (r) {
-      var pos = Number(r.posicao);
-      if (pos === 1) return "relatorio-oficial__top3 relatorio-oficial__top3--1";
-      if (pos === 2) return "relatorio-oficial__top3 relatorio-oficial__top3--2";
-      if (pos === 3) return "relatorio-oficial__top3 relatorio-oficial__top3--3";
-      return "";
-    });
-    appendTabela(
-      blocoClass,
-      ["Posição", "Igreja", "Participação", "Punições", "Gincana", "Extra", "Total"],
-      classRows,
-      top3Classes
-    );
-    doc.appendChild(blocoClass);
-
-    // 4) Medalhas por igreja
-    var blocoMed = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "medalhas" },
-    });
-    blocoMed.appendChild(el("h3", { text: "Medalhas por igreja" }));
-    var medRows = (ev.igrejas || []).map(function (g) {
-      var m = out.medalhasPorIgreja[g.id] || { ou: 0, pt: 0, br: 0 };
-      var gg = out.gincanaPorIgreja[g.id] || 0;
-      return [g.nome || "—", String(m.ou), String(m.pt), String(m.br), fmt(gg)];
-    });
-    appendTabela(blocoMed, ["Igreja", "Ouro", "Prata", "Bronze", "Pts gincana"], medRows);
-    doc.appendChild(blocoMed);
-
-    // 5) Pódio por prova (agrupado por categoria — reaproveita groupProvasByCategoria)
-    var blocoPodio = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "podio" },
-    });
-    blocoPodio.appendChild(el("h3", { text: "Pódio por prova" }));
-    var algumaProva = false;
-    PROVA_TIPO_ORDER.forEach(function (tipo) {
-      var grouped = groupProvasByCategoria(tipo);
-      var listTipo = [];
-      grouped.order.forEach(function (catKey) {
-        var list = grouped.groups[catKey] || [];
-        list.forEach(function (p) {
-          listTipo.push({ catKey: catKey, p: p });
+    blocos.forEach(function (blocoId) {
+      if (blocoId === "capa") {
+        var blocoCapa = el("section", {
+          className: "relatorio-oficial__bloco relatorio-oficial__capa",
+          attrs: { "data-bloco": "capa" },
         });
-      });
-      if (!listTipo.length) return;
-      algumaProva = true;
-      blocoPodio.appendChild(el("h4", { text: labelProvaTipo(tipo) }));
-      listTipo.forEach(function (item) {
-        var p = item.p;
-        var card = el("div", {
-          className: "relatorio-oficial__prova",
-          attrs: { "data-prova": p.id },
-        });
-        card.appendChild(
-          el("p", {
-            className: "relatorio-oficial__prova-titulo",
-            text:
-              labelCategoria(item.catKey) +
-              " — " +
-              nomeProvaExibicao(p),
+        blocoCapa.appendChild(
+          el("p", { className: "relatorio-oficial__eyebrow", text: "Pontuação Conclave" })
+        );
+        blocoCapa.appendChild(
+          el("h2", {
+            className: "relatorio-oficial__titulo",
+            text: R.buildRelatorioCapaTitulo(perfil),
           })
         );
-        var ol = el("ol", { className: "relatorio-oficial__podio" });
-        var places = (dados.podium && dados.podium[p.id]) || {};
-        ["ou", "pt", "br"].forEach(function (mk) {
-          var ent = places[mk] || {};
-          var li = document.createElement("li");
-          li.setAttribute("data-medalha", mk);
-          var nome;
-          if (ent.igrejaId) nome = igrejaNome(ent.igrejaId) || "—";
-          else if (ent.nomeLivre && String(ent.nomeLivre).trim())
-            nome = String(ent.nomeLivre).trim();
-          else nome = "—";
-          var comp = ent.competidor ? String(ent.competidor).trim() : "";
-          var txt = medalLabel(mk) + " — " + nome;
-          if (comp) txt += " (" + comp + ")";
-          li.textContent = txt;
-          ol.appendChild(li);
+        blocoCapa.appendChild(
+          el("p", { className: "relatorio-oficial__evento", text: meta.nome || "—" })
+        );
+        var dlMeta = el("dl", { className: "relatorio-oficial__meta" });
+        R.buildCapaMetaRows(meta, perfil, agoraTxt, {
+          temaTexto: temaTexto,
+          schemaVersion: schemaVersion,
+        }).forEach(function (row) {
+          defRow(dlMeta, row.dt, row.dd);
         });
-        card.appendChild(ol);
-        blocoPodio.appendChild(card);
-      });
-    });
-    if (!algumaProva) {
-      blocoPodio.appendChild(el("p", { text: "Nenhuma prova cadastrada." }));
-    }
-    doc.appendChild(blocoPodio);
+        blocoCapa.appendChild(dlMeta);
+        doc.appendChild(blocoCapa);
+        return;
+      }
 
-    // 6) Detalhe de participação por igreja
-    var blocoPart = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "participacao" },
-    });
-    blocoPart.appendChild(el("h3", { text: "Detalhe de participação por igreja" }));
-    var labelsPart = [
-      "Igreja",
-      isErUiTheme() ? "Pastor" : "Inscr.",
-      "Pont.",
-      isErUiTheme() ? "Emb. tot." : "MR total",
-      isErUiTheme() ? "Emb. camisa" : "MR camisa",
-      isErUiTheme() ? "Emb. bíblia" : "MR bíblia",
-      "Visit.",
-      "Anim.",
-      "Mau comp.",
-      "Extra",
-    ];
-    var partRows = (ev.igrejas || []).map(function (g) {
-      var row = (dados.participacao && dados.participacao[g.id]) || {};
-      var extra = row.pontuacao_extra != null ? row.pontuacao_extra : row.embaixadas;
-      return [
-        g.nome || "—",
-        row.inscricao ? "Sim" : "Não",
-        row.pontualidade ? "Sim" : "Não",
-        fmt(row.mr_total || 0),
-        fmt(row.mr_camisa || 0),
-        fmt(row.mr_biblia || 0),
-        fmt(row.visitantes || 0),
-        row.animacao ? "Sim" : "Não",
-        row.mau_comportamento ? "Sim" : "Não",
-        fmt(extra || 0),
-      ];
-    });
-    appendTabela(blocoPart, labelsPart, partRows);
-    doc.appendChild(blocoPart);
+      if (blocoId === "sumario") {
+        var blocoSumario = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "sumario" },
+        });
+        blocoSumario.appendChild(el("h3", { text: "Sumário executivo" }));
+        var sumarioUl = el("ul", { className: "relatorio-oficial__sumario" });
+        function podiumLi(label, det) {
+          var li = document.createElement("li");
+          var strong = document.createElement("strong");
+          strong.textContent = label + ":";
+          li.appendChild(strong);
+          if (det) {
+            li.appendChild(
+              document.createTextNode(" " + det.igreja + " (" + fmt(det.total) + " pts)")
+            );
+          } else {
+            li.appendChild(document.createTextNode(" —"));
+          }
+          return li;
+        }
+        function infoLi(label, valor) {
+          var li = document.createElement("li");
+          var strong = document.createElement("strong");
+          strong.textContent = label + ":";
+          li.appendChild(strong);
+          li.appendChild(document.createTextNode(" " + valor));
+          return li;
+        }
+        sumarioUl.appendChild(podiumLi("Vencedora", top1));
+        sumarioUl.appendChild(podiumLi("2º lugar", top2));
+        sumarioUl.appendChild(podiumLi("3º lugar", top3));
+        var nIgrejas = Array.isArray(ev.igrejas) ? ev.igrejas.length : 0;
+        var nProvas = Array.isArray(ev.provas) ? ev.provas.length : 0;
+        sumarioUl.appendChild(infoLi("Igrejas participantes", String(nIgrejas)));
+        sumarioUl.appendChild(infoLi("Provas", String(nProvas)));
+        sumarioUl.appendChild(
+          infoLi(
+            "Medalhas distribuídas",
+            "ouro " + totalOu + " · prata " + totalPt + " · bronze " + totalBr
+          )
+        );
+        blocoSumario.appendChild(sumarioUl);
+        doc.appendChild(blocoSumario);
+        return;
+      }
 
-    // 7) Avisos
-    var blocoAvisos = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "avisos" },
+      if (blocoId === "classificacao") {
+        var blocoClass = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "classificacao" },
+        });
+        blocoClass.appendChild(el("h3", { text: "Classificação geral" }));
+        var classRows = ord.map(function (r) {
+          return [
+            String(r.posicao),
+            r.igreja,
+            fmt(r.participacao),
+            fmt(r.punicoes),
+            fmt(r.gincana),
+            fmt(r.pontuacao_extra),
+            fmt(r.total),
+          ];
+        });
+        var top3Classes = ord.map(function (r) {
+          var pos = Number(r.posicao);
+          if (pos === 1) return "relatorio-oficial__top3 relatorio-oficial__top3--1";
+          if (pos === 2) return "relatorio-oficial__top3 relatorio-oficial__top3--2";
+          if (pos === 3) return "relatorio-oficial__top3 relatorio-oficial__top3--3";
+          return "";
+        });
+        appendTabela(
+          blocoClass,
+          ["Posição", "Igreja", "Participação", "Punições", "Gincana", "Extra", "Total"],
+          classRows,
+          top3Classes
+        );
+        doc.appendChild(blocoClass);
+        return;
+      }
+
+      if (blocoId === "medalhas") {
+        var blocoMed = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "medalhas" },
+        });
+        blocoMed.appendChild(el("h3", { text: "Medalhas por igreja" }));
+        var medRows = (ev.igrejas || []).map(function (g) {
+          var m = out.medalhasPorIgreja[g.id] || { ou: 0, pt: 0, br: 0 };
+          var gg = out.gincanaPorIgreja[g.id] || 0;
+          return [g.nome || "—", String(m.ou), String(m.pt), String(m.br), fmt(gg)];
+        });
+        appendTabela(blocoMed, ["Igreja", "Ouro", "Prata", "Bronze", "Pts gincana"], medRows);
+        doc.appendChild(blocoMed);
+        return;
+      }
+
+      if (blocoId === "podio") {
+        var blocoPodio = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "podio" },
+        });
+        appendBlocoPodio(blocoPodio);
+        doc.appendChild(blocoPodio);
+        return;
+      }
+
+      if (blocoId === "participacao") {
+        var blocoPart = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "participacao" },
+        });
+        blocoPart.appendChild(el("h3", { text: "Detalhe de participação por igreja" }));
+        var labelsPart = [
+          "Igreja",
+          isErUiTheme() ? "Pastor" : "Inscr.",
+          "Pont.",
+          isErUiTheme() ? "Emb. tot." : "MR total",
+          isErUiTheme() ? "Emb. camisa" : "MR camisa",
+          isErUiTheme() ? "Emb. bíblia" : "MR bíblia",
+          "Visit.",
+          "Anim.",
+          "Mau comp.",
+          "Extra",
+        ];
+        var partRows = (ev.igrejas || []).map(function (g) {
+          var row = (dados.participacao && dados.participacao[g.id]) || {};
+          var extra = row.pontuacao_extra != null ? row.pontuacao_extra : row.embaixadas;
+          return [
+            g.nome || "—",
+            row.inscricao ? "Sim" : "Não",
+            row.pontualidade ? "Sim" : "Não",
+            fmt(row.mr_total || 0),
+            fmt(row.mr_camisa || 0),
+            fmt(row.mr_biblia || 0),
+            fmt(row.visitantes || 0),
+            row.animacao ? "Sim" : "Não",
+            row.mau_comportamento ? "Sim" : "Não",
+            fmt(extra || 0),
+          ];
+        });
+        appendTabela(blocoPart, labelsPart, partRows);
+        doc.appendChild(blocoPart);
+        return;
+      }
+
+      if (blocoId === "avisos") {
+        var blocoAvisos = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "avisos" },
+        });
+        blocoAvisos.appendChild(el("h3", { text: "Avisos e inconsistências" }));
+        var todosAvisos = avisosPodio.concat(orphans);
+        if (!todosAvisos.length) {
+          blocoAvisos.appendChild(el("p", { text: "Nenhum aviso." }));
+        } else {
+          var ulAv = document.createElement("ul");
+          todosAvisos.forEach(function (msg) {
+            var li = document.createElement("li");
+            li.textContent = msg;
+            ulAv.appendChild(li);
+          });
+          blocoAvisos.appendChild(ulAv);
+        }
+        doc.appendChild(blocoAvisos);
+        return;
+      }
+
+      if (blocoId === "criterios") {
+        var blocoCrit = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "criterios" },
+        });
+        blocoCrit.appendChild(el("h3", { text: "Critérios usados" }));
+        blocoCrit.appendChild(el("h4", { text: "Pesos" }));
+        var dlPesos = el("dl", { className: "relatorio-oficial__defs" });
+        var pz = ev.pesos || {};
+        defRow(
+          dlPesos,
+          isErUiTheme() ? "Pastor (pts se marcado)" : "Inscrição (pts se marcado)",
+          fmt(pz.inscricao || 0)
+        );
+        defRow(dlPesos, "Pontualidade (pts se marcado)", fmt(pz.pontualidade || 0));
+        defRow(
+          dlPesos,
+          isErUiTheme()
+            ? "Uniforme (pts se emb. camisa = emb. tot.)"
+            : "Uniforme (pts se MR camisa = MR tot.)",
+          fmt(pz.uniforme || 0)
+        );
+        defRow(
+          dlPesos,
+          isErUiTheme()
+            ? "Bíblia (pts se emb. bíblia = emb. tot.)"
+            : "Bíblia (pts se MR bíblia = MR tot.)",
+          fmt(pz.biblia || 0)
+        );
+        defRow(dlPesos, "Visitante (pts por visitante)", fmt(pz.visitante || 0));
+        defRow(dlPesos, "Animação (pts se marcado)", fmt(pz.animacao || 0));
+        defRow(dlPesos, "Mau comportamento (pts se marcado)", fmt(pz.mau_comportamento || 0));
+        blocoCrit.appendChild(dlPesos);
+
+        blocoCrit.appendChild(el("h4", { text: "Valores de medalha" }));
+        var dlMed = el("dl", { className: "relatorio-oficial__defs" });
+        var medConf = ev.medalhas || {};
+        defRow(dlMed, "Ouro", fmt(medConf.ou || 0));
+        defRow(dlMed, "Prata", fmt(medConf.pt || 0));
+        defRow(dlMed, "Bronze", fmt(medConf.br || 0));
+        blocoCrit.appendChild(dlMed);
+
+        blocoCrit.appendChild(el("h4", { text: "Ordem de desempate" }));
+        var olDes = document.createElement("ol");
+        [
+          "Medalhas de ouro (desc).",
+          "Medalhas de prata (desc).",
+          "Pontos em Conhecimentos Gerais da Bíblia.",
+          "Pontos em Debate de Versículos.",
+          "Pontos em Conhecimentos Gerais da Organização.",
+          "Nome da igreja (ordenação pt-BR).",
+        ].forEach(function (txt) {
+          var li = document.createElement("li");
+          li.textContent = txt;
+          olDes.appendChild(li);
+        });
+        blocoCrit.appendChild(olDes);
+        doc.appendChild(blocoCrit);
+        return;
+      }
+
+      if (blocoId === "encerramento") {
+        var blocoEnc = el("section", {
+          className: "relatorio-oficial__bloco relatorio-oficial__encerramento",
+          attrs: { "data-bloco": "encerramento" },
+        });
+        blocoEnc.appendChild(el("h3", { text: "Encerramento" }));
+        blocoEnc.appendChild(el("p", { className: "relatorio-oficial__ata", text: R.TEXTO_ATA }));
+        var assGrid = el("div", { className: "relatorio-oficial__assinaturas" });
+        ["Comissão de Apuração", "Coordenação", "Data"].forEach(function (rotulo) {
+          var cell = el("div", { className: "relatorio-oficial__assinatura" });
+          cell.appendChild(el("span", { className: "relatorio-oficial__assinatura-linha" }));
+          cell.appendChild(
+            el("span", { className: "relatorio-oficial__assinatura-rotulo", text: rotulo })
+          );
+          assGrid.appendChild(cell);
+        });
+        blocoEnc.appendChild(assGrid);
+        var rodapeEnc = el("footer", { className: "relatorio-oficial__rodape" });
+        rodapeEnc.appendChild(
+          el("p", {
+            text: R.buildRodapeTexto(meta, agoraTxt, perfil, schemaVersion),
+          })
+        );
+        blocoEnc.appendChild(rodapeEnc);
+        doc.appendChild(blocoEnc);
+        return;
+      }
+
+      if (blocoId === "rodape") {
+        /* Rodapé já incluso no bloco de encerramento (evita página órfã no PDF). */
+        return;
+      }
     });
-    blocoAvisos.appendChild(el("h3", { text: "Avisos e inconsistências" }));
-    var todosAvisos = avisosPodio.concat(orphans);
-    if (!todosAvisos.length) {
-      blocoAvisos.appendChild(el("p", { text: "Nenhum aviso." }));
-    } else {
-      var ulAv = document.createElement("ul");
-      todosAvisos.forEach(function (msg) {
-        var li = document.createElement("li");
-        li.textContent = msg;
-        ulAv.appendChild(li);
-      });
-      blocoAvisos.appendChild(ulAv);
-    }
-    doc.appendChild(blocoAvisos);
-
-    // 8) Apêndice — critérios
-    var blocoCrit = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "criterios" },
-    });
-    blocoCrit.appendChild(el("h3", { text: "Critérios usados" }));
-    blocoCrit.appendChild(el("h4", { text: "Pesos" }));
-    var dlPesos = el("dl", { className: "relatorio-oficial__defs" });
-    var pz = ev.pesos || {};
-    defRow(
-      dlPesos,
-      isErUiTheme() ? "Pastor (pts se marcado)" : "Inscrição (pts se marcado)",
-      fmt(pz.inscricao || 0)
-    );
-    defRow(dlPesos, "Pontualidade (pts se marcado)", fmt(pz.pontualidade || 0));
-    defRow(
-      dlPesos,
-      isErUiTheme()
-        ? "Uniforme (pts se emb. camisa = emb. tot.)"
-        : "Uniforme (pts se MR camisa = MR tot.)",
-      fmt(pz.uniforme || 0)
-    );
-    defRow(
-      dlPesos,
-      isErUiTheme()
-        ? "Bíblia (pts se emb. bíblia = emb. tot.)"
-        : "Bíblia (pts se MR bíblia = MR tot.)",
-      fmt(pz.biblia || 0)
-    );
-    defRow(dlPesos, "Visitante (pts por visitante)", fmt(pz.visitante || 0));
-    defRow(dlPesos, "Animação (pts se marcado)", fmt(pz.animacao || 0));
-    defRow(dlPesos, "Mau comportamento (pts se marcado)", fmt(pz.mau_comportamento || 0));
-    blocoCrit.appendChild(dlPesos);
-
-    blocoCrit.appendChild(el("h4", { text: "Valores de medalha" }));
-    var dlMed = el("dl", { className: "relatorio-oficial__defs" });
-    var medConf = ev.medalhas || {};
-    defRow(dlMed, "Ouro", fmt(medConf.ou || 0));
-    defRow(dlMed, "Prata", fmt(medConf.pt || 0));
-    defRow(dlMed, "Bronze", fmt(medConf.br || 0));
-    blocoCrit.appendChild(dlMed);
-
-    blocoCrit.appendChild(el("h4", { text: "Ordem de desempate" }));
-    var olDes = document.createElement("ol");
-    [
-      "Medalhas de ouro (desc).",
-      "Medalhas de prata (desc).",
-      "Pontos em Conhecimentos Gerais da Bíblia.",
-      "Pontos em Debate de Versículos.",
-      "Pontos em Conhecimentos Gerais da Organização.",
-      "Nome da igreja (ordenação pt-BR).",
-    ].forEach(function (txt) {
-      var li = document.createElement("li");
-      li.textContent = txt;
-      olDes.appendChild(li);
-    });
-    blocoCrit.appendChild(olDes);
-    doc.appendChild(blocoCrit);
-
-    // 9) Rodapé
-    var rodape = el("footer", { className: "relatorio-oficial__rodape" });
-    rodape.appendChild(
-      el("p", {
-        text:
-          "Gerado em " + agoraTxt + " · slug: " + (slug || "—") + " · schema: v" + schemaVersion,
-      })
-    );
-    doc.appendChild(rodape);
 
     host.appendChild(doc);
   }
@@ -4434,15 +4841,48 @@
     return avisos;
   }
 
+  function humanizeEventoValidationError(msg) {
+    if (msg.indexOf("meta.nome") >= 0) return "falta o nome do evento";
+    if (msg.indexOf("meta.slug") >= 0)
+      return "identificador inválido (use só letras minúsculas, números e hífen)";
+    if (msg.indexOf("igrejas deve ter ao menos") >= 0) return "cadastre ao menos uma igreja";
+    if (msg.indexOf("provas deve ter ao menos") >= 0) return "cadastre ao menos uma prova";
+    if (/igrejas\[\d+\]\.nome/.test(msg)) return "há igreja sem nome";
+    if (/provas\[\d+\]\.titulo/.test(msg)) return "há prova sem título";
+    if (msg.indexOf("IDs de igrejas duplicados") >= 0)
+      return "há igrejas com o mesmo identificador";
+    if (msg.indexOf("IDs de provas duplicados") >= 0) return "há provas com o mesmo identificador";
+    if (msg.indexOf("Falta chave:") >= 0) {
+      return "estrutura incompleta (" + msg.replace("Falta chave: ", "falta «") + "»)";
+    }
+    return msg.charAt(0).toLowerCase() + msg.slice(1);
+  }
+
+  function formatEventoValidationFeedback(errs) {
+    var hints = errs.slice(0, 2).map(humanizeEventoValidationError);
+    var detail = hints.join("; ");
+    if (errs.length > 2) detail += " (e mais " + (errs.length - 2) + ")";
+    return (
+      "Não foi possível abrir o evento: " +
+      detail +
+      ". Corrija o arquivo ou clique em «Novo evento» para começar do zero."
+    );
+  }
+
+  function eventoValidationErrors(ev) {
+    return validateEventoSchemaLike(ev).concat(E.validateEventoMinimal(ev));
+  }
+
   function setEvento(ev, mergeDados) {
-    var errs = validateEventoSchemaLike(ev).concat(E.validateEventoMinimal(ev));
+    var errs = eventoValidationErrors(ev);
     if (errs.length) {
-      showFeedback("Evento inválido: " + errs.slice(0, 3).join(" · "), "error");
+      showFeedback(formatEventoValidationFeedback(errs), "error");
       return false;
     }
     // Garante que qualquer save pendente do evento atual seja gravado antes
     // de trocar o slug — evita corrida com o debounce de scheduleSave.
     flushScheduledSave();
+    revokeRegulamentoBlobUrl();
     state.persistFailed = false;
     state.evento = ev;
     normalizeEvento(state.evento);
@@ -4452,7 +4892,7 @@
     state.configSectionCollapsed = {};
     state.relatorioSectionCollapsed = {};
     state.relatorioPodiumCollapsed = {};
-    state.relatorioOficialGerado = false;
+    resetRelatorioOficialGerado();
     var ids = state.evento.igrejas.map(function (g) {
       return g.id;
     });
@@ -4478,7 +4918,7 @@
         var ev = JSON.parse(r.result);
         var schemaErrs = validateEventoSchemaLike(ev);
         if (schemaErrs.length) {
-          showFeedback("Evento inválido: " + schemaErrs.slice(0, 3).join(" · "), "error");
+          showFeedback(formatEventoValidationFeedback(schemaErrs), "error");
           return;
         }
         var slug = ev.meta && ev.meta.slug;
@@ -4633,7 +5073,7 @@
         });
         state.dados = E.emptyDadosTemplate(ids, pids);
         state.podiumCollapsed = {};
-        state.relatorioOficialGerado = false;
+        resetRelatorioOficialGerado();
         scheduleSave();
         render();
         showFeedback("Dados do evento foram limpos.", "info");
@@ -4723,25 +5163,11 @@
         if (!state.evento || !state.evento.meta) return;
         var u = state.evento.meta.regulamentoUrl;
         if (!u || !String(u).trim()) return;
-        window.open(resolveAssetUrl(String(u).trim()), "_blank", "noopener,noreferrer");
+        openRegulamentoUrl(String(u).trim());
       });
     $("#btn-novo-dados") && $("#btn-novo-dados").addEventListener("click", novoProjetoDados);
     $("#btn-eventos-salvos") &&
       $("#btn-eventos-salvos").addEventListener("click", openEventosSalvosModal);
-    $("#btn-print") &&
-      $("#btn-print").addEventListener("click", function () {
-        // Pequena dica antes de abrir o diálogo: usuários costumam não saber
-        // que "Salvar como PDF" é um destino do diálogo nativo do navegador.
-        showFeedback(
-          "Abrindo a impressão. No diálogo, selecione «Salvar como PDF» se quiser gerar um arquivo.",
-          "info"
-        );
-        // Aguarda o feedback aparecer antes de abrir o diálogo (que bloqueia
-        // a thread em alguns navegadores).
-        setTimeout(function () {
-          window.print();
-        }, 80);
-      });
     $("#btn-exit-presentation") &&
       $("#btn-exit-presentation").addEventListener("click", function () {
         setPresentationMode(false);
@@ -5050,20 +5476,42 @@
     });
   }
 
+  /** URL com `?novo` ou `?evento=novo` inicia com evento em branco (sem exemplo). */
+  function shouldStartWithNovoEvento() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      if (params.has("novo")) return true;
+      var ev = params.get("evento");
+      return ev === "novo" || ev === "vazio";
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function startWithNovoEvento() {
+    var ev = buildNovoEventoSeed();
+    if (setEvento(ev, null)) {
+      state.tab = "config";
+    }
+  }
+
   function tryFetchDefaultEvento() {
     tryLoadDefaultEventoWeb()
       .then(function (ev) {
-        if (!state.evento) {
-          var slug = ev.meta && ev.meta.slug;
-          var saved = slug ? loadFromStorage(slug) : null;
-          if (saved && saved.evento && saved.dados) {
-            setEvento(saved.evento, saved.dados);
-            return;
-          } else {
-            setEvento(ev, saved && saved.dados ? saved.dados : null);
-            return;
-          }
+        if (state.evento) return;
+        var slug = ev.meta && ev.meta.slug;
+        var saved = slug ? loadFromStorage(slug) : null;
+        if (saved && saved.evento && saved.dados && !eventoValidationErrors(saved.evento).length) {
+          setEvento(saved.evento, saved.dados);
+          return;
         }
+        if (saved && saved.evento && saved.dados) {
+          showFeedback(
+            "O evento salvo neste navegador estava incompleto (sem nome). Carregamos o exemplo — ou clique em «Novo evento» para começar do zero.",
+            "warn"
+          );
+        }
+        setEvento(ev, null);
       })
       .catch(function () {
         state.autoLoadFailed = true;
@@ -5097,7 +5545,11 @@
     applyUiTheme(getStoredUiTheme());
     initToolbar();
     initThemeToggle();
-    tryFetchDefaultEvento();
+    if (shouldStartWithNovoEvento()) {
+      startWithNovoEvento();
+    } else {
+      tryFetchDefaultEvento();
+    }
     render();
     registerServiceWorker();
   });

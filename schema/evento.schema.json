@@ -17,9 +17,17 @@
         "nome": { "type": "string", "minLength": 1 },
         "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
         "data": { "type": "string", "description": "ISO date ou texto livre" },
+        "local": {
+          "type": "string",
+          "description": "Local do evento (exibido na capa do relatório oficial)"
+        },
         "horarioInicio": { "type": "string", "description": "HH:MM (input time)" },
         "horarioEncerramento": { "type": "string", "description": "HH:MM (input time)" },
         "regulamentoUrl": { "type": "string" },
+        "regulamentoNome": {
+          "type": "string",
+          "description": "Nome do arquivo PDF carregado pelo organizador (exibição na UI; opcional)."
+        },
         "tema": {
           "type": "object",
           "properties": {

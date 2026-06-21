@@ -14,12 +14,13 @@
       - style-src 'self' 'unsafe-inline': necessário para atribuições style.X via JS
         (theme-color dinâmico, etc.). Não há <style> inline no HTML.
       - img-src 'self' data: blob: https:: ícones locais (icons/) e blobs de download.
+      - default-src 'self' blob:: abrir PDF embutido via blob: URL.
       - connect-src 'self': fetch de eventos/*.json no mesmo origem.
       - object/frame-ancestors negados; base-uri/form-action limitados a 'self'.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      content="default-src 'self' blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     />
     <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
@@ -182,15 +183,6 @@
               >
                 Modo apresentação
               </button>
-              <button
-                type="button"
-                role="menuitem"
-                tabindex="-1"
-                id="btn-print"
-                class="more-menu__item"
-              >
-                Imprimir / Salvar como PDF
-              </button>
               <div role="separator" class="more-menu__sep"></div>
               <button
                 type="button"
@@ -292,6 +284,7 @@
          o app cai no fetch() do JSON original. -->
     <script src="eventos/conclave-2026-1.evento.embedded.js" defer></script>
     <script src="web/engine.js" defer></script>
+    <script src="web/relatorio.js" defer></script>
     <script src="web/app.js" defer></script>
   </body>
 </html>

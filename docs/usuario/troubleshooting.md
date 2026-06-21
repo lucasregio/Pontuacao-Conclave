@@ -77,25 +77,25 @@ as provas e igrejas).
 Se mesmo após limpar a lista o aviso continuar, pode ser que outro site na mesma
 origem esteja consumindo a cota. Em PWA isolada, isso é raro.
 
-## Imprimi e saiu cortado
+## Imprimi o relatorio oficial e saiu cortado
 
-**Sintoma**: a impressão (ou "Salvar como PDF") cortou colunas de uma tabela
-grande, ou alguma seção ficou parcial.
+**Sintoma**: ao gerar o PDF do **relatório oficial** (aba Relatórios → Gerar →
+Imprimir / Salvar PDF), colunas ficaram cortadas ou alguma seção saiu parcial.
 
 **Causa provável**: o navegador ajustou a escala automaticamente e a tabela ficou
-mais larga do que cabe na orientação retrato.
+mais larga do que cabe na orientação retrato — comum no perfil **Completo**.
 
 **O que fazer**: no diálogo de impressão do navegador:
 
-1. Mude **Orientação** para **Paisagem**.
+1. Mude **Orientação** para **Paisagem** se o perfil Completo tiver tabelas largas.
 2. Em **Mais configurações** → **Escala**, escolha **Padrão** ou **Ajustar à
    página** (em vez de **100%**).
 3. Confira **Margens**: padrão funciona para a maioria dos casos; em tabelas muito
    largas, escolha **Mínimas**.
 4. Habilite **Gráficos de fundo** se quiser preservar fundos coloridos.
 
-A folha de estilo `@media print` já esconde a toolbar e expande as tabelas
-automaticamente, mas a paginação física é responsabilidade do navegador.
+O `@media print` do relatório oficial esconde a interface e formata o documento
+em A4; a paginação física é responsabilidade do navegador.
 
 ## Atalho Escape nao sai do modo apresentacao
 

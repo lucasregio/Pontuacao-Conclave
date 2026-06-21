@@ -37,17 +37,12 @@ Em `index.html` servido via `http(s)://` (preferir; `file://` desativa SW):
       (round-trip).
 - [ ] **Eventos salvos**: lista, carrega, exporta e remove projetos do
       `localStorage`.
-- [ ] **Relatório oficial**: na aba Relatórios, **Gerar relatório oficial**
-      produz capa, sumário, classificação com top 3 destacado, medalhas,
-      pódio por prova, participação detalhada, avisos e apêndice; depois
-      **Imprimir / Salvar PDF** abre o diálogo e o PDF gerado contém apenas
-      o relatório (sem toolbar, abas ou outras seções).
-- [ ] **Imprimir / Salvar como PDF** abre prévia limpa, sem UI de toolbar,
-      tabelas expandidas.
+- [ ] **Relatório — Resumo** e **Oficial completo**: gerar e imprimir cada um
+      separadamente; PDF contém só o documento escolhido (sem UI).
 - [ ] **Modo apresentação** entra/sai com botão e com `Escape`.
 - [ ] **Mobile (≥ 360px)**: toolbar quebra corretamente; tabelas rolam
       horizontalmente sem cortar conteúdo.
-- [ ] `docs/index.html` abre na URL do Pages; links para `docs/usuario/*.md` funcionam.
+- [ ] `docs/index.html` abre na URL do Pages; links para `docs/usuario/*.html` funcionam.
 - [ ] Smoke test de links da documentação após mover pastas (usuario/ vs operacional/).
 
 ## 3. Acessibilidade e UX

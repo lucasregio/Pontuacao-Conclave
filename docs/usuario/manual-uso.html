@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pt-BR" data-ui-theme="mr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Manual de uso — Pontuação Conclave</title>
+    <meta name="description" content="Manual de uso — documentação da Pontuação Conclave." />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+    <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="../../icons/icon.svg" />
+    <link rel="stylesheet" href="../../web/styles.css" />
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <header class="docs-header">
+      <p class="docs-eyebrow"><a href="../../index.html">← Voltar ao app</a> · <a href="../index.html">Documentação</a></p>
+      <h1>Manual de uso</h1>
+    </header>
+    <main id="conteudo" tabindex="-1" class="docs-main docs-prose">
+      <article class="docs-article">
+<p>Guia passo a passo para o organizador/juiz usar o <strong>Pontuação Conclave</strong> no dia do evento. Tudo acontece no navegador, sem servidor, sem cadastro e sem login.</p>
+<h2 id="sumario">Sumário</h2>
+<ul>
+<li><a href="#interface-início-e-navegação">Interface: Início e navegação</a></li>
+<li><a href="#primeiro-evento-em-5-minutos">Primeiro evento em 5 minutos</a></li>
+<li><a href="#carregar-um-evento-ou-projeto-existente">Carregar um evento ou projeto existente</a></li>
+<li><a href="#editar-configuracao">Editar configuracao</a></li>
+<li><a href="#participacao">Participacao</a></li>
+<li><a href="#podio">Podio</a></li>
+<li><a href="#classificacao-e-desempate">Classificacao e desempate</a></li>
+<li><a href="#gerar-relatorio-oficial">Gerar relatorio oficial</a></li>
+<li><a href="#backup-e-portabilidade">Backup e portabilidade</a></li>
+<li><a href="#modo-apresentacao-e-impressao-em-pdf">Modo apresentacao e impressao em PDF</a></li>
+</ul>
+<h2 id="interface-inicio-e-navegacao">Interface: Início e navegação</h2>
+<h3 id="aba-inicio-dashboard">Aba Início (Dashboard)</h3>
+<p>Sem evento carregado, a tela de boas-vindas oferece atalhos para <strong>Novo evento</strong>, <strong>Carregar projeto</strong>, <strong>Carregar exemplo</strong> e a lista de <strong>Eventos salvos</strong> no navegador. Com evento aberto, mostra resumo (nome, data, local), KPIs (igrejas, provas, % pódios preenchidos, líder atual) e atalhos para Participação, Pódio, Classificação e geração do relatório oficial.</p>
+<h3 id="sidebar-e-barra-inferior">Sidebar e barra inferior</h3>
+<p>Em telas largas (≥ 1024px), a <strong>sidebar</strong> à esquerda lista as seis abas com ícones, o seletor de tema <strong>MR / ER</strong> e o link para esta documentação. Em celular e tablet, a <strong>barra inferior</strong> repete as mesmas abas com rótulos curtos.</p>
+<h3 id="topbar-e-menu-mais">Topbar e menu «Mais»</h3>
+<p>A barra superior exibe o nome do evento, o botão <strong>Regulamento</strong> (PDF configurado em Configuração → Geral), o indicador <strong>Salvo localmente</strong> e o menu <strong>Mais</strong>, que concentra:</p>
+<ul>
+<li>Carregar evento / Carregar projeto</li>
+<li><strong>Exportar evento</strong> (só configuração) e <strong>Exportar projeto</strong> (completo)</li>
+<li>Novo evento, Eventos salvos, Modo apresentação</li>
+<li>Limpar dados do evento</li>
+</ul>
+<p>Use as <strong>setas</strong> (← →) para mover entre abas quando o foco estiver na lista de navegação (padrão ARIA tablist).</p>
+<h2 id="primeiro-evento-em-5-minutos">Primeiro evento em 5 minutos</h2>
+<ol>
+<li>Abra <code>index.html</code> no navegador. Para que o app funcione offline depois (PWA), prefira servir via <code>http://</code> ou <code>https://</code> em vez de abrir direto como <code>file://</code>.</li>
+<li>Na aba <strong>Início</strong>, clique em <strong>Novo evento</strong> ou use o menu <strong>Mais</strong> → <strong>Novo evento</strong>. A aba <strong>Configuração</strong> é aberta em seguida.</li>
+<li>Em <strong>Configuração</strong>, ajuste:<ul>
+<li><strong>Geral</strong>: nome, data, <strong>local</strong>, horários e <strong>regulamento</strong> (botão «Carregar arquivo» para escolher um PDF do computador, ou URL externa opcional).</li>
+<li><strong>Igrejas</strong>: adicione cada igreja participante. O <code>id</code> é gerado automaticamente a partir do nome e precisa ser único.</li>
+<li><strong>Categorias</strong>: por exemplo Junior, Adolescente, Juvenil. Define a ordem das colunas no pódio.</li>
+<li><strong>Provas</strong>: cada prova pertence a uma categoria e a um <strong>tipo</strong> (oral ou escrita). Reordene como quiser; a ordem vira a ordem de exibição dentro de cada tipo.</li>
+<li><strong>Pesos</strong>: as 7 chaves obrigatórias são <code>inscricao</code>, <code>pontualidade</code>, <code>uniforme</code>, <code>biblia</code>, <code>visitante</code>, <code>animacao</code>, <code>mau_comportamento</code> (este último é negativo).</li>
+<li><strong>Medalhas</strong>: as 3 chaves obrigatórias são <code>ou</code> (ouro), <code>pt</code> (prata) e <code>br</code> (bronze). São os pontos somados quando uma igreja vence em uma prova.</li>
+</ul></li>
+<li>Vá para <strong>Participação</strong> e preencha cada linha (uma por igreja). Os totais de cada igreja aparecem ao vivo na coluna da direita.</li>
+<li>Vá para <strong>Pódio</strong>, marque ouro/prata/bronze por prova selecionando a igreja vencedora e (opcional) o nome do competidor.</li>
+<li>Vá para <strong>Classificação</strong> para ver o ranking ordenado com desempate aplicado.</li>
+<li>Salve com <strong>Exportar projeto</strong> (menu Mais) ou <strong>Exportar evento</strong> se quiser só a configuração. <strong>Exportar CSV</strong> fica na aba Classificação.</li>
+</ol>
+<p>Os dados também ficam guardados automaticamente no <code>localStorage</code> deste navegador, mas só o <code>.projeto.json</code> é portátil entre máquinas.</p>
+<h2 id="carregar-um-evento-ou-projeto-existente">Carregar um evento ou projeto existente</h2>
+<p>A topbar e o menu <strong>Mais</strong> concentram as ações de arquivo:</p>
+<ul>
+<li><strong>Carregar evento (.evento.json)</strong>: traz só a configuração (igrejas, categorias, provas, pesos, medalhas, meta). Os campos de Participação e Pódio começam zerados. Útil para reaproveitar uma estrutura já desenhada e começar a pontuar do zero.</li>
+<li><strong>Carregar projeto (.json)</strong>: traz configuração <strong>e</strong> dados preenchidos (Participação + Pódio). Útil para retomar um trabalho em andamento ou abrir o arquivo enviado por outro juiz.</li>
+</ul>
+<p>Para experimentar sem digitar nada, use a amostra incluída no repositório: <code>eventos/conclave-2026-1.evento.json</code> (só configuração) ou <code>eventos/conclave-2026-1.projeto.exemplo.json</code> (com dados).</p>
+<p>Ao carregar um JSON, mensagens de validação aparecem nos banners <code>#errors</code> (em vermelho, bloqueia carga) e <code>#warnings</code> (em amarelo, apenas alerta). Se um banner vermelho aparecer, leia a mensagem e corrija o JSON antes de tentar de novo.</p>
+<h2 id="editar-configuracao">Editar configuracao</h2>
+<p>Tudo é feito na aba <strong>Configuração</strong>. Os campos editam o objeto <code>evento</code> em memória; as mudanças refletem imediatamente nas outras abas.</p>
+<ul>
+<li><strong>Adicionar igreja</strong>: botão <strong>Adicionar igreja</strong> ou pressione Enter no último campo. O <code>id</code> aceita apenas <code>a-z</code>, <code>0-9</code>, <code>-</code> e <code>_</code> (gerado a partir do nome).</li>
+<li><strong>Remover igreja</strong>: botão de remoção na linha. Se houver dados de Participação ou pódio para essa igreja, um modal-confirm acessível pede confirmação.</li>
+<li><strong>Adicionar/remover prova</strong>: igual às igrejas; cada prova precisa de <code>id</code>, <code>titulo</code>, <code>categoriaId</code> e <code>ordem</code>.</li>
+<li><strong>Pesos</strong> (todas as 7 chaves precisam estar presentes):<ul>
+<li><code>inscricao</code>: pontos por igreja inscrita.</li>
+<li><code>pontualidade</code>: pontos por chegar no horário.</li>
+<li><code>uniforme</code>: pontos quando todos os MR usam camisa (ver Participação).</li>
+<li><code>biblia</code>: pontos quando todos os MR estão com a Bíblia.</li>
+<li><code>visitante</code>: pontos por visitante (multiplicado pela quantidade).</li>
+<li><code>animacao</code>: pontos quando a torcida/animação está marcada.</li>
+<li><code>mau_comportamento</code>: já lançado como número negativo (ex.: <code>-150</code>).</li>
+</ul></li>
+<li><strong>Medalhas</strong> (chaves <code>ou</code>, <code>pt</code>, <code>br</code>): pontos somados ao total da igreja por cada medalha de ouro, prata ou bronze conquistada nas provas.</li>
+</ul>
+<p>Pequena armadilha: a UI fala &quot;ouro/prata/bronze&quot; porque é o vocabulário do regulamento, mas no JSON os campos têm os nomes curtos <code>ou</code>, <code>pt</code>, <code>br</code>. Se editar o JSON na mão, não use <code>ouro</code>, <code>prata</code>, <code>bronze</code> — o motor não os reconhece.</p>
+<h2 id="participacao">Participacao</h2>
+<p>Uma linha por igreja, com os campos abaixo. A coluna <strong>Total</strong> é recalculada a cada edição (cache via <code>computeTotals</code>, atualização coalescida com <code>requestAnimationFrame</code>).</p>
+<ul>
+<li><code>inscricao</code> (boolean ou número): true conta como 1 e multiplica por <code>pesos.inscricao</code>. Para a igreja pontuar em participação, é preciso que <code>inscricao + mr_total</code> seja maior que zero — caso contrário a linha vale 0.</li>
+<li><code>pontualidade</code> (boolean ou número): igual a <code>inscricao</code>, multiplica por <code>pesos.pontualidade</code>.</li>
+<li><code>mr_total</code>: número de MR (Mensageiras do Rei) presentes da igreja.</li>
+<li><code>mr_camisa</code>: número de MR de camisa. <strong>Pontua só se <code>mr_camisa === mr_total</code></strong> (e <code>mr_total &gt; 0</code>). Se faltar um MR sem camisa, perde inteiro o ponto de uniforme.</li>
+<li><code>mr_biblia</code>: número de MR com Bíblia. Mesma regra: <strong>só pontua se <code>mr_biblia === mr_total</code></strong> (e <code>mr_total &gt; 0</code>).</li>
+<li><code>visitantes</code>: número inteiro multiplicado por <code>pesos.visitante</code>.</li>
+<li><code>animacao</code> (boolean): se marcado, soma <code>pesos.animacao</code> uma vez.</li>
+<li><code>mau_comportamento</code> (boolean): se marcado, soma <code>pesos.mau_comportamento</code> (que costuma ser negativo).</li>
+<li><code>pontuacao_extra</code>: pontos avulsos somados ao total. Aceita qualquer número (positivo ou negativo). Substitui o antigo <code>embaixadas</code>.</li>
+<li><code>embaixadas</code> (legado): só é lido se <code>pontuacao_extra</code> estiver ausente; novos eventos devem usar <code>pontuacao_extra</code>.</li>
+</ul>
+<p>Erros comuns:</p>
+<ul>
+<li>Marcar <code>mr_camisa = 5</code> quando <code>mr_total = 6</code> zera o ponto de uniforme da igreja.</li>
+<li>Esquecer de marcar <code>inscricao</code> ou colocar <code>mr_total = 0</code>: a linha inteira de participação fica zerada (mas medalhas de pódio e <code>pontuacao_extra</code> continuam contando).</li>
+</ul>
+<h2 id="podio">Podio</h2>
+<p>Uma seção por prova. Para cada prova, marque ouro (<code>ou</code>), prata (<code>pt</code>) e bronze (<code>br</code>) escolhendo a igreja vencedora num dropdown. Campos opcionais:</p>
+<ul>
+<li><code>competidor</code>: nome do MR vencedor (não pontua, apenas referência).</li>
+<li><code>nomeLivre</code>: texto livre para identificar o ganhador quando a igreja <strong>não está</strong> cadastrada em <code>evento.igrejas[]</code>. Útil para registros visuais e relatórios; é ignorado pelo motor de pontuação (não soma medalhas).</li>
+</ul>
+<p>Se a mesma igreja for selecionada em dois lugares da mesma prova (ex.: ouro e prata para a mesma igreja), aparece um aviso em <code>#warnings</code>. O cálculo continua, mas vale revisar.</p>
+<h2 id="classificacao-e-desempate">Classificacao e desempate</h2>
+<p>A aba <strong>Classificação</strong> mostra o ranking final ordenado por critérios em cascata:</p>
+<ol>
+<li><strong>Pontos totais</strong> (decrescente).</li>
+<li><strong>Medalhas de ouro</strong> (decrescente).</li>
+<li><strong>Medalhas de prata</strong> (decrescente).</li>
+<li><strong>Pontos em Conhecimentos Gerais da Bíblia</strong> (decrescente).</li>
+<li><strong>Pontos em Debate de Versículos</strong> (decrescente).</li>
+<li><strong>Pontos em Conhecimentos Gerais da Organização</strong> (decrescente).</li>
+<li><strong>Nome da igreja</strong> (<code>localeCompare(&quot;pt&quot;, { sensitivity: &quot;base&quot;, numeric: true })</code>).</li>
+</ol>
+<p>Os três critérios de prova (CG Bíblia, Debate, CG Organização) são identificados pelo <strong>título da prova normalizado</strong> (sem acentos, em minúsculas). Por isso, ao renomear provas, mantenha as palavras-chave: &quot;conhecimentos gerais&quot; + &quot;biblia&quot;, &quot;debate&quot; + &quot;versiculos&quot; e &quot;conhecimentos gerais&quot; + &quot;organiza&quot;. Sem essas palavras, a prova vira inerte para fins de desempate (mas continua valendo medalhas normalmente).</p>
+<h2 id="gerar-relatorio-oficial">Gerar relatorio oficial</h2>
+<p>Quando a apuração estiver concluída, gere um <strong>relatório oficial</strong> em PDF para arquivar e divulgar. Este é o <strong>único</strong> caminho de impressão/PDF do app — não há mais botão genérico no menu «Mais».</p>
+<ol>
+<li>Vá na aba <strong>Relatórios</strong>.</li>
+<li>Há <strong>dois documentos</strong> independentes, cada um com <strong>Gerar</strong> e <strong>Imprimir / Salvar PDF</strong>:<ul>
+<li><strong>Resumo (divulgação)</strong> — enxuto para compartilhar.</li>
+<li><strong>Oficial completo (auditoria)</strong> — com classificação integral, participação, avisos e critérios.</li>
+</ul></li>
+<li>Gere o modelo desejado (ou os dois) e confira a prévia na tela.</li>
+<li>Clique em <strong>Imprimir / Salvar PDF</strong> na linha correspondente e escolha <strong>Salvar como PDF</strong> no diálogo nativo do navegador.</li>
+</ol>
+<p><strong>Resumo</strong> inclui: capa, sumário executivo (Top 3), pódio por prova, encerramento com assinaturas e rodapé.</p>
+<p><strong>Oficial completo</strong> inclui tudo do resumo mais: classificação geral, medalhas por igreja, detalhe de participação, avisos e apêndice de critérios.</p>
+<p>Você pode gerar e imprimir <strong>os dois</strong> no mesmo evento — cada um mantém sua própria prévia (com botão <strong>Pré-visualização</strong> para expandir ou recolher) e botão de PDF.</p>
+<p>Dicas:</p>
+<ul>
+<li>Preencha <strong>Local</strong> em Configuração → Geral para aparecer na capa.</li>
+<li>Se as faixas coloridas das medalhas não aparecerem no PDF, marque <strong>Imprimir gráficos de fundo</strong> (ou similar) no diálogo do navegador.</li>
+<li>O relatório se mantém visível enquanto você navega entre as abas dentro da sessão; um F5 ou troca de evento exige gerá-lo novamente — comportamento proposital para garantir que o relatório sempre reflita o estado atual.</li>
+</ul>
+<h3 id="consulta-rapida-e-outros-atalhos">Consulta rápida e outros atalhos</h3>
+<p>Abaixo do relatório oficial ficam as seções <strong>Consulta rápida</strong> (medalhas por igreja e pódio colapsável) — úteis na tela, mas <strong>não</strong> entram no PDF.</p>
+<p>Na mesma área você encontra dois atalhos extras:</p>
+<ul>
+<li><strong>Exportar CSV (pódio)</strong>: baixa um <code>.csv</code> com uma linha por (prova, posição), incluindo categoria, igreja e nome do(a) competidor(a). Abre direto no Excel/Sheets em pt-BR (separador <code>;</code>, UTF-8 com BOM) e serve para alimentar planilhas históricas ou cruzamentos posteriores.</li>
+<li><strong>Copiar resumo</strong>: copia para a área de transferência um resumo curto em <strong>Markdown</strong> com o Top 3 da classificação e as vencedoras de cada prova agrupadas por categoria. Cole direto no WhatsApp, Telegram ou e-mail — formatação leve (negrito, listas) é interpretada pela maioria dos apps; caso contrário, o texto puro continua legível.</li>
+</ul>
+<p>Os dois atalhos respeitam o estado atual da apuração: se você ainda não preencheu pódios, eles avisam («Não há provas para exportar») em vez de gerar um arquivo vazio.</p>
+<h2 id="backup-e-portabilidade">Backup e portabilidade</h2>
+<p>O Pontuação Conclave oferece dois mecanismos complementares de proteção contra perda de dados:</p>
+<ul>
+<li><strong>Exportar projeto</strong> (toolbar): gera um <code>.projeto.json</code> com <strong>tudo</strong> (configuração + Participação + Pódio + meta). É o backup canônico — guarde em pendrive, e-mail, nuvem ou compartilhe com outro juiz. Round-trip seguro: importar de volta com <strong>Carregar projeto</strong> restaura o estado bit-a-bit equivalente.</li>
+<li><strong>Eventos salvos</strong> (toolbar): abre um modal listando todos os projetos guardados no <code>localStorage</code> deste navegador. Permite <strong>carregar</strong>, <strong>exportar</strong> e <strong>remover</strong> cada projeto individualmente (com modal-confirm acessível). Útil para alternar entre vários conclaves sem precisar abrir cada arquivo manualmente.</li>
+</ul>
+<p>Use os dois juntos: o <code>localStorage</code> te salva da queda do navegador e o <code>.projeto.json</code> te salva da troca de máquina ou da limpeza de cache.</p>
+<h2 id="modo-apresentacao">Modo apresentacao</h2>
+<ul>
+<li><strong>Modo apresentação</strong> (menu Mais): esconde menus e amplia tabelas para exibir o ranking num projetor ou telão. Sair: clique em <strong>Sair da apresentação</strong> ou pressione <code>Escape</code> (em algumas versões de iOS Safari, <code>Escape</code> pode não ser capturado; nesse caso, use o botão).</li>
+</ul>
+      </article>
+    </main>
+    <footer class="docs-footer">
+      <p>
+        <a href="../../index.html">Abrir o app</a> ·
+        <a href="../index.html">Índice</a> ·
+        <a href="../changelog.html">Changelog</a>
+      </p>
+    </footer>
+  </body>
+</html>

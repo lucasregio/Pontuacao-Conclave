@@ -13,6 +13,7 @@ window.ConclaveDefaultEvento = {
     "nome": "Conclave MR 2026/1",
     "slug": "conclave-2026-1",
     "data": "2026-04-11",
+    "local": "Vitória — ES",
     "regulamentoUrl": "regulamento-2026.pdf"
   },
   "pesos": {

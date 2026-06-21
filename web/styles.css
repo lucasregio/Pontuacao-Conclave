@@ -2269,57 +2269,61 @@ body.presentation-mode .presentation-exit-btn {
   grid-column: 1 / -1;
 }
 
-/* Regulamento: prefixo static/ fixo; só se edita o nome do ficheiro */
-.config-regulamento-row {
+/* Regulamento: carregar PDF do computador ou URL externa */
+.config-regulamento-picker {
   display: flex;
-  align-items: stretch;
-  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
   margin-top: 0.28rem;
+  padding: 0.55rem 0.65rem;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--card-solid);
-  overflow: hidden;
 }
 
-.config-regulamento-prefix {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  padding: 0.4rem 0.55rem 0.4rem 0.65rem;
-  font-family: ui-monospace, Menlo, Consolas, monospace;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--muted);
-  background: var(--theme-table-head-bg);
-  border-right: 1px solid var(--border);
+.config-regulamento-filename {
+  flex: 1 1 12rem;
+  min-width: 0;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.config-regulamento-row input[type="text"] {
-  flex: 1 1 auto;
-  min-width: 0;
-  width: auto;
-  max-width: none;
-  margin: 0;
-  border: none;
-  border-radius: 0;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.9rem;
-  background: transparent;
-  color: var(--theme-text-main);
+.config-regulamento-filename--empty {
+  color: var(--muted);
+  font-style: italic;
 }
 
-.config-regulamento-row input[type="text"]:focus {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--accent);
+.config-regulamento-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
 }
 
-.config-regulamento-row--external {
-  border-style: dashed;
+.config-regulamento-load {
+  margin-top: 0;
+  position: relative;
+  cursor: pointer;
 }
 
-.config-regulamento-row--external input[type="text"] {
-  width: 100%;
+.config-regulamento-load input[type="file"] {
+  position: absolute;
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.config-regulamento-url-field {
+  margin-top: 0.45rem;
+}
+
+.config-regulamento-actions .config-danger-btn {
+  margin-top: 0;
 }
 
 .config-grid--medalhas {
@@ -3110,6 +3114,65 @@ table.data.participacao-table thead th:first-child {
   margin: 0 0 0.5rem;
 }
 
+/* Artigos gerados a partir de Markdown (build-docs). */
+.docs-page .docs-prose .docs-article > :first-child {
+  margin-top: 0;
+}
+
+.docs-page .docs-prose h2 {
+  margin: 1.75rem 0 0.65rem;
+  scroll-margin-top: 1rem;
+}
+
+.docs-page .docs-prose h2:first-child {
+  margin-top: 0.5rem;
+}
+
+.docs-page .docs-prose h3 {
+  margin: 1.15rem 0 0.45rem;
+  color: var(--accent);
+  font-size: 1.05rem;
+  scroll-margin-top: 1rem;
+}
+
+.docs-page .docs-prose p {
+  margin: 0 0 0.85rem;
+}
+
+.docs-page .docs-prose ul,
+.docs-page .docs-prose ol {
+  margin: 0 0 0.85rem;
+  padding-inline-start: 1.5rem;
+}
+
+.docs-page .docs-prose li {
+  margin-bottom: 0.35rem;
+}
+
+.docs-page .docs-prose li > ul,
+.docs-page .docs-prose li > ol {
+  margin-top: 0.35rem;
+  margin-bottom: 0;
+}
+
+.docs-page .docs-prose pre {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.docs-page .docs-prose pre code {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: inherit;
+}
+
 .docs-page .docs-footer p {
   margin: 0;
   color: var(--muted);
@@ -3336,11 +3399,103 @@ table.data.participacao-table thead th:first-child {
    alterado — o bloco @media print abaixo é dedicado e não interfere
    no @media print genérico já existente. */
 
-.relatorio-acoes {
+.relatorio-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  margin-bottom: 1rem;
+}
+
+.relatorio-doc-block {
+  padding: 1rem 1.1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-solid);
+  box-shadow: var(--theme-card-shadow);
+}
+
+.relatorio-doc-block__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: var(--accent);
+}
+
+.relatorio-doc-block__desc {
+  margin: 0 0 0.75rem;
+}
+
+.relatorio-doc-block__acoes {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
   margin-bottom: 0.85rem;
+}
+
+.relatorio-doc-preview-section {
+  margin-top: 0.25rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
+}
+
+.relatorio-doc-preview-section .config-section-head {
+  margin-bottom: 0.35rem;
+}
+
+.relatorio-oficial-host:empty {
+  display: none;
+}
+
+.relatorio-acoes {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.relatorio-perfil {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-sunken);
+}
+
+.relatorio-perfil__opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.relatorio-perfil__opt:has(input:checked) {
+  background: var(--brand-soft);
+  color: var(--accent);
+}
+
+.relatorio-perfil__opt input {
+  accent-color: var(--accent);
+}
+
+.relatorio-consulta-title {
+  margin: 1.75rem 0 0.65rem;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+.relatorio-consulta-acoes {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
 }
 
 .relatorio-oficial {
@@ -3435,6 +3590,42 @@ table.data.participacao-table thead th:first-child {
 
 .relatorio-oficial__meta dd {
   margin: 0;
+}
+
+/* Encerramento e assinaturas */
+.relatorio-oficial__ata {
+  max-width: 42rem;
+  line-height: 1.6;
+}
+
+.relatorio-oficial__assinaturas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem 1.5rem;
+  margin-top: 2rem;
+}
+
+.relatorio-oficial__assinatura {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.relatorio-oficial__assinatura-linha {
+  display: block;
+  border-bottom: 1px dashed var(--border-strong, var(--border));
+  min-height: 2.25rem;
+}
+
+.relatorio-oficial__assinatura-rotulo {
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.relatorio-oficial[data-perfil="resumo"] .relatorio-oficial__capa {
+  min-height: 16cm;
 }
 
 /* Sumário executivo */
@@ -3563,6 +3754,9 @@ table.data.participacao-table thead th:first-child {
   .relatorio-oficial__evento {
     font-size: 1.15rem;
   }
+  .relatorio-oficial__assinaturas {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Impressão dedicada do relatório oficial.
@@ -3574,36 +3768,107 @@ table.data.participacao-table thead th:first-child {
    regras com seletor mais específico (body:has) que sobrescrevem o
    necessário sem !important onde a cascata já basta. */
 @media print {
-  body:has(.relatorio-oficial) {
+  body:has(.relatorio-oficial),
+  body.relatorio-print-mode {
     background: #fff;
   }
+  body:has(.relatorio-oficial) .topbar,
+  body:has(.relatorio-oficial) .sidebar,
+  body:has(.relatorio-oficial) .bottom-nav,
+  body:has(.relatorio-oficial) .kpi-strip,
+  body:has(.relatorio-oficial) .topbar-hint,
   body:has(.relatorio-oficial) .app-header,
   body:has(.relatorio-oficial) .app-footer,
   body:has(.relatorio-oficial) .tabs,
+  body:has(.relatorio-oficial) .skip-link,
   body:has(.relatorio-oficial) #feedback,
   body:has(.relatorio-oficial) #errors,
   body:has(.relatorio-oficial) #warnings,
   body:has(.relatorio-oficial) #boot-hint,
-  body:has(.relatorio-oficial) .presentation-exit-btn {
+  body:has(.relatorio-oficial) .presentation-exit-btn,
+  body.relatorio-print-mode .topbar,
+  body.relatorio-print-mode .sidebar,
+  body.relatorio-print-mode .bottom-nav,
+  body.relatorio-print-mode .kpi-strip,
+  body.relatorio-print-mode .topbar-hint,
+  body.relatorio-print-mode .app-header,
+  body.relatorio-print-mode .app-footer,
+  body.relatorio-print-mode .tabs,
+  body.relatorio-print-mode .skip-link,
+  body.relatorio-print-mode #feedback,
+  body.relatorio-print-mode #errors,
+  body.relatorio-print-mode #warnings,
+  body.relatorio-print-mode #boot-hint,
+  body.relatorio-print-mode .presentation-exit-btn {
     display: none !important;
   }
-  body:has(.relatorio-oficial) main.shell > .panel:not(#panel-relatorios) {
+  body:has(.relatorio-oficial) main.content > .panel:not(#panel-relatorios),
+  body.relatorio-print-mode main.content > .panel:not(#panel-relatorios) {
     display: none !important;
   }
-  body:has(.relatorio-oficial) #panel-relatorios .relatorio-acoes,
-  body:has(.relatorio-oficial) #panel-relatorios > .relatorio-wrap > section.config-section {
+  body:has(.relatorio-oficial) #panel-relatorios .relatorio-doc-block__title,
+  body:has(.relatorio-oficial) #panel-relatorios .relatorio-doc-block__desc,
+  body:has(.relatorio-oficial) #panel-relatorios .relatorio-doc-block__acoes,
+  body:has(.relatorio-oficial) #panel-relatorios .relatorio-consulta-title,
+  body:has(.relatorio-oficial) #panel-relatorios .relatorio-consulta-acoes,
+  body:has(.relatorio-oficial) #panel-relatorios > .relatorio-wrap > section.config-section,
+  body.relatorio-print-mode #panel-relatorios .relatorio-doc-block__title,
+  body.relatorio-print-mode #panel-relatorios .relatorio-doc-block__desc,
+  body.relatorio-print-mode #panel-relatorios .relatorio-doc-block__acoes,
+  body.relatorio-print-mode #panel-relatorios .relatorio-consulta-title,
+  body.relatorio-print-mode #panel-relatorios .relatorio-consulta-acoes,
+  body.relatorio-print-mode #panel-relatorios > .relatorio-wrap > section.config-section,
+  body.relatorio-print-mode[data-relatorio-print-perfil="resumo"]
+    #panel-relatorios
+    .relatorio-doc-block[data-perfil="completo"],
+  body.relatorio-print-mode[data-relatorio-print-perfil="completo"]
+    #panel-relatorios
+    .relatorio-doc-block[data-perfil="resumo"] {
     display: none !important;
   }
-  body:has(.relatorio-oficial) main.shell {
-    padding: 0;
-    background: #fff;
+  body.relatorio-print-mode .relatorio-doc-block {
+    border: 0;
     box-shadow: none;
-    border-radius: 0;
+    padding: 0;
+    background: transparent;
+  }
+  body.relatorio-print-mode .relatorio-doc-preview-section.is-collapsed .config-section-body {
+    display: block !important;
+  }
+  body.relatorio-print-mode .relatorio-doc-preview-section .config-section-head {
+    display: none !important;
+  }
+  body:has(.relatorio-oficial) #panel-relatorios,
+  body.relatorio-print-mode #panel-relatorios {
+    display: block !important;
+  }
+  body:has(.relatorio-oficial) #panel-relatorios[hidden],
+  body.relatorio-print-mode #panel-relatorios[hidden] {
+    display: block !important;
+  }
+  body:has(.relatorio-oficial) .app-grid,
+  body.relatorio-print-mode .app-grid {
+    display: block !important;
+    min-height: auto !important;
+  }
+  body:has(.relatorio-oficial) main.content,
+  body.relatorio-print-mode main.content {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-width: none !important;
   }
 
   @page {
-    size: A4;
-    margin: 18mm 14mm;
+    size: A4 portrait;
+    margin: 16mm 12mm 20mm;
+    @bottom-center {
+      content: counter(page);
+      font-size: 9pt;
+      color: #666;
+    }
   }
 
   .relatorio-oficial {
@@ -3614,40 +3879,159 @@ table.data.participacao-table thead th:first-child {
     box-shadow: none;
     background: #fff;
     color: #000;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 11pt;
+    line-height: 1.45;
   }
 
-  /* Capa em página inteira; o @page já reserva a margem, height: calc()
-     é só fallback para evitar que a capa "encolha" se algum browser não
-     contar a margem corretamente. */
-  .relatorio-oficial__capa {
-    min-height: auto;
-    height: calc(100vh - 36mm);
+  .relatorio-oficial h3,
+  .relatorio-oficial h4 {
+    color: #222;
+  }
+
+  .relatorio-oficial h3 {
+    page-break-after: avoid;
+    break-after: avoid;
+    margin-top: 0;
+  }
+
+  .relatorio-oficial h4 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /* Capa ocupa a página 1 inteira (área útil A4 menos margens do @page). */
+  .relatorio-oficial__bloco[data-bloco="capa"] {
+    box-sizing: border-box;
+    min-height: calc(297mm - 36mm);
+    padding: 8mm 4mm;
     page-break-after: always;
+    break-after: page;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .relatorio-oficial__bloco[data-bloco="sumario"] {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    padding: 0.5rem 0 1rem;
+  }
+
+  /* Cada seção principal começa em página nova (após sumário na pág. 2). */
+  .relatorio-oficial__bloco[data-bloco="classificacao"],
+  .relatorio-oficial__bloco[data-bloco="medalhas"],
+  .relatorio-oficial__bloco[data-bloco="podio"],
+  .relatorio-oficial__bloco[data-bloco="participacao"],
+  .relatorio-oficial__bloco[data-bloco="avisos"],
+  .relatorio-oficial__bloco[data-bloco="criterios"],
+  .relatorio-oficial__bloco[data-bloco="encerramento"] {
+    page-break-before: always;
+    break-before: page;
+    padding: 0.75rem 0 1rem;
+  }
+
+  /* Seções longas podem continuar na página seguinte. */
+  .relatorio-oficial__bloco[data-bloco="classificacao"],
+  .relatorio-oficial__bloco[data-bloco="medalhas"],
+  .relatorio-oficial__bloco[data-bloco="podio"],
+  .relatorio-oficial__bloco[data-bloco="participacao"],
+  .relatorio-oficial__bloco[data-bloco="criterios"] {
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+
+  .relatorio-oficial__bloco[data-bloco="avisos"],
+  .relatorio-oficial__bloco[data-bloco="encerramento"] {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
   .relatorio-oficial__bloco {
-    page-break-inside: avoid;
     border-bottom: 0;
   }
 
-  .relatorio-oficial__bloco + .relatorio-oficial__bloco {
-    page-break-before: auto;
+  .relatorio-oficial__prova {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #ddd;
   }
 
-  /* Tabelas longas (classificação) podem quebrar entre páginas, desde
-     que o cabeçalho seja repetido e linhas individuais não se partam. */
+  .relatorio-oficial__prova:last-child {
+    border-bottom: 0;
+  }
+
+  .relatorio-oficial__podio {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .relatorio-oficial__podio li[data-medalha="ou"] {
+    border-left: 3px solid #b8860b;
+    padding-left: 0.4rem;
+  }
+  .relatorio-oficial__podio li[data-medalha="pt"] {
+    border-left: 3px solid #78909c;
+    padding-left: 0.4rem;
+  }
+  .relatorio-oficial__podio li[data-medalha="br"] {
+    border-left: 3px solid #8d6e63;
+    padding-left: 0.4rem;
+  }
+
+  .relatorio-oficial__sumario > li {
+    background: #f5f5f5;
+  }
+
+  .relatorio-oficial__ata {
+    max-width: none;
+  }
+
+  .relatorio-oficial__assinatura-linha {
+    border-bottom-color: #888;
+  }
+
+  .relatorio-oficial__assinatura-rotulo {
+    color: #444;
+  }
+
+  .relatorio-oficial .table-wrap {
+    overflow: visible !important;
+  }
+
   .relatorio-oficial table {
     page-break-inside: auto;
+    break-inside: auto;
+    width: 100%;
+    font-size: 10pt;
   }
+
   .relatorio-oficial thead {
     display: table-header-group;
   }
+
   .relatorio-oficial tbody tr {
     page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .relatorio-oficial__top3 > td:first-child {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .relatorio-oficial__rodape {
+    margin-top: 1rem;
+    padding-top: 0.5rem;
     page-break-before: avoid;
+    break-before: avoid;
+    font-size: 9pt;
   }
 }
 

@@ -40,7 +40,7 @@ concentra:
 
 - Carregar evento / Carregar projeto
 - **Exportar evento** (só configuração) e **Exportar projeto** (completo)
-- Novo evento, Eventos salvos, Modo apresentação, Imprimir / Salvar PDF
+- Novo evento, Eventos salvos, Modo apresentação
 - Limpar dados do evento
 
 Use as **setas** (← →) para mover entre abas quando o foco estiver na lista de
@@ -53,7 +53,7 @@ navegação (padrão ARIA tablist).
 2. Na aba **Início**, clique em **Novo evento** ou use o menu **Mais** → **Novo evento**.
    A aba **Configuração** é aberta em seguida.
 3. Em **Configuração**, ajuste:
-   - **Geral**: nome, data, **local**, horários e regulamento (PDF em `static/`).
+   - **Geral**: nome, data, **local**, horários e **regulamento** (botão «Carregar arquivo» para escolher um PDF do computador, ou URL externa opcional).
    - **Igrejas**: adicione cada igreja participante. O `id` é gerado automaticamente a
      partir do nome e precisa ser único.
    - **Categorias**: por exemplo Junior, Adolescente, Juvenil. Define a ordem das colunas
@@ -186,29 +186,41 @@ a prova vira inerte para fins de desempate (mas continua valendo medalhas normal
 ## Gerar relatorio oficial
 
 Quando a apuração estiver concluída, gere um **relatório oficial** em PDF para
-arquivar e divulgar.
+arquivar e divulgar. Este é o **único** caminho de impressão/PDF do app — não há
+mais botão genérico no menu «Mais».
 
 1. Vá na aba **Relatórios**.
-2. Clique em **Gerar relatório oficial** no topo da aba.
-3. Confira o documento gerado (capa, sumário executivo, classificação geral
-   com top 3 destacado, medalhas por igreja, pódio por prova, detalhe de
-   participação, avisos e apêndice de critérios).
-4. Clique em **Imprimir / Salvar PDF** e escolha **Salvar como PDF** no
-   diálogo nativo do navegador. O `@media print` esconde a interface; o PDF
-   sai com apenas o relatório, em A4.
+2. Há **dois documentos** independentes, cada um com **Gerar** e **Imprimir / Salvar PDF**:
+   - **Resumo (divulgação)** — enxuto para compartilhar.
+   - **Oficial completo (auditoria)** — com classificação integral, participação, avisos e critérios.
+3. Gere o modelo desejado (ou os dois) e confira a prévia na tela.
+4. Clique em **Imprimir / Salvar PDF** na linha correspondente e escolha **Salvar como PDF** no
+   diálogo nativo do navegador.
+
+**Resumo** inclui: capa, sumário executivo (Top 3), pódio por prova, encerramento com
+assinaturas e rodapé.
+
+**Oficial completo** inclui tudo do resumo mais: classificação geral, medalhas por igreja,
+detalhe de participação, avisos e apêndice de critérios.
+
+Você pode gerar e imprimir **os dois** no mesmo evento — cada um mantém sua própria prévia
+(com botão **Pré-visualização** para expandir ou recolher) e botão de PDF.
 
 Dicas:
 
+- Preencha **Local** em Configuração → Geral para aparecer na capa.
 - Se as faixas coloridas das medalhas não aparecerem no PDF, marque
   **Imprimir gráficos de fundo** (ou similar) no diálogo do navegador.
 - O relatório se mantém visível enquanto você navega entre as abas dentro da
   sessão; um F5 ou troca de evento exige gerá-lo novamente — comportamento
   proposital para garantir que o relatório sempre reflita o estado atual.
 
-### Outras formas de compartilhar
+### Consulta rápida e outros atalhos
 
-Na mesma linha de ações do relatório oficial você encontra dois atalhos
-extras, úteis quando o PDF é demais ou de menos:
+Abaixo do relatório oficial ficam as seções **Consulta rápida** (medalhas por
+igreja e pódio colapsável) — úteis na tela, mas **não** entram no PDF.
+
+Na mesma área você encontra dois atalhos extras:
 
 - **Exportar CSV (pódio)**: baixa um `.csv` com uma linha por (prova,
   posição), incluindo categoria, igreja e nome do(a) competidor(a). Abre
@@ -241,13 +253,9 @@ dados:
 Use os dois juntos: o `localStorage` te salva da queda do navegador e o
 `.projeto.json` te salva da troca de máquina ou da limpeza de cache.
 
-## Modo apresentacao e impressao em PDF
+## Modo apresentacao
 
-- **Modo apresentação** (botão na toolbar): esconde menus e amplia tabelas para
+- **Modo apresentação** (menu Mais): esconde menus e amplia tabelas para
   exibir o ranking num projetor ou telão. Sair: clique em **Sair da apresentação**
   ou pressione `Escape` (em algumas versões de iOS Safari, `Escape` pode não ser
   capturado; nesse caso, use o botão).
-- **Imprimir / Salvar como PDF** (botão na toolbar): abre o diálogo de impressão do
-  navegador. Selecione **Salvar como PDF** como destino para gerar um PDF. A folha de
-  estilo `@media print` esconde a toolbar e expande tabelas. Para tabelas muito
-  largas, prefira **orientação paisagem** no diálogo do navegador.
