@@ -1,0 +1,9 @@
+node_modules
+coverage
+.git
+.pytest_cache
+.cursor
+
+# Arquivos gerados — fonte canônica é o .json correspondente.
+# Regere com `npm run build:embedded` quando o JSON mudar.
+eventos/*.evento.embedded.js

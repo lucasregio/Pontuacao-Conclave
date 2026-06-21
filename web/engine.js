@@ -1,5 +1,5 @@
 /**
- * Motor de pontuação Conclave MR — espelho de engine.py (manter em sincronia).
+ * Motor de pontuação Pontuação Conclave (uso web).
  */
 (function (global) {
   function truthy(v) {
@@ -11,8 +11,23 @@
   function num(v, def) {
     if (def === undefined) def = 0;
     if (v === null || v === undefined || v === "") return def;
+    // Aceita vírgula decimal (entrada de planilha em pt-BR) sem quebrar JSON.
+    if (typeof v === "string") {
+      const s = v.trim();
+      if (s === "") return def;
+      const n = Number(s.indexOf(",") !== -1 ? s.replace(/\./g, "").replace(",", ".") : s);
+      return Number.isFinite(n) ? n : def;
+    }
     const n = Number(v);
     return Number.isFinite(n) ? n : def;
+  }
+
+  /** Lê peso garantindo número finito (default 0) — evita NaN silencioso quando
+   *  o evento foi importado com `pesos` parciais. */
+  function peso(pesos, key) {
+    if (!pesos) return 0;
+    const v = pesos[key];
+    return typeof v === "number" && Number.isFinite(v) ? v : 0;
   }
 
   function pontosParticipacao(row, pesos) {
@@ -26,17 +41,17 @@
     const g = Math.trunc(num(row.visitantes, 0));
     const anim = truthy(row.animacao);
     if (b + d <= 0) return 0;
-    let total = b * pesos.inscricao + c * pesos.pontualidade;
-    if (d > 0 && e === d) total += pesos.uniforme;
-    if (d > 0 && f === d) total += pesos.biblia;
-    total += g * pesos.visitante;
-    if (anim) total += pesos.animacao;
+    let total = b * peso(pesos, "inscricao") + c * peso(pesos, "pontualidade");
+    if (d > 0 && e === d) total += peso(pesos, "uniforme");
+    if (d > 0 && f === d) total += peso(pesos, "biblia");
+    total += g * peso(pesos, "visitante");
+    if (anim) total += peso(pesos, "animacao");
     return total;
   }
 
   function pontosPunicoes(row, pesos) {
     let p = 0;
-    if (truthy(row.mau_comportamento)) p += pesos.mau_comportamento;
+    if (truthy(row.mau_comportamento)) p += peso(pesos, "mau_comportamento");
     return p;
   }
 
@@ -99,12 +114,12 @@
   }
 
   function buildTiebreakByIgreja(evento, dados) {
-    const igrejas = evento.igrejas || [];
-    const medalhas = evento.medalhas || { ou: 0, pt: 0, br: 0 };
+    const igrejas = Array.isArray(evento && evento.igrejas) ? evento.igrejas : [];
+    const medalhas = (evento && evento.medalhas) || { ou: 0, pt: 0, br: 0 };
     const podium = (dados && dados.podium) || {};
     const igrejaIds = new Set(
       igrejas.map(function (g) {
-        return g.id;
+        return g && g.id;
       })
     );
     const medalCounts = contarMedalhasPorIgreja(podium, igrejaIds);
@@ -136,12 +151,14 @@
   }
 
   function computeTotals(evento, dados) {
-    const pesos = evento.pesos;
-    const medalhas = evento.medalhas;
-    const igrejas = evento.igrejas;
-    const igrejaIds = new Set(igrejas.map(function (g) {
-      return g.id;
-    }));
+    const pesos = (evento && evento.pesos) || {};
+    const medalhas = (evento && evento.medalhas) || { ou: 0, pt: 0, br: 0 };
+    const igrejas = Array.isArray(evento && evento.igrejas) ? evento.igrejas : [];
+    const igrejaIds = new Set(
+      igrejas.map(function (g) {
+        return g && g.id;
+      })
+    );
     const participacao = (dados && dados.participacao) || {};
     const podium = (dados && dados.podium) || {};
     const gincTotals = gincanaPorIgreja(podium, medalhas, igrejaIds);
@@ -242,7 +259,10 @@
       if (diff !== 0) return diff;
       diff = xb.cgOrg - xa.cgOrg;
       if (diff !== 0) return diff;
-      return String(da.igreja || "").localeCompare(String(db.igreja || ""), "pt");
+      return String(da.igreja || "").localeCompare(String(db.igreja || ""), "pt", {
+        sensitivity: "base",
+        numeric: true,
+      });
     });
     return indexed.map(function (i) {
       const row = Object.assign({}, detalhes[i]);
@@ -253,16 +273,19 @@
 
   function validateEventoMinimal(evento) {
     const errs = [];
+    if (!evento || typeof evento !== "object") return ["Evento deve ser um objeto."];
     ["meta", "pesos", "medalhas", "igrejas", "provas"].forEach(function (k) {
       if (evento[k] == null) errs.push("Falta chave: " + k);
     });
+    if (!Array.isArray(evento.igrejas)) errs.push("igrejas deve ser uma lista.");
+    if (!Array.isArray(evento.provas)) errs.push("provas deve ser uma lista.");
     if (errs.length) return errs;
     const ids = evento.igrejas.map(function (g) {
-      return g.id;
+      return g && g.id;
     });
     if (new Set(ids).size !== ids.length) errs.push("IDs de igrejas duplicados");
     const pids = evento.provas.map(function (p) {
-      return p.id;
+      return p && p.id;
     });
     if (new Set(pids).size !== pids.length) errs.push("IDs de provas duplicados");
     return errs;
@@ -303,7 +326,8 @@
       ["ou", "pt", "br"].forEach(function (key) {
         const iid = places[key] && places[key].igrejaId;
         if (!iid) return;
-        if (seen.has(iid)) avisos.push("Prova «" + provaId + "»: igreja repetida em mais de um lugar.");
+        if (seen.has(iid))
+          avisos.push("Prova «" + provaId + "»: igreja repetida em mais de um lugar.");
         seen.add(iid);
       });
     });
@@ -318,5 +342,12 @@
     emptyDadosTemplate: emptyDadosTemplate,
     avisosPodiumDuplicado: avisosPodiumDuplicado,
     contarMedalhasPorIgreja: contarMedalhasPorIgreja,
+    // Helpers expostos para reuso por integrações externas, evitando
+    // reimplementação divergente das regras de pontuação/punição.
+    pontosParticipacao: pontosParticipacao,
+    pontosPunicoes: pontosPunicoes,
+    pontuacaoExtra: pontuacaoExtra,
+    truthy: truthy,
+    num: num,
   };
 })(typeof window !== "undefined" ? window : globalThis);

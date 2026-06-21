@@ -1,0 +1,91 @@
+name: Deploy GitHub Pages
+
+# Publica o app estático no GitHub Pages a partir de `main` quando o CI
+# de qualidade passar. Usa o "actions" deployment (sem branch gh-pages).
+#
+# Pré-requisitos no repositório:
+#   - Settings → Pages → Source: GitHub Actions.
+#
+# Como o app é 100% estático, o "build" é apenas um upload de artefato com
+# os arquivos relevantes (excluindo node_modules, .github, tests etc.).
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Apenas um deploy concorrente; cancela o anterior em caso de novo push.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      - name: Format check
+        run: npm run format:check
+
+  deploy:
+    needs: quality
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare site directory
+        run: |
+          mkdir -p _site
+          # Copia apenas os arquivos servidos publicamente.
+          rsync -a \
+            --exclude='_site' \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='scripts' \
+            --exclude='.cursor' \
+            --exclude='referencia/' \
+            --exclude='.prettierignore' \
+            --exclude='eslint.config.js' \
+            --exclude='package.json' \
+            --exclude='package-lock.json' \
+            --exclude='AGENTS.md' \
+            ./ _site/
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

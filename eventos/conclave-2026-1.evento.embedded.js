@@ -1,4 +1,15 @@
-{
+/**
+ * Gerado automaticamente por scripts/build-embedded.mjs.
+ * NÃO EDITE À MÃO. Reedite eventos/conclave-2026-1.evento.json e
+ * rode 
+pm run build:embedded (ou 
+ode scripts/build-embedded.mjs).
+ *
+ * Este arquivo expõe o evento de exemplo como window.ConclaveDefaultEvento
+ * para que o app funcione sem etch() (cenário típico de uso via
+ * ile://, por exemplo a partir de um pen-drive).
+ */
+window.ConclaveDefaultEvento = {
   "meta": {
     "schemaVersion": 2,
     "nome": "Conclave MR 2026/1",
@@ -20,28 +31,94 @@
     "br": 100
   },
   "igrejas": [
-    { "id": "alianca", "nome": "Primeira Igreja Batista Aliança" },
-    { "id": "ibes", "nome": "Igreja Batista do Ibes" },
-    { "id": "gloria", "nome": "Igreja Batista da Glória" },
-    { "id": "orla", "nome": "Igreja da Orla" },
-    { "id": "vila-batista", "nome": "Vila Batista" },
-    { "id": "aribiri", "nome": "PIB Aribiri" },
-    { "id": "vila-garrido", "nome": "Primeira Igreja Batista em Vila Garrido" },
-    { "id": "novo-mexico", "nome": "Novo México" },
-    { "id": "santa-rita", "nome": "Igreja Batista de Santa Rita" },
-    { "id": "23-maio", "nome": "Primeira igreja Batista 23 de maio" },
-    { "id": "guarapari", "nome": "batista Guaranhuns" },
-    { "id": "pibjg", "nome": "Primeira Igreja Batista em João Goulart (PIBJG)" },
-    { "id": "brunellas", "nome": "Primeira Igreja Batista em Brunellas" },
-    { "id": "cobilandia", "nome": "Pib Cobilandia" },
-    { "id": "alvorada", "nome": "Primeira igreja Batista em Alvorada" },
-    { "id": "cocal", "nome": "Pib Cocal" },
-    { "id": "santa-monica", "nome": "Igreja batista de Santa Mônica" }
+    {
+      "id": "alianca",
+      "nome": "Primeira Igreja Batista Aliança"
+    },
+    {
+      "id": "ibes",
+      "nome": "Igreja Batista do Ibes"
+    },
+    {
+      "id": "gloria",
+      "nome": "Igreja Batista da Glória"
+    },
+    {
+      "id": "orla",
+      "nome": "Igreja da Orla"
+    },
+    {
+      "id": "vila-batista",
+      "nome": "Vila Batista"
+    },
+    {
+      "id": "aribiri",
+      "nome": "PIB Aribiri"
+    },
+    {
+      "id": "vila-garrido",
+      "nome": "Primeira Igreja Batista em Vila Garrido"
+    },
+    {
+      "id": "novo-mexico",
+      "nome": "Novo México"
+    },
+    {
+      "id": "santa-rita",
+      "nome": "Igreja Batista de Santa Rita"
+    },
+    {
+      "id": "23-maio",
+      "nome": "Primeira igreja Batista 23 de maio"
+    },
+    {
+      "id": "guarapari",
+      "nome": "batista Guaranhuns"
+    },
+    {
+      "id": "pibjg",
+      "nome": "Primeira Igreja Batista em João Goulart (PIBJG)"
+    },
+    {
+      "id": "brunellas",
+      "nome": "Primeira Igreja Batista em Brunellas"
+    },
+    {
+      "id": "cobilandia",
+      "nome": "Pib Cobilandia"
+    },
+    {
+      "id": "alvorada",
+      "nome": "Primeira igreja Batista em Alvorada"
+    },
+    {
+      "id": "cocal",
+      "nome": "Pib Cocal"
+    },
+    {
+      "id": "santa-monica",
+      "nome": "Igreja batista de Santa Mônica"
+    }
   ],
   "categorias": [
-    { "id": "junior", "nome": "Junior", "ordem": 0, "idade": "10–13" },
-    { "id": "adolescente", "nome": "Adolescente", "ordem": 1, "idade": "14–17" },
-    { "id": "juvenil", "nome": "Juvenil", "ordem": 2, "idade": "18–25" }
+    {
+      "id": "junior",
+      "nome": "Junior",
+      "ordem": 0,
+      "idade": "10–13"
+    },
+    {
+      "id": "adolescente",
+      "nome": "Adolescente",
+      "ordem": 1,
+      "idade": "14–17"
+    },
+    {
+      "id": "juvenil",
+      "nome": "Juvenil",
+      "ordem": 2,
+      "idade": "18–25"
+    }
   ],
   "provas": [
     {
@@ -141,4 +218,4 @@
       "ordem": 12
     }
   ]
-}
+};

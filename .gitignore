@@ -6,7 +6,7 @@
 ._*
 
 # Custom folder icons
-Icon
+Icon
 
 # Volume root files
 .DocumentRevisions-V100
@@ -114,3 +114,18 @@ htmlcov/
 
 # pyenv
 # .python-version
+
+### Pontuação Conclave
+# Saída do workflow de Pages (gerada no CI a partir dos arquivos da raiz)
+_site/
+
+# Editores
+.idea/
+.vscode/
+.cursor/
+
+# Sistema (Linux)
+*~
+
+# Lighthouse CI
+.lighthouseci/

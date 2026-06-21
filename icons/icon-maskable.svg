@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="Pontuação Conclave">
+  <rect width="192" height="192" fill="#1b5e20"/>
+  <circle cx="96" cy="96" r="48" fill="#fdd835"/>
+  <text x="96" y="110"
+        font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+        font-weight="800"
+        font-size="48"
+        text-anchor="middle"
+        fill="#1b5e20">MR</text>
+</svg>

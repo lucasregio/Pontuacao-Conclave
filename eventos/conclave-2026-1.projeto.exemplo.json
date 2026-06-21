@@ -1,13 +1,10 @@
 {
   "evento": {
     "meta": {
+      "schemaVersion": 2,
       "nome": "Conclave MR 2026/1",
       "slug": "conclave-2026-1",
-      "data": "2026-04-11",
-      "tema": {
-        "backgroundImage": "IMG_7105.PNG",
-        "accentColor": "#1b5e20"
-      }
+      "data": "2026-04-11"
     },
     "pesos": {
       "inscricao": 100,
@@ -93,76 +90,120 @@
         "nome": "Igreja batista de Santa Mônica"
       }
     ],
+    "categorias": [
+      {
+        "id": "junior",
+        "nome": "Junior",
+        "ordem": 0,
+        "idade": "10–13"
+      },
+      {
+        "id": "adolescente",
+        "nome": "Adolescente",
+        "ordem": 1,
+        "idade": "14–17"
+      },
+      {
+        "id": "juvenil",
+        "nome": "Juvenil",
+        "ordem": 2,
+        "idade": "18–25"
+      }
+    ],
     "provas": [
       {
         "id": "esgrima-jun",
         "titulo": "Esgrima bíblica — Junior",
+        "tipo": "oral",
+        "categoriaId": "junior",
         "categoria": "Junior",
         "ordem": 1
       },
       {
         "id": "esgrima-adl",
         "titulo": "Esgrima bíblica — Adolescente",
+        "tipo": "oral",
+        "categoriaId": "adolescente",
         "categoria": "Adolescente",
         "ordem": 2
       },
       {
         "id": "esgrima-juv",
         "titulo": "Esgrima bíblica — Juvenil",
+        "tipo": "oral",
+        "categoriaId": "juvenil",
         "categoria": "Juvenil",
         "ordem": 3
       },
       {
         "id": "debate-jun",
         "titulo": "Debate de versículos — Junior",
+        "tipo": "oral",
+        "categoriaId": "junior",
         "categoria": "Junior",
         "ordem": 4
       },
       {
         "id": "debate-adl",
         "titulo": "Debate de versículos — Adolescente",
+        "tipo": "oral",
+        "categoriaId": "adolescente",
         "categoria": "Adolescente",
         "ordem": 5
       },
       {
         "id": "debate-juv",
         "titulo": "Debate de versículos — Juvenil",
+        "tipo": "oral",
+        "categoriaId": "juvenil",
         "categoria": "Juvenil",
         "ordem": 6
       },
       {
         "id": "esgrima-av-jun",
         "titulo": "Esgrima avançada — Junior",
+        "tipo": "oral",
+        "categoriaId": "junior",
         "categoria": "Junior",
         "ordem": 7
       },
       {
         "id": "esgrima-av-adl",
         "titulo": "Esgrima avançada — Adolescente",
+        "tipo": "oral",
+        "categoriaId": "adolescente",
         "categoria": "Adolescente",
         "ordem": 8
       },
       {
         "id": "esgrima-av-juv",
         "titulo": "Esgrima avançada — Juvenil",
+        "tipo": "oral",
+        "categoriaId": "juvenil",
         "categoria": "Juvenil",
         "ordem": 9
       },
       {
         "id": "escrita-jun",
         "titulo": "Prova escrita — Junior",
+        "tipo": "escrita",
+        "categoriaId": "junior",
         "categoria": "Junior",
         "ordem": 10
       },
       {
         "id": "escrita-adl",
         "titulo": "Prova escrita — Adolescente",
+        "tipo": "escrita",
+        "categoriaId": "adolescente",
         "categoria": "Adolescente",
         "ordem": 11
       },
       {
         "id": "escrita-juv",
         "titulo": "Prova escrita — Juvenil",
+        "tipo": "escrita",
+        "categoriaId": "juvenil",
         "categoria": "Juvenil",
         "ordem": 12
       }

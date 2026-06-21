@@ -1,62 +1,297 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR" data-ui-theme="mr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Conclave MR — Pontuação</title>
-  <link rel="stylesheet" href="web/styles.css">
-</head>
-<body>
-  <header class="app-header">
-    <div class="app-header-main">
-      <div class="app-header-text">
-        <h1>Conclave MR — Pontuação</h1>
-        <p class="sub">Carregue um arquivo «.evento.json» ou um «projeto» completo (evento + dados). Com servidor local, o evento de exemplo é carregado automaticamente.</p>
-      </div>
-      <div class="app-header-actions">
-        <button type="button" class="header-action-btn" id="btn-regulamento" disabled title="Configure o regulamento em Configuração → Geral">Regulamento</button>
-        <div class="theme-toggle" role="group" aria-label="Tema visual">
-          <span class="theme-toggle-label">Tema</span>
-          <button type="button" class="theme-btn active" id="theme-mr" data-ui-theme="mr" title="MR: verde, amarelo e branco">MR</button>
-          <button type="button" class="theme-btn" id="theme-er" data-ui-theme="er" title="ER: azul, amarelo e branco; medalhas 500/300/150 e extras de participação +100 (pastor, pontualidade, uniforme, bíblia)">ER</button>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Pontuação Conclave</title>
+    <meta
+      name="description"
+      content="Aplicação local para registro e classificação de pontuação do Conclave."
+    />
+    <!--
+      Política de Segurança de Conteúdo (CSP):
+      - script-src 'self': só carrega web/engine.js, web/app.js, sw.js (mesma origem).
+      - style-src 'self' 'unsafe-inline': necessário para atribuições style.X via JS
+        (theme-color dinâmico, etc.). Não há <style> inline no HTML.
+      - img-src 'self' data: blob: https:: ícones locais (icons/) e blobs de download.
+      - connect-src 'self': fetch de eventos/*.json no mesmo origem.
+      - object/frame-ancestors negados; base-uri/form-action limitados a 'self'.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    />
+    <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/icon.svg" />
+    <link rel="stylesheet" href="web/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#conteudo-principal">Pular para o conteúdo</a>
+
+    <div class="app-grid">
+      <!-- Sidebar (>= 1024px) — abas + tema + docs. Bottom-nav móvel é renderizada
+           pelo mesmo TAB_ORDER em #bottom-nav. -->
+      <aside class="sidebar" aria-label="Navegação principal">
+        <header class="sidebar-brand">
+          <span class="sidebar-brand-mark" aria-hidden="true">C</span>
+          <span class="sidebar-brand-text">
+            <span class="sidebar-brand-title">Pontuação Conclave</span>
+          </span>
+        </header>
+        <nav class="sidebar-nav" id="sidebar-nav" aria-label="Seções principais"></nav>
+        <footer class="sidebar-foot">
+          <div class="theme-toggle" role="group" aria-label="Tema visual">
+            <span class="theme-toggle-label">Tema</span>
+            <button
+              type="button"
+              class="theme-btn active"
+              id="theme-mr"
+              data-ui-theme="mr"
+              title="MR: verde, amarelo e branco"
+            >
+              MR
+            </button>
+            <button
+              type="button"
+              class="theme-btn"
+              id="theme-er"
+              data-ui-theme="er"
+              title="ER: azul, amarelo e branco; medalhas 500/300/150 e extras +100"
+            >
+              ER
+            </button>
+          </div>
+          <a
+            class="sidebar-link"
+            href="docs/index.html"
+            id="link-docs"
+            title="Abrir documentação (manual, FAQ, glossário)"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+              <path
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v15.5H5.5A1.5 1.5 0 0 1 4 18zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v15.5h5.5A1.5 1.5 0 0 0 20 18z"
+              />
+            </svg>
+            <span>Documentação</span>
+          </a>
+        </footer>
+      </aside>
+
+      <!-- Topbar enxuta: nome do evento + menu Mais ações + KPIs.
+           A ordem importa para o grid: actions deve vir antes do kpi-strip
+           para ficar na coluna direita da linha 1 (mesmo nível do título). -->
+      <header class="topbar">
+        <div class="topbar-text">
+          <h1 id="evento-title" class="topbar-title">Pontuação Conclave</h1>
+          <p id="evento-sub" class="topbar-sub">
+            Carregue um arquivo «.evento.json» ou um «projeto» completo (evento + dados).
+          </p>
         </div>
-      </div>
+        <div class="topbar-actions">
+          <button
+            type="button"
+            id="btn-regulamento"
+            class="pill-btn"
+            disabled
+            title="Configure o regulamento em Configuração → Geral"
+          >
+            Regulamento
+          </button>
+          <span class="status-pill" id="status-pill"></span>
+          <div class="menu-wrap">
+            <button
+              type="button"
+              id="btn-mais"
+              class="menu-trigger"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="more-menu"
+              aria-label="Mais ações"
+              title="Mais ações"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                <circle cx="5" cy="12" r="1.6" fill="currentColor" />
+                <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+                <circle cx="19" cy="12" r="1.6" fill="currentColor" />
+              </svg>
+              <span>Mais</span>
+            </button>
+
+            <div id="more-menu" class="more-menu" role="menu" aria-labelledby="btn-mais" hidden>
+              <label role="menuitem" tabindex="-1" class="more-menu__item">
+                Carregar evento
+                <input type="file" id="file-evento" accept=".json,application/json" />
+              </label>
+              <label role="menuitem" tabindex="-1" class="more-menu__item">
+                Carregar projeto
+                <input type="file" id="file-projeto" accept=".json,application/json" />
+              </label>
+              <button
+                type="button"
+                role="menuitem"
+                tabindex="-1"
+                id="btn-export-evento"
+                class="more-menu__item"
+              >
+                Exportar evento
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                tabindex="-1"
+                id="btn-export"
+                class="more-menu__item"
+              >
+                Exportar projeto
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                tabindex="-1"
+                id="btn-novo-evento"
+                class="more-menu__item"
+              >
+                Novo evento (zerar tudo)
+              </button>
+              <div role="separator" class="more-menu__sep"></div>
+              <button
+                type="button"
+                role="menuitem"
+                tabindex="-1"
+                id="btn-eventos-salvos"
+                class="more-menu__item"
+              >
+                Eventos salvos
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                tabindex="-1"
+                id="btn-pres"
+                class="more-menu__item"
+                aria-pressed="false"
+              >
+                Modo apresentação
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                tabindex="-1"
+                id="btn-print"
+                class="more-menu__item"
+              >
+                Imprimir / Salvar como PDF
+              </button>
+              <div role="separator" class="more-menu__sep"></div>
+              <button
+                type="button"
+                role="menuitem"
+                tabindex="-1"
+                id="btn-novo-dados"
+                class="more-menu__item more-menu__item--danger"
+              >
+                Limpar dados do evento
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="kpi-strip" class="kpi-strip" aria-label="Indicadores do evento"></div>
+        <p class="hint topbar-hint" hidden>
+          Dica: se abrir como <code>file://</code>, o carregamento automático do evento de exemplo
+          pode falhar.
+        </p>
+      </header>
+
+      <main class="content" id="conteudo-principal" tabindex="-1">
+        <div id="boot-hint" class="banner-warn" hidden role="status"></div>
+        <div id="feedback" aria-live="polite" aria-atomic="true"></div>
+        <div id="errors" aria-live="assertive" aria-atomic="true" role="alert"></div>
+        <div id="warnings" aria-live="polite" aria-atomic="true" role="status"></div>
+
+        <section
+          id="panel-dashboard"
+          class="panel active"
+          role="tabpanel"
+          aria-labelledby="tab-dashboard"
+          aria-label="Início"
+        ></section>
+        <section
+          id="panel-config"
+          class="panel"
+          role="tabpanel"
+          aria-labelledby="tab-config"
+          hidden
+          aria-label="Configuração do evento"
+        ></section>
+        <section
+          id="panel-participacao"
+          class="panel"
+          role="tabpanel"
+          aria-labelledby="tab-participacao"
+          hidden
+          aria-label="Participação"
+        ></section>
+        <section
+          id="panel-podio"
+          class="panel"
+          role="tabpanel"
+          aria-labelledby="tab-podio"
+          hidden
+          aria-label="Pódio"
+        ></section>
+        <section
+          id="panel-classificacao"
+          class="panel"
+          role="tabpanel"
+          aria-labelledby="tab-classificacao"
+          hidden
+          aria-label="Classificação"
+        ></section>
+        <section
+          id="panel-relatorios"
+          class="panel"
+          role="tabpanel"
+          aria-labelledby="tab-relatorios"
+          hidden
+          aria-label="Relatórios"
+        ></section>
+
+        <footer class="app-footer">
+          <p class="app-footer-text">
+            Precisa de ajuda? <a href="docs/index.html">Documentação do Pontuação Conclave</a>
+          </p>
+        </footer>
+      </main>
+
+      <!-- Bottom-nav (<= 768px) — renderizada pelo mesmo TAB_ORDER -->
+      <nav class="bottom-nav" id="bottom-nav" aria-label="Navegação (móvel)"></nav>
     </div>
-    <div class="toolbar">
-      <label class="file-btn">Carregar evento (.evento.json)<input type="file" id="file-evento" accept=".json,application/json"></label>
-      <label class="file-btn">Carregar projeto (.json)<input type="file" id="file-projeto" accept=".json,application/json"></label>
-      <button type="button" id="btn-novo-dados">Limpar dados do evento</button>
-      <button type="button" id="btn-export" class="primary">Exportar projeto</button>
-      <button type="button" id="btn-pres">Modo apresentação</button>
-      <button type="button" id="btn-print">Imprimir / PDF</button>
-      <span class="status-pill" id="status-pill"></span>
-    </div>
-    <p class="hint">Dica: na pasta do projeto, rode <code>python3 -m http.server 8765</code> e abra <code>http://localhost:8765/</code> para carregar <code>eventos/conclave-2026-1.evento.json</code> sem bloqueios do navegador.</p>
-  </header>
 
-  <button type="button" id="btn-exit-presentation" class="presentation-exit-btn">Sair da apresentação</button>
+    <!-- Container legado mantido para retrocompat com renderTabs() (id #tabs). -->
+    <nav id="tabs" hidden aria-hidden="true"></nav>
 
-  <main class="shell">
-    <div id="boot-hint" class="banner-warn" style="display: none;" role="status"></div>
-    <div id="errors"></div>
-    <div id="warnings"></div>
-    <nav class="tabs" id="tabs" aria-label="Secções principais"></nav>
+    <!-- Modo apresentação: scoreboard renderizado dinamicamente quando ativo. -->
+    <div id="presentation-host" class="presentation-host" hidden aria-hidden="true"></div>
 
-    <section id="panel-config" class="panel" role="tabpanel" aria-labelledby="tab-config" hidden aria-label="Configuração do evento"></section>
-    <section id="panel-participacao" class="panel active" role="tabpanel" aria-labelledby="tab-participacao" aria-label="Participação"></section>
-    <section id="panel-podio" class="panel" role="tabpanel" aria-labelledby="tab-podio" hidden aria-label="Pódio"></section>
-    <section id="panel-classificacao" class="panel" role="tabpanel" aria-labelledby="tab-classificacao" hidden aria-label="Classificação"></section>
-    <section id="panel-relatorios" class="panel" role="tabpanel" aria-labelledby="tab-relatorios" hidden aria-label="Relatórios"></section>
-  </main>
+    <button type="button" id="btn-exit-presentation" class="presentation-exit-btn">
+      Sair da apresentação
+    </button>
 
-  <footer class="app-footer">
-    <p class="app-footer-text">
-      Prefere uma única tabela sem configurar evento?
-      <a href="pontuacao_conclave.html">Pontuação rápida (planilha)</a>
-    </p>
-  </footer>
-
-  <script src="web/engine.js"></script>
-  <script src="web/app.js"></script>
-</body>
+    <!-- Evento de exemplo embarcado como `window.ConclaveDefaultEvento`.
+         Permite que o auto-load funcione mesmo em `file://` (pen-drive, etc.).
+         Gerado por `npm run build:embedded`. Carregamento opcional: se faltar,
+         o app cai no fetch() do JSON original. -->
+    <script src="eventos/conclave-2026-1.evento.embedded.js" defer></script>
+    <script src="web/engine.js" defer></script>
+    <script src="web/app.js" defer></script>
+  </body>
 </html>

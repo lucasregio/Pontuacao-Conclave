@@ -1,0 +1,71 @@
+name: Lighthouse CI
+
+# Roda o Lighthouse CI no app servido localmente como warn-only:
+# o job NUNCA falha o PR, só publica um relatório como artefato. Use os
+# resultados como direção (regressão de A11y/Best Practices, peso de assets,
+# etc.), não como gate.
+#
+# Como o app é estático, servimos a raiz com `http-server` e apontamos o
+# Lighthouse para `index.html`.
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    # Não bloqueia o merge: continua falhas silenciosamente.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Lighthouse CI
+        run: npm install --no-save --no-audit --no-fund @lhci/cli@0.14.x http-server@14.x
+
+      - name: Servir app estático em background
+        run: |
+          npx http-server . --port 4173 --silent &
+          echo $! > .server.pid
+          # Espera o servidor responder.
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fs http://127.0.0.1:4173/index.html > /dev/null; then
+              echo "Servidor pronto em http://127.0.0.1:4173"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Servidor não respondeu a tempo"
+          exit 1
+
+      - name: Run Lighthouse CI
+        run: |
+          npx lhci collect \
+            --url=http://127.0.0.1:4173/index.html \
+            --numberOfRuns=1 \
+            --settings.preset=desktop
+        continue-on-error: true
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          if-no-files-found: ignore
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -f .server.pid ]; then
+            kill "$(cat .server.pid)" || true
+          fi

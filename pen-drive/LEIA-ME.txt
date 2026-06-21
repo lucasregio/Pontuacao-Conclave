@@ -1,0 +1,72 @@
+PONTUAÇÃO CONCLAVE — RODAR DE PEN-DRIVE
+=======================================
+
+Você pode rodar o Pontuação Conclave direto de um pen-drive (ou de qualquer
+pasta local), sem instalar nada e sem internet. Há dois jeitos:
+
+
+-----------------------------------------------------------------
+JEITO 1 — CLIQUE DUAS VEZES NO index.html (mais simples)
+-----------------------------------------------------------------
+
+1) Copie a pasta INTEIRA do projeto para o pen-drive (mesma estrutura
+   que está aqui: index.html, web/, eventos/, docs/, static/, etc.).
+2) No computador onde quer usar, dê duplo clique no arquivo:
+
+      index.html
+
+3) O navegador padrão abre o Pontuação Conclave. O evento de exemplo
+   (Conclave MR 2026/1) já vem embarcado e carrega sozinho.
+
+Limitações deste jeito (todas leves):
+ - O cache offline / "instalar como app" (PWA) não funciona.
+Tudo o resto (digitar pontos, exportar JSON, gerar relatório, etc.) funciona.
+
+
+-----------------------------------------------------------------
+JEITO 2 — SUBIR UM SERVIDOR LOCAL (PWA completo, exemplo recarregável)
+-----------------------------------------------------------------
+
+Pré-requisito: Python 3 instalado no computador.
+  - macOS já vem com Python 3 instalado por padrão.
+  - Windows: instale grátis em https://www.python.org/downloads/
+    (marque "Add Python to PATH" durante a instalação).
+  - Linux: já vem na maioria das distros.
+
+Passos:
+
+  macOS / Linux
+  -------------
+    1) Abra a pasta "pen-drive/" no Finder/Explorer de arquivos.
+    2) Dê duplo clique em "iniciar.command".
+
+  Windows
+  -------
+    1) Abra a pasta "pen-drive\" no Explorador.
+    2) Dê duplo clique em "iniciar.bat".
+
+Em ambos os casos:
+  - Uma janela de terminal abre e o navegador abre em http://127.0.0.1:8765/
+  - Para parar, feche a janela do terminal (ou Ctrl+C).
+
+
+-----------------------------------------------------------------
+DICAS PRÁTICAS
+-----------------------------------------------------------------
+
+* PDF do regulamento: coloque em static/ e configure em Configuração → Geral.
+
+* Para levar dados entre computadores, use "Exportar projeto" (menu Mais).
+
+* Documentação: docs/index.html (link na sidebar).
+
+
+-----------------------------------------------------------------
+PROBLEMAS COMUNS
+-----------------------------------------------------------------
+
+"O evento de exemplo não foi carregado automaticamente"
+  → Use "Mais → Carregar evento" e escolha eventos/conclave-2026-1.evento.json.
+
+"Python 3 não foi encontrado"
+  → Instale Python 3 ou use o JEITO 1 (duplo clique em index.html).

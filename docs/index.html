@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR" data-ui-theme="mr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Documentação — Pontuação Conclave</title>
+    <meta
+      name="description"
+      content="Manual do organizador, FAQ, glossário e referência rápida da Pontuação Conclave."
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    />
+    <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="../icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="../icons/icon.svg" />
+    <link rel="stylesheet" href="../web/styles.css" />
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+    <header class="docs-header">
+      <p class="docs-eyebrow"><a href="../index.html">← Voltar ao app</a></p>
+      <h1>Documentação da Pontuação Conclave</h1>
+      <p class="docs-lead">
+        Manual, FAQ, glossário e referência rápida para organizadores e juízes.
+      </p>
+    </header>
+
+    <main id="conteudo" tabindex="-1" class="docs-main">
+      <section aria-labelledby="comecar">
+        <h2 id="comecar">Começar em 5 passos</h2>
+        <ol class="docs-steps">
+          <li>
+            Abra <a href="../index.html">o app</a>. Na aba <strong>Início</strong>, clique em
+            <strong>Novo evento</strong> ou carregue um <code>.projeto.json</code>.
+          </li>
+          <li>
+            Use a <strong>sidebar</strong> (desktop) ou a <strong>barra inferior</strong> (celular)
+            para alternar entre Início, Configuração, Participação, Pódio, Classificação e
+            Relatórios.
+          </li>
+          <li>
+            O menu <strong>Mais</strong> (topbar) concentra import/export, eventos salvos,
+            apresentação e impressão.
+          </li>
+          <li>Preencha <strong>Participação</strong> e <strong>Pódio</strong>.</li>
+          <li>
+            Veja o ranking em <strong>Classificação</strong> ou gere o relatório oficial em
+            <strong>Relatórios</strong>.
+          </li>
+        </ol>
+        <p>Passo a passo completo em <a href="usuario/manual-uso.md">Manual de uso</a>.</p>
+      </section>
+
+      <section aria-labelledby="indice">
+        <h2 id="indice">Índice da documentação</h2>
+        <ul class="docs-cards">
+          <li>
+            <a href="usuario/manual-uso.md">
+              <strong>Manual de uso</strong>
+              <span>Dashboard, shell, configuração e apuração.</span>
+            </a>
+          </li>
+          <li>
+            <a href="usuario/faq.md">
+              <strong>Perguntas frequentes</strong>
+              <span>Backup, offline, compartilhamento.</span>
+            </a>
+          </li>
+          <li>
+            <a href="usuario/glossario.md">
+              <strong>Glossário</strong>
+              <span>MR, ER, gincana, desempate.</span>
+            </a>
+          </li>
+          <li>
+            <a href="usuario/troubleshooting.md">
+              <strong>Solução de problemas</strong>
+              <span>JSON, cache, impressão.</span>
+            </a>
+          </li>
+          <li>
+            <a href="usuario/atalhos-teclado.md">
+              <strong>Atalhos e teclado</strong>
+              <span>Navegação acessível por abas e modais.</span>
+            </a>
+          </li>
+          <li>
+            <a href="usuario/regulamento-mapeado.md">
+              <strong>Regulamento mapeado</strong>
+              <span>Regulamento → campos do app.</span>
+            </a>
+          </li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="glossario-curto">
+        <h2 id="glossario-curto">Glossário essencial</h2>
+        <dl class="docs-defs">
+          <dt>MR / ER</dt>
+          <dd>
+            Temas visuais (Mocidade Regular / Encontro Real). ER aplica preset de pesos e
+            medalhas — com confirmação antes de sobrescrever.
+          </dd>
+          <dt>Desempate</dt>
+          <dd>
+            Contagem de ouro → contagem de prata → pontos em provas-chave (CG Bíblia, Debate,
+            CG Organização) → nome da igreja.
+          </dd>
+          <dt>Projeto / evento</dt>
+          <dd>
+            <code>.projeto.json</code> = configuração + dados; <code>.evento.json</code> = só
+            configuração (exportável pelo menu Mais).
+          </dd>
+        </dl>
+      </section>
+    </main>
+
+    <footer class="docs-footer">
+      <p>
+        <a href="../index.html">Abrir o app</a> · <a href="../CHANGELOG.md">Changelog</a> ·
+        <a href="../README.md">README</a>
+      </p>
+    </footer>
+  </body>
+</html>

@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Projeto Conclave (config + dados preenchidos)",
+  "$id": "https://conclave-mr.local/projeto.schema.json",
+  "title": "Projeto Pontuação Conclave (config + dados preenchidos)",
   "type": "object",
   "required": ["evento", "dados"],
   "properties": {
@@ -11,18 +12,24 @@
       "properties": {
         "participacao": {
           "type": "object",
+          "description": "Mapa { igrejaId → linha de participação }. Os campos `inscricao`/`pontualidade` aceitam booleano ou número (compatibilidade com planilhas).",
           "additionalProperties": {
             "type": "object",
             "properties": {
-              "inscricao": { "type": "boolean" },
-              "pontualidade": { "type": "boolean" },
+              "inscricao": { "type": ["boolean", "number"] },
+              "pontualidade": { "type": ["boolean", "number"] },
               "mr_total": { "type": "number" },
               "mr_camisa": { "type": "number" },
               "mr_biblia": { "type": "number" },
               "visitantes": { "type": "number" },
               "animacao": { "type": "boolean" },
               "mau_comportamento": { "type": "boolean" },
-              "pontuacao_extra": { "type": "number" }
+              "pontuacao_extra": { "type": "number" },
+              "embaixadas": {
+                "type": "number",
+                "deprecated": true,
+                "description": "Campo legado: usado como fallback quando `pontuacao_extra` está ausente. Novos eventos devem usar `pontuacao_extra`."
+              }
             }
           }
         },
@@ -45,7 +52,11 @@
       "type": "object",
       "properties": {
         "igrejaId": { "type": ["string", "null"] },
-        "competidor": { "type": "string" }
+        "competidor": { "type": "string" },
+        "nomeLivre": {
+          "type": "string",
+          "description": "Texto livre para identificar a igreja vencedora quando ela não está cadastrada em `evento.igrejas[]`. Ignorado pelo motor de pontuação; serve apenas para exibição/relatórios."
+        }
       }
     }
   }
