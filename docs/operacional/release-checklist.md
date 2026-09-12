@@ -40,6 +40,8 @@ Em `index.html` servido via `http(s)://` (preferir; `file://` desativa SW):
 - [ ] **Relatório — Resumo** e **Oficial completo**: gerar e imprimir cada um
       separadamente; PDF contém só o documento escolhido (sem UI).
 - [ ] **Modo apresentação** entra/sai com botão e com `Escape`.
+- [ ] **Cerimônia de revelação**: intro sem classificações; Espaço/clique revela
+      5º→1º; palco mostra só top 5; Shift+Espaço ou «Revelar tudo» pula a cerimônia.
 - [ ] **Mobile (≥ 360px)**: toolbar quebra corretamente; tabelas rolam
       horizontalmente sem cortar conteúdo.
 - [ ] `docs/index.html` abre na URL do Pages; links para `docs/usuario/*.html` funcionam.
@@ -60,8 +62,9 @@ Em `index.html` servido via `http(s)://` (preferir; `file://` desativa SW):
 - [ ] `README.md` atualizado se mudou comando/fluxo.
 - [ ] `AGENTS.md` atualizado se mudou invariante/contrato (engine/UI/dados).
 - [ ] Se a mudança afeta o fluxo do organizador, atualizar `docs/usuario/manual-uso.md`,
-      `docs/usuario/faq.md`, `docs/usuario/glossario.md`, `docs/usuario/troubleshooting.md` ou
-      `docs/usuario/regulamento-mapeado.md` conforme aplicável.
+      `docs/usuario/faq.md`, `docs/usuario/glossario.md`, `docs/usuario/troubleshooting.md`,
+      `docs/usuario/regulamento-mapeado.md` ou `docs/usuario/guia-visual.md` conforme aplicável.
+- [ ] Se a UI visível mudou, regenerar capturas com `npm run guia:visual` e `npm run build:docs`.
 - [ ] `CHANGELOG.md` recebe entrada nova (versão + data + tipo de mudança).
 - [ ] `docs/operacional/metrics-baseline.md` revisado se houve mudança que afete
       tempos/tamanho.

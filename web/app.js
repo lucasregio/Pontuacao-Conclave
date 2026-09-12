@@ -5,6 +5,8 @@
   var E = window.ConclaveEngine;
   var R = window.ConclaveRelatorio;
   var PF = window.ConclavePodioFilters;
+  var EM = window.ConclaveEscritaMetrics;
+  var EC = window.ConclaveEscritaCharts;
   var state = {
     evento: null,
     dados: null,
@@ -46,7 +48,11 @@
       phase: "intro",
       revealedUpTo: null,
       snapshot: null,
+      ignoreAdvanceUntil: 0,
     },
+    /** Prova escrita: prova selecionada na aba métricas */
+    escritaProvaId: null,
+    escritaChartsRaf: null,
   };
 
   var presentationCeremonyClickHandler = null;
@@ -365,6 +371,93 @@
   function normalizeProvaTipos(ev) {
     (ev.provas || []).forEach(function (p) {
       if (p.tipo !== "oral" && p.tipo !== "escrita") p.tipo = inferProvaTipo(p);
+    });
+  }
+
+  function provasEscrita(ev) {
+    return (ev && ev.provas ? ev.provas : []).filter(function (p) {
+      return p.tipo === "escrita";
+    });
+  }
+
+  function ensureMetricasEscrita() {
+    if (!state.evento || !state.dados) return;
+    if (!state.dados.metricasEscrita || typeof state.dados.metricasEscrita !== "object") {
+      state.dados.metricasEscrita = {};
+    }
+    var escritaIds = provasEscrita(state.evento).map(function (p) {
+      return p.id;
+    });
+    escritaIds.forEach(function (pid) {
+      if (!Array.isArray(state.dados.metricasEscrita[pid])) {
+        state.dados.metricasEscrita[pid] = [];
+      }
+    });
+    Object.keys(state.dados.metricasEscrita).forEach(function (pid) {
+      if (escritaIds.indexOf(pid) < 0) delete state.dados.metricasEscrita[pid];
+    });
+  }
+
+  function buildIgrejaNomeMap(ev) {
+    var m = {};
+    (ev && ev.igrejas ? ev.igrejas : []).forEach(function (g) {
+      m[g.id] = g.nome;
+    });
+    return m;
+  }
+
+  function newEscritaParticipanteId() {
+    var n = 1;
+    var used = {};
+    var all = (state.dados && state.dados.metricasEscrita) || {};
+    Object.keys(all).forEach(function (pid) {
+      (all[pid] || []).forEach(function (p) {
+        if (p && p.id) used[p.id] = true;
+      });
+    });
+    var cand = "p-" + n;
+    while (used[cand]) {
+      n += 1;
+      cand = "p-" + n;
+    }
+    return cand;
+  }
+
+  function getEscritaProvaAtual() {
+    if (!state.evento) return null;
+    var list = provasEscrita(state.evento);
+    if (!list.length) return null;
+    if (state.escritaProvaId) {
+      var found = list.find(function (p) {
+        return p.id === state.escritaProvaId;
+      });
+      if (found) return found;
+    }
+    return list[0];
+  }
+
+  function scheduleEscritaChartsRefresh() {
+    if (state.escritaChartsRaf) cancelAnimationFrame(state.escritaChartsRaf);
+    state.escritaChartsRaf = requestAnimationFrame(function () {
+      state.escritaChartsRaf = null;
+      refreshEscritaCharts();
+    });
+  }
+
+  function refreshEscritaCharts() {
+    var host = document.getElementById("escrita-charts-host");
+    if (!host || !EC || !EM) return;
+    var prova = getEscritaProvaAtual();
+    if (!prova || !state.dados) {
+      host.innerHTML = "";
+      return;
+    }
+    var list = (state.dados.metricasEscrita && state.dados.metricasEscrita[prova.id]) || [];
+    EC.renderEscritaCharts(host, {
+      list: list,
+      igrejaNomeMap: buildIgrejaNomeMap(state.evento),
+      totalQuestoes: prova.escritaTotalQuestoes,
+      provaTitulo: prova.titulo,
     });
   }
 
@@ -724,6 +817,7 @@
       }
     });
     syncIgrejasIntoDados();
+    ensureMetricasEscrita();
   }
 
   function ensureUniqueIgrejaId(ev, baseId) {
@@ -1348,10 +1442,18 @@
     }
     el.hidden = false;
     el.textContent =
-      "O evento de exemplo não foi carregado automaticamente (isso acontece ao abrir como file://). Clique em «Novo evento» para começar do zero, ou em «Carregar evento» para escolher um arquivo .evento.json.";
+      "O evento de exemplo não foi carregado automaticamente (isso acontece ao abrir como file://). Clique em «Carregar exemplo» para abrir o Conclave ER 2026/2, ou em «Carregar evento» para escolher um arquivo .evento.json.";
   }
 
-  var TAB_ORDER = ["dashboard", "config", "participacao", "podio", "classificacao", "relatorios"];
+  var TAB_ORDER = [
+    "dashboard",
+    "config",
+    "participacao",
+    "podio",
+    "escrita",
+    "classificacao",
+    "relatorios",
+  ];
 
   /** Definição de cada aba: label visível, label curto (mobile) e ícone SVG.
    *  Ícones em outline (24x24) — usam `currentColor` para herdar a tinta da
@@ -1376,6 +1478,11 @@
       label: "Pódio por prova",
       short: "Pódio",
       icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="5"/><path d="M8.5 12.5 7 21l5-3 5 3-1.5-8.5"/></svg>',
+    },
+    escrita: {
+      label: "Prova escrita",
+      short: "Escrita",
+      icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/><rect x="15" y="14" width="3" height="6" rx="0.5" fill="currentColor" stroke="none" opacity="0.35"/></svg>',
     },
     classificacao: {
       label: "Classificação",
@@ -1588,7 +1695,7 @@
     root.className = "confirm-overlay";
     root.setAttribute("role", "presentation");
     root.innerHTML =
-      '<div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">' +
+      '<div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">' +
       '<h2 id="confirm-title">Confirmar ação</h2>' +
       '<p id="confirm-message"></p>' +
       '<div class="confirm-actions">' +
@@ -1646,6 +1753,8 @@
     var cancel = $("#confirm-cancel");
     if (ok) ok.textContent = opts.confirmLabel || (opts.destructive ? "Remover" : "Confirmar");
     if (cancel) cancel.textContent = opts.cancelLabel || "Cancelar";
+    var titleEl = $("#confirm-title");
+    if (titleEl) titleEl.textContent = opts.title || "Confirmar ação";
     $("#confirm-message").textContent = message;
     root.classList.add("open");
     setBackgroundInert(true);
@@ -2068,7 +2177,7 @@
           id: "btn-dash-novo-evento",
           variant: "primary",
           title: "Novo evento",
-          desc: "Começa do zero com a configuração padrão MR e nenhum dado.",
+          desc: "Começa do zero, sem igrejas nem resultados. Edite os pesos na Configuração.",
         })
       );
       ctaGrid.appendChild(
@@ -2084,7 +2193,7 @@
           id: "btn-dash-carregar-exemplo",
           variant: "default",
           title: "Carregar exemplo",
-          desc: "Conclave MR 2026/1 — útil para conhecer a ferramenta.",
+          desc: "Conclave ER 2026/2 — evento padrão deste app.",
         })
       );
       wrap.appendChild(ctaGrid);
@@ -2264,7 +2373,8 @@
         tryLoadDefaultEventoWeb().then(
           function (ev) {
             if (setEvento(ev, null)) {
-              showFeedback("Exemplo Conclave 2026/1 carregado.", "info");
+              var nome = (ev.meta && ev.meta.nome) || "evento de exemplo";
+              showFeedback(nome + " carregado.", "info");
             }
           },
           function () {
@@ -2525,15 +2635,12 @@
   function buildConfigPesosSection(ev) {
     var pesHint = document.createElement("p");
     pesHint.className = "config-hint";
-    pesHint.textContent = isErUiTheme()
-      ? "Modelo ER: presença do pastor, pontualidade, uniforme e bíblia (+100 pts cada quando aplicável; uniforme/bíblia exigem totais iguais na tabela de participação). Os valores aparecem no cabeçalho da aba Participação."
-      : "Usados no cálculo da participação; os valores aparecem no cabeçalho da aba Participação.";
+    pesHint.textContent =
+      "Usados no cálculo da participação; os valores aparecem no cabeçalho da aba Participação.";
     var pev = ev.pesos || {};
     var pesGrid = document.createElement("div");
     pesGrid.className = "config-grid config-grid--pesos";
-    var lblInscr = isErUiTheme()
-      ? "Presença do pastor (pts se marcado)"
-      : "Inscrição (pts se marcado)";
+    var lblInscr = "Inscrição (pts se marcado)";
     var lblUni = isErUiTheme() ? "Uniforme (camisa = total emb.)" : "Uniforme (camisa = MR tot.)";
     var lblBib = isErUiTheme()
       ? "Bíblia (emb. com bíblia = total emb.)"
@@ -2560,7 +2667,9 @@
       '<label class="config-field"><span>Por visitante</span><input type="number" step="1" data-cfg="pesos.visitante" value="' +
       escapeHtml(String(pev.visitante != null ? pev.visitante : 0)) +
       '" /></label>' +
-      '<label class="config-field"><span>Animação (pts se marcado)</span><input type="number" step="1" data-cfg="pesos.animacao" value="' +
+      '<label class="config-field"><span>' +
+      escapeHtml(isErUiTheme() ? "Grito de guerra (pts se marcado)" : "Animação (pts se marcado)") +
+      '</span><input type="number" step="1" data-cfg="pesos.animacao" value="' +
       escapeHtml(String(pev.animacao != null ? pev.animacao : 0)) +
       '" /></label>' +
       '<label class="config-field"><span>Mau comportamento (geralmente negativo)</span><input type="number" step="1" data-cfg="pesos.mau_comportamento" value="' +
@@ -2652,7 +2761,7 @@
     var tprov = document.createElement("table");
     tprov.className = "data config-table config-table--sortable";
     tprov.innerHTML =
-      '<thead><tr><th class="config-col-drag" scope="col" aria-hidden="true">&nbsp;</th><th scope="col">Título</th><th scope="col">Tipo</th><th scope="col">Categoria</th><th scope="col"><span class="visually-hidden">Ações</span></th></tr></thead>';
+      '<thead><tr><th class="config-col-drag" scope="col" aria-hidden="true">&nbsp;</th><th scope="col">Título</th><th scope="col">Tipo</th><th scope="col">Questões</th><th scope="col">Categoria</th><th scope="col"><span class="visually-hidden">Ações</span></th></tr></thead>';
     var bprov = document.createElement("tbody");
     bprov.id = "config-prova-tbody";
     sortedProvas().forEach(function (p) {
@@ -2682,6 +2791,19 @@
         '<option value="oral">Oral</option><option value="escrita">Escrita</option>';
       selTipo.value = p.tipo === "escrita" ? "escrita" : "oral";
       tdTipo.appendChild(selTipo);
+      var tdQuest = document.createElement("td");
+      var inpQuest = document.createElement("input");
+      inpQuest.type = "number";
+      inpQuest.min = "1";
+      inpQuest.step = "1";
+      inpQuest.className = "config-prova-questoes";
+      inpQuest.setAttribute("data-prova-id", p.id);
+      inpQuest.title = "Total de questões (prova escrita)";
+      if (p.escritaTotalQuestoes != null && p.escritaTotalQuestoes !== "") {
+        inpQuest.value = String(p.escritaTotalQuestoes);
+      }
+      inpQuest.disabled = p.tipo !== "escrita";
+      tdQuest.appendChild(inpQuest);
       var td2 = document.createElement("td");
       td2.appendChild(sel);
       var tdRem = document.createElement("td");
@@ -2694,6 +2816,7 @@
       tr.appendChild(tdG);
       tr.appendChild(td1);
       tr.appendChild(tdTipo);
+      tr.appendChild(tdQuest);
       tr.appendChild(td2);
       tr.appendChild(tdRem);
       bprov.appendChild(tr);
@@ -2779,6 +2902,8 @@
       refreshDerivedPanels();
       renderPodio();
       wirePodio();
+      renderEscrita();
+      wireEscrita();
       setHeader();
       reactivatePanel();
     }
@@ -3025,11 +3150,29 @@
         });
         if (p) {
           p.tipo = sel.value === "escrita" ? "escrita" : "oral";
+          if (p.tipo !== "escrita") delete p.escritaTotalQuestoes;
         }
         afterConfigChange();
         renderConfig();
         wireConfig();
       });
+    });
+
+    host.querySelectorAll(".config-prova-questoes").forEach(function (inp) {
+      function applyQuestoes() {
+        var id = inp.getAttribute("data-prova-id");
+        var p = state.evento.provas.find(function (x) {
+          return x.id === id;
+        });
+        if (!p || p.tipo !== "escrita") return;
+        var v = Number(inp.value);
+        if (Number.isFinite(v) && v >= 1) p.escritaTotalQuestoes = Math.round(v);
+        else delete p.escritaTotalQuestoes;
+        scheduleSave();
+        if (state.tab === "escrita") scheduleEscritaChartsRefresh();
+      }
+      inp.addEventListener("change", applyQuestoes);
+      inp.addEventListener("input", applyQuestoes);
     });
 
     var addCat = host.querySelector("[data-config-add-cat]");
@@ -3297,12 +3440,14 @@
     bTodos.className = "part-bool-all";
     bTodos.setAttribute("data-part-bool-field", field);
     bTodos.setAttribute("data-part-bool-val", "1");
+    bTodos.setAttribute("aria-label", "Marcar todas — " + shortTitle);
     bTodos.textContent = "Todos";
     var bNenhum = document.createElement("button");
     bNenhum.type = "button";
     bNenhum.className = "part-bool-all";
     bNenhum.setAttribute("data-part-bool-field", field);
     bNenhum.setAttribute("data-part-bool-val", "0");
+    bNenhum.setAttribute("aria-label", "Desmarcar todas — " + shortTitle);
     bNenhum.textContent = "Nenhum";
     tools.appendChild(bTodos);
     tools.appendChild(bNenhum);
@@ -3312,10 +3457,11 @@
     return th;
   }
 
-  function thParticipacaoNum(title, pesoLine) {
+  function thParticipacaoNum(title, pesoLine, hint) {
     var th = document.createElement("th");
     th.scope = "col";
     th.className = "part-th";
+    if (hint) th.title = hint;
     var l1 = document.createElement("div");
     l1.className = "part-th-line";
     l1.textContent = title;
@@ -3347,53 +3493,70 @@
     thIgreja.className = "part-th part-th--igreja";
     thIgreja.textContent = "Igreja";
     trh.appendChild(thIgreja);
-    trh.appendChild(thParticipacaoBool(isErUiTheme() ? "Pastor" : "Inscr.", "inscricao", pz));
+    trh.appendChild(thParticipacaoBool("Inscr.", "inscricao", pz));
     trh.appendChild(thParticipacaoBool("Pont.", "pontualidade", pz));
+    var er = isErUiTheme();
     trh.appendChild(
       thParticipacaoNum(
-        isErUiTheme() ? "Emb. tot." : "MR tot.",
-        isErUiTheme() ? "contagem emb. (sem peso fixo)" : "contagem MR (sem peso fixo)"
+        er ? "Presentes" : "MR tot.",
+        er ? "embaixadores (sem peso fixo)" : "contagem MR (sem peso fixo)",
+        er
+          ? "Número de embaixadores da igreja. Uniforme e Bíblia só pontuam se a contagem for igual a este total."
+          : "Número de MR da igreja. Uniforme e Bíblia só pontuam se a contagem for igual a este total."
       )
     );
     trh.appendChild(
       thParticipacaoNum(
-        isErUiTheme() ? "Emb. camisa" : "MR camisa",
-        participacaoPesoTxt(pz, "uniforme") +
-          (isErUiTheme() ? " se emb. camisa = emb. tot." : " se MR camisa = MR tot.")
+        er ? "Camisa" : "MR camisa",
+        participacaoPesoTxt(pz, "uniforme") + (er ? " se camisa = presentes" : " se MR camisa = MR tot."),
+        "Pontua só se todos os presentes estiverem de camisa (contagem igual ao total)."
       )
     );
     trh.appendChild(
       thParticipacaoNum(
-        isErUiTheme() ? "Emb. bíblia" : "MR bíblia",
-        participacaoPesoTxt(pz, "biblia") +
-          (isErUiTheme() ? " se emb. bíblia = emb. tot." : " se MR bíblia = MR tot.")
+        er ? "Bíblia" : "MR bíblia",
+        participacaoPesoTxt(pz, "biblia") + (er ? " se bíblia = presentes" : " se MR bíblia = MR tot."),
+        "Pontua só se todos os presentes estiverem com Bíblia física (contagem igual ao total)."
       )
     );
-    trh.appendChild(
-      thParticipacaoNum("Visit.", participacaoPesoTxt(pz, "visitante") + " / visitante")
-    );
-    trh.appendChild(thParticipacaoBool("Animação", "animacao", pz));
+    var showVisit = Number(pz.visitante) !== 0;
+    if (showVisit) {
+      trh.appendChild(
+        thParticipacaoNum("Visit.", participacaoPesoTxt(pz, "visitante") + " / visitante")
+      );
+    }
+    trh.appendChild(thParticipacaoBool(er ? "Grito" : "Animação", "animacao", pz));
     trh.appendChild(thParticipacaoBool("Mau comp.", "mau_comportamento", pz));
-    trh.appendChild(thParticipacaoNum("Extra", "livre (sem peso)"));
+    var extraTh = thParticipacaoNum(
+      "Extra",
+      er ? "CER + pastor + templo" : "livre (sem peso)",
+      er
+        ? "Some: CER no pré-conclave +100, pastor presente +50. Se houver penalidade de conservação do templo, subtraia 100 de todas as igrejas."
+        : "Pontos avulsos somados ao total."
+    );
+    trh.appendChild(extraTh);
     thead.appendChild(trh);
     table.appendChild(thead);
     var tbody = document.createElement("tbody");
     state.evento.igrejas.forEach(function (g) {
       var row = state.dados.participacao[g.id] || {};
+      var extraVal = row.pontuacao_extra != null ? row.pontuacao_extra : row.embaixadas;
       var tr = document.createElement("tr");
       tr.innerHTML =
         "<td>" +
         escapeHtml(g.nome) +
         "</td>" +
-        tdBool(g.id, "inscricao", row.inscricao) +
-        tdBool(g.id, "pontualidade", row.pontualidade) +
-        tdNum(g.id, "mr_total", row.mr_total) +
-        tdNum(g.id, "mr_camisa", row.mr_camisa) +
-        tdNum(g.id, "mr_biblia", row.mr_biblia) +
-        tdNum(g.id, "visitantes", row.visitantes) +
-        tdBool(g.id, "animacao", row.animacao) +
-        tdBool(g.id, "mau_comportamento", row.mau_comportamento) +
-        tdNum(g.id, "pontuacao_extra", row.pontuacao_extra);
+        tdBool(g.id, "inscricao", row.inscricao, "Inscrição — " + g.nome) +
+        tdBool(g.id, "pontualidade", row.pontualidade, "Pontualidade — " + g.nome) +
+        tdNum(g.id, "mr_total", row.mr_total, (er ? "Presentes" : "MR tot.") + " — " + g.nome) +
+        tdNum(g.id, "mr_camisa", row.mr_camisa, (er ? "Camisa" : "MR camisa") + " — " + g.nome) +
+        tdNum(g.id, "mr_biblia", row.mr_biblia, (er ? "Bíblia" : "MR bíblia") + " — " + g.nome) +
+        (showVisit
+          ? tdNum(g.id, "visitantes", row.visitantes, "Visitantes — " + g.nome)
+          : "") +
+        tdBool(g.id, "animacao", row.animacao, (er ? "Grito de guerra" : "Animação") + " — " + g.nome) +
+        tdBool(g.id, "mau_comportamento", row.mau_comportamento, "Mau comportamento — " + g.nome) +
+        tdNum(g.id, "pontuacao_extra", extraVal, "Pontuação extra — " + g.nome);
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
@@ -3401,7 +3564,7 @@
     host.appendChild(wrap);
   }
 
-  function tdBool(gid, field, val) {
+  function tdBool(gid, field, val, label) {
     var c = typeof val === "boolean" ? val : !!val;
     return (
       '<td><input type="checkbox" data-gid="' +
@@ -3410,11 +3573,12 @@
       escapeHtml(field) +
       '" ' +
       (c ? "checked" : "") +
+      (label ? ' aria-label="' + escapeHtml(label) + '"' : "") +
       " /></td>"
     );
   }
 
-  function tdNum(gid, field, val) {
+  function tdNum(gid, field, val, label) {
     var n = val != null ? val : 0;
     return (
       '<td><input type="number" step="1" data-gid="' +
@@ -3423,7 +3587,9 @@
       escapeHtml(field) +
       '" value="' +
       escapeHtml(String(n)) +
-      '" /></td>'
+      '"' +
+      (label ? ' aria-label="' + escapeHtml(label) + '"' : "") +
+      " /></td>"
     );
   }
 
@@ -3686,7 +3852,7 @@
       })
     );
 
-    if (filteredProvas.length === 0 && PF.isActivePodioFilters(filters)) {
+    if (filteredProvas.length === 0 && PF && PF.isActivePodioFilters(filters)) {
       var empty = document.createElement("div");
       empty.className = "podio-filter-empty";
       empty.setAttribute("role", "status");
@@ -3731,7 +3897,9 @@
       host.textContent = "Sem dados.";
       return;
     }
-    if (isErUiTheme()) {
+    if (isErUiTheme() && state.evento) {
+      var medEr = state.evento.medalhas || {};
+      var pzEr = state.evento.pesos || {};
       var info = document.createElement("aside");
       info.className = "classificacao-er-premiacao";
       info.setAttribute("aria-label", "Pontuação e premiação ER");
@@ -3742,7 +3910,13 @@
       var p1 = document.createElement("p");
       p1.className = "classificacao-er-block";
       p1.innerHTML =
-        "<strong>Medalhas.</strong> Embaixadores que conquistarem o primeiro lugar receberão a medalha de ouro <strong>(500 pontos)</strong>; o segundo, a medalha de prata <strong>(300 pontos)</strong> e o terceiro, a medalha de bronze <strong>(150 pontos)</strong>.";
+        "<strong>Medalhas.</strong> Ouro <strong>(" +
+        escapeHtml(String(medEr.ou != null ? medEr.ou : 0)) +
+        " pts)</strong>, prata <strong>(" +
+        escapeHtml(String(medEr.pt != null ? medEr.pt : 0)) +
+        " pts)</strong>, bronze <strong>(" +
+        escapeHtml(String(medEr.br != null ? medEr.br : 0)) +
+        " pts)</strong>.";
       info.appendChild(p1);
       var p2 = document.createElement("p");
       p2.className = "classificacao-er-block";
@@ -3752,7 +3926,19 @@
       var p3 = document.createElement("p");
       p3.className = "classificacao-er-block";
       p3.innerHTML =
-        "<strong>Extra (participação).</strong> Presença do pastor (+100 pts), pontualidade (+100 pts), uniforme (+100 pts), bíblia (+100 pts).";
+        "<strong>Participação.</strong> Inscrição (" +
+        escapeHtml(String(pzEr.inscricao != null ? pzEr.inscricao : 0)) +
+        " pts), pontualidade (" +
+        escapeHtml(String(pzEr.pontualidade != null ? pzEr.pontualidade : 0)) +
+        " pts), uniforme (" +
+        escapeHtml(String(pzEr.uniforme != null ? pzEr.uniforme : 0)) +
+        " pts), bíblia (" +
+        escapeHtml(String(pzEr.biblia != null ? pzEr.biblia : 0)) +
+        " pts), grito de guerra / animação (" +
+        escapeHtml(String(pzEr.animacao != null ? pzEr.animacao : 0)) +
+        " pts). CER e pastor entram em Pontuação extra. Mau comportamento: " +
+        escapeHtml(String(pzEr.mau_comportamento != null ? pzEr.mau_comportamento : 0)) +
+        " pts.";
       info.appendChild(p3);
       host.appendChild(info);
     }
@@ -3780,7 +3966,9 @@
     table.className = "data rank-table";
     var thead = document.createElement("thead");
     thead.innerHTML =
-      '<tr><th class="pos" scope="col">#</th><th scope="col">Igreja</th><th scope="col">Partic.</th><th scope="col">Punições</th><th scope="col">Gincana</th><th scope="col">Extra</th><th class="tot" scope="col">Total</th></tr>';
+      '<tr><th class="pos" scope="col">#</th><th scope="col">Igreja</th><th scope="col">Partic.</th><th scope="col">Punições</th><th scope="col">' +
+      (isErUiTheme() ? "Medalhas" : "Gincana") +
+      '</th><th scope="col">Extra</th><th class="tot" scope="col">Total</th></tr>';
     table.appendChild(thead);
     var tbody = document.createElement("tbody");
     ord.forEach(function (r) {
@@ -3813,8 +4001,9 @@
     host.appendChild(wrap);
     var foot = document.createElement("p");
     foot.className = "classificacao-desempate-hint";
-    foot.innerHTML =
-      "<strong>Desempate</strong> (mesmo total geral): 1.º mais medalhas de ouro no pódio; 2.º mais de prata; em seguida maior pontuação de gincana nas provas cujo título corresponde a <em>Conhecimentos Gerais da Bíblia</em>, depois <em>Debate de Versículos</em>, depois <em>Conhecimentos Gerais da Organização</em> (soma de todas as provas que coincidem com cada grupo).";
+    foot.innerHTML = isErUiTheme()
+      ? "<strong>Desempate</strong> (mesmo total geral): 1.º mais medalhas de ouro no pódio; 2.º mais de prata; em seguida maior pontuação nas provas de <em>Debate de Versículos</em> e depois <em>Conhecimentos Gerais da Organização</em> (o título precisa conter essas palavras). A prova escrita dos Evangelhos conta medalhas, mas não entra sozinha nesse critério."
+      : "<strong>Desempate</strong> (mesmo total geral): 1.º mais medalhas de ouro no pódio; 2.º mais de prata; em seguida maior pontuação de gincana nas provas cujo título corresponde a <em>Conhecimentos Gerais da Bíblia</em>, depois <em>Debate de Versículos</em>, depois <em>Conhecimentos Gerais da Organização</em> (soma de todas as provas que coincidem com cada grupo).";
     host.appendChild(foot);
   }
 
@@ -3994,7 +4183,7 @@
       });
     }
     lines.push("");
-    lines.push("## Vencedoras por prova");
+    lines.push(isErUiTheme() ? "## Vencedores por prova" : "## Vencedoras por prova");
     lines.push("");
     var anyProva = false;
     PROVA_TIPO_ORDER.forEach(function (tipo) {
@@ -4259,7 +4448,7 @@
     btnCopyMd.className = "pill-btn";
     btnCopyMd.textContent = "Copiar resumo";
     btnCopyMd.title =
-      "Copia um resumo em Markdown (top 3 + vencedoras por prova) para colar em mensagens.";
+      "Copia um resumo em Markdown (top 3 + vencedores por prova) para colar em mensagens.";
     consultaAcoes.appendChild(btnCsvPodio);
     consultaAcoes.appendChild(btnCopyMd);
     outer.appendChild(consultaAcoes);
@@ -4269,7 +4458,9 @@
     var t1 = document.createElement("table");
     t1.className = "data";
     t1.innerHTML =
-      '<thead><tr><th scope="col">Igreja</th><th scope="col">Ouro</th><th scope="col">Prata</th><th scope="col">Bronze</th><th scope="col">Pts gincana</th></tr></thead>';
+      '<thead><tr><th scope="col">Igreja</th><th scope="col">Ouro</th><th scope="col">Prata</th><th scope="col">Bronze</th><th scope="col">' +
+      (isErUiTheme() ? "Pts medalhas" : "Pts gincana") +
+      "</th></tr></thead>";
     var b1 = document.createElement("tbody");
     state.evento.igrejas.forEach(function (g) {
       var m = out.medalhasPorIgreja[g.id] || { ou: 0, pt: 0, br: 0 };
@@ -4745,7 +4936,7 @@
           var gg = out.gincanaPorIgreja[g.id] || 0;
           return [g.nome || "—", String(m.ou), String(m.pt), String(m.br), fmt(gg)];
         });
-        appendTabela(blocoMed, ["Igreja", "Ouro", "Prata", "Bronze", "Pts gincana"], medRows);
+        appendTabela(blocoMed, ["Igreja", "Ouro", "Prata", "Bronze", isErUiTheme() ? "Pts medalhas" : "Pts gincana"], medRows);
         doc.appendChild(blocoMed);
         return;
       }
@@ -4768,15 +4959,15 @@
         blocoPart.appendChild(el("h3", { text: "Detalhe de participação por igreja" }));
         var labelsPart = [
           "Igreja",
-          isErUiTheme() ? "Pastor" : "Inscr.",
+          "Inscr.",
           "Pont.",
-          isErUiTheme() ? "Emb. tot." : "MR total",
-          isErUiTheme() ? "Emb. camisa" : "MR camisa",
-          isErUiTheme() ? "Emb. bíblia" : "MR bíblia",
+          isErUiTheme() ? "Presentes" : "MR total",
+          isErUiTheme() ? "Camisa" : "MR camisa",
+          isErUiTheme() ? "Bíblia" : "MR bíblia",
           "Visit.",
-          "Anim.",
+          isErUiTheme() ? "Grito" : "Anim.",
           "Mau comp.",
-          "Extra",
+          isErUiTheme() ? "Extra (CER/pastor)" : "Extra",
         ];
         var partRows = (ev.igrejas || []).map(function (g) {
           var row = (dados.participacao && dados.participacao[g.id]) || {};
@@ -4832,26 +5023,30 @@
         var pz = ev.pesos || {};
         defRow(
           dlPesos,
-          isErUiTheme() ? "Pastor (pts se marcado)" : "Inscrição (pts se marcado)",
+          "Inscrição (pts se marcado)",
           fmt(pz.inscricao || 0)
         );
         defRow(dlPesos, "Pontualidade (pts se marcado)", fmt(pz.pontualidade || 0));
         defRow(
           dlPesos,
           isErUiTheme()
-            ? "Uniforme (pts se emb. camisa = emb. tot.)"
+            ? "Uniforme (pts se camisa = presentes)"
             : "Uniforme (pts se MR camisa = MR tot.)",
           fmt(pz.uniforme || 0)
         );
         defRow(
           dlPesos,
           isErUiTheme()
-            ? "Bíblia (pts se emb. bíblia = emb. tot.)"
+            ? "Bíblia (pts se bíblia = presentes)"
             : "Bíblia (pts se MR bíblia = MR tot.)",
           fmt(pz.biblia || 0)
         );
         defRow(dlPesos, "Visitante (pts por visitante)", fmt(pz.visitante || 0));
-        defRow(dlPesos, "Animação (pts se marcado)", fmt(pz.animacao || 0));
+        defRow(
+          dlPesos,
+          isErUiTheme() ? "Grito de guerra (pts se marcado)" : "Animação (pts se marcado)",
+          fmt(pz.animacao || 0)
+        );
         defRow(dlPesos, "Mau comportamento (pts se marcado)", fmt(pz.mau_comportamento || 0));
         blocoCrit.appendChild(dlPesos);
 
@@ -4865,14 +5060,23 @@
 
         blocoCrit.appendChild(el("h4", { text: "Ordem de desempate" }));
         var olDes = document.createElement("ol");
-        [
-          "Medalhas de ouro (desc).",
-          "Medalhas de prata (desc).",
-          "Pontos em Conhecimentos Gerais da Bíblia.",
-          "Pontos em Debate de Versículos.",
-          "Pontos em Conhecimentos Gerais da Organização.",
-          "Nome da igreja (ordenação pt-BR).",
-        ].forEach(function (txt) {
+        var ordemDesempate = isErUiTheme()
+          ? [
+              "Medalhas de ouro (desc).",
+              "Medalhas de prata (desc).",
+              "Pontos em Debate de Versículos.",
+              "Pontos em Conhecimentos Gerais da Organização.",
+              "Nome da igreja (ordenação pt-BR).",
+            ]
+          : [
+              "Medalhas de ouro (desc).",
+              "Medalhas de prata (desc).",
+              "Pontos em Conhecimentos Gerais da Bíblia.",
+              "Pontos em Debate de Versículos.",
+              "Pontos em Conhecimentos Gerais da Organização.",
+              "Nome da igreja (ordenação pt-BR).",
+            ];
+        ordemDesempate.forEach(function (txt) {
           var li = document.createElement("li");
           li.textContent = txt;
           olDes.appendChild(li);
@@ -5107,6 +5311,329 @@
     refreshDerivedPanels();
   }
 
+  function renderEscrita() {
+    var host = $("#panel-escrita");
+    if (!host) return;
+    host.innerHTML = "";
+    if (!state.evento || !state.dados) {
+      host.textContent = "Carregue um evento para registrar métricas da prova escrita.";
+      return;
+    }
+    ensureMetricasEscrita();
+    var escritaList = provasEscrita(state.evento);
+    if (!escritaList.length) {
+      host.innerHTML =
+        '<p class="escrita-empty-hint">Nenhuma prova com tipo «Escrita» na configuração. Adicione ou altere o tipo de uma prova em Configuração.</p>';
+      return;
+    }
+    var prova = getEscritaProvaAtual();
+    if (prova) state.escritaProvaId = prova.id;
+    var participantes =
+      (state.dados.metricasEscrita && prova && state.dados.metricasEscrita[prova.id]) || [];
+    var resumo = EM ? EM.resumoProva(participantes) : { count: 0, media: 0, max: 0 };
+
+    var head = document.createElement("div");
+    head.className = "escrita-panel-head";
+
+    var labSel = document.createElement("label");
+    labSel.innerHTML = "<span>Prova</span>";
+    var sel = document.createElement("select");
+    sel.id = "escrita-prova-select";
+    sel.className = "escrita-prova-select";
+    var grouped = groupProvasByCategoria("escrita");
+    grouped.order.forEach(function (catKey) {
+      var og = document.createElement("optgroup");
+      og.label = labelCategoria(catKey);
+      (grouped.groups[catKey] || []).forEach(function (p) {
+        var opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.titulo || p.id;
+        if (prova && p.id === prova.id) opt.selected = true;
+        og.appendChild(opt);
+      });
+      sel.appendChild(og);
+    });
+    labSel.appendChild(sel);
+
+    var btnAdd = document.createElement("button");
+    btnAdd.type = "button";
+    btnAdd.className = "pill-btn pill-btn--primary";
+    btnAdd.id = "btn-escrita-add";
+    btnAdd.textContent = "Adicionar participante";
+
+    var btnCsv = document.createElement("button");
+    btnCsv.type = "button";
+    btnCsv.className = "pill-btn";
+    btnCsv.id = "btn-export-escrita-csv";
+    btnCsv.textContent = "Exportar CSV";
+
+    var chips = document.createElement("div");
+    chips.className = "escrita-summary-chips";
+    chips.innerHTML =
+      '<span class="escrita-chip"><span>Participantes</span> <strong>' +
+      escapeHtml(String(resumo.count)) +
+      "</strong></span>" +
+      '<span class="escrita-chip"><span>Média</span> <strong>' +
+      escapeHtml(resumo.count ? resumo.media.toFixed(1) : "—") +
+      "</strong></span>" +
+      '<span class="escrita-chip"><span>Maior nota</span> <strong>' +
+      escapeHtml(resumo.count ? String(resumo.max) : "—") +
+      "</strong></span>";
+
+    head.appendChild(labSel);
+    head.appendChild(btnAdd);
+    head.appendChild(btnCsv);
+    head.appendChild(chips);
+    host.appendChild(head);
+
+    if (prova && prova.escritaTotalQuestoes) {
+      var hint = document.createElement("p");
+      hint.className = "escrita-empty-hint";
+      hint.textContent =
+        "Total de questões configurado: " +
+        prova.escritaTotalQuestoes +
+        ". As métricas não alteram a classificação geral — use o pódio para medalhas.";
+      host.appendChild(hint);
+    } else {
+      var hint2 = document.createElement("p");
+      hint2.className = "escrita-empty-hint";
+      hint2.textContent =
+        "Defina o total de questões em Configuração para ver percentuais e histograma. Estas métricas são analíticas e não alteram a classificação.";
+      host.appendChild(hint2);
+    }
+
+    var wrap = document.createElement("div");
+    wrap.className = "table-wrap escrita-table-wrap";
+    var table = document.createElement("table");
+    table.className = "data escrita-table";
+    table.innerHTML =
+      '<thead><tr><th scope="col">#</th><th scope="col">Nome</th><th scope="col">Igreja</th><th scope="col">Acertos</th><th scope="col" class="escrita-col-acoes"><span class="visually-hidden">Ações</span></th></tr></thead>';
+    var tbody = document.createElement("tbody");
+    tbody.id = "escrita-part-tbody";
+    var nomeMap = buildIgrejaNomeMap(state.evento);
+    participantes.forEach(function (p, idx) {
+      var tr = document.createElement("tr");
+      tr.setAttribute("data-escrita-id", p.id);
+      var igrejaTxt = nomeMap[p.igrejaId] || "";
+      tr.innerHTML =
+        "<td>" +
+        escapeHtml(String(idx + 1)) +
+        "</td>" +
+        '<td><input type="text" data-escrita-id="' +
+        escapeHtml(p.id) +
+        '" data-f="nome" value="' +
+        escapeHtml(p.nome || "") +
+        '" aria-label="Nome do participante" /></td>' +
+        '<td><input type="text" list="podio-igreja-list" data-escrita-id="' +
+        escapeHtml(p.id) +
+        '" data-f="igreja" value="' +
+        escapeHtml(igrejaTxt) +
+        '" aria-label="Igreja" /></td>' +
+        '<td><input type="number" min="0" step="1" data-escrita-id="' +
+        escapeHtml(p.id) +
+        '" data-f="acertos" value="' +
+        escapeHtml(String(p.acertos != null ? p.acertos : 0)) +
+        '" aria-label="Acertos" /></td>' +
+        '<td class="escrita-col-acoes"><button type="button" class="config-danger-btn" data-escrita-del="' +
+        escapeHtml(p.id) +
+        '">Remover</button></td>';
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    host.appendChild(wrap);
+
+    var chartsHost = document.createElement("div");
+    chartsHost.id = "escrita-charts-host";
+    host.appendChild(chartsHost);
+
+    refreshEscritaCharts();
+  }
+
+  function findEscritaParticipante(provaId, partId) {
+    var list = (state.dados.metricasEscrita && state.dados.metricasEscrita[provaId]) || [];
+    return list.find(function (p) {
+      return p.id === partId;
+    });
+  }
+
+  function onEscritaFieldChange(inp) {
+    var prova = getEscritaProvaAtual();
+    if (!prova || !state.dados) return;
+    var partId = inp.getAttribute("data-escrita-id");
+    var field = inp.getAttribute("data-f");
+    if (!partId || !field) return;
+    var entry = findEscritaParticipante(prova.id, partId);
+    if (!entry) return;
+    if (field === "nome") {
+      entry.nome = inp.value;
+    } else if (field === "igreja") {
+      var nome = inp.value.trim();
+      var gid = resolveIgrejaIdFromNome(nome);
+      if (gid) {
+        entry.igrejaId = gid;
+        var canonical = igrejaNome(gid);
+        if (canonical && canonical !== inp.value) inp.value = canonical;
+      }
+    } else if (field === "acertos") {
+      entry.acertos = EM ? EM.normalizeAcertos(inp.value) : Math.max(0, Number(inp.value) || 0);
+      if (EM && String(entry.acertos) !== inp.value) inp.value = String(entry.acertos);
+    }
+    scheduleSave();
+    scheduleEscritaChartsRefresh();
+    updateEscritaSummaryChips();
+  }
+
+  function updateEscritaSummaryChips() {
+    var prova = getEscritaProvaAtual();
+    if (!prova || !EM) return;
+    var list = (state.dados.metricasEscrita && state.dados.metricasEscrita[prova.id]) || [];
+    var resumo = EM.resumoProva(list);
+    var chips = document.querySelector(".escrita-summary-chips");
+    if (!chips) return;
+    chips.innerHTML =
+      '<span class="escrita-chip"><span>Participantes</span> <strong>' +
+      escapeHtml(String(resumo.count)) +
+      "</strong></span>" +
+      '<span class="escrita-chip"><span>Média</span> <strong>' +
+      escapeHtml(resumo.count ? resumo.media.toFixed(1) : "—") +
+      "</strong></span>" +
+      '<span class="escrita-chip"><span>Maior nota</span> <strong>' +
+      escapeHtml(resumo.count ? String(resumo.max) : "—") +
+      "</strong></span>";
+  }
+
+  function wireEscrita() {
+    var host = $("#panel-escrita");
+    if (!host) return;
+
+    var sel = host.querySelector("#escrita-prova-select");
+    if (sel) {
+      sel.addEventListener("change", function () {
+        state.escritaProvaId = sel.value;
+        renderEscrita();
+        wireEscrita();
+        reactivatePanel();
+      });
+    }
+
+    var btnAdd = host.querySelector("#btn-escrita-add");
+    if (btnAdd) {
+      btnAdd.addEventListener("click", function () {
+        var prova = getEscritaProvaAtual();
+        if (!prova || !state.dados) return;
+        ensureMetricasEscrita();
+        var firstIgreja =
+          state.evento.igrejas && state.evento.igrejas[0] ? state.evento.igrejas[0].id : "";
+        state.dados.metricasEscrita[prova.id].push({
+          id: newEscritaParticipanteId(),
+          nome: "",
+          igrejaId: firstIgreja,
+          acertos: 0,
+        });
+        scheduleSave();
+        renderEscrita();
+        wireEscrita();
+        reactivatePanel();
+      });
+    }
+
+    var btnCsv = host.querySelector("#btn-export-escrita-csv");
+    if (btnCsv) btnCsv.addEventListener("click", exportEscritaCsv);
+
+    host.querySelectorAll("[data-escrita-del]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var partId = btn.getAttribute("data-escrita-del");
+        var prova = getEscritaProvaAtual();
+        if (!prova || !partId || !state.dados.metricasEscrita) return;
+        state.dados.metricasEscrita[prova.id] = (
+          state.dados.metricasEscrita[prova.id] || []
+        ).filter(function (p) {
+          return p.id !== partId;
+        });
+        scheduleSave();
+        renderEscrita();
+        wireEscrita();
+        reactivatePanel();
+      });
+    });
+
+    host.querySelectorAll("input[data-escrita-id]").forEach(function (inp) {
+      inp.addEventListener("change", function () {
+        onEscritaFieldChange(inp);
+      });
+      if (inp.getAttribute("data-f") === "acertos") {
+        inp.addEventListener("input", function () {
+          onEscritaFieldChange(inp);
+        });
+      }
+    });
+  }
+
+  /** Exporta métricas da prova escrita (todas ou só a selecionada). */
+  function exportEscritaCsv(allProvas) {
+    if (!state.evento || !state.dados) {
+      showFeedback("Não há dados para exportar.", "warn");
+      return;
+    }
+    ensureMetricasEscrita();
+    var metricas = state.dados.metricasEscrita || {};
+    var headers = [
+      "Prova",
+      "Categoria",
+      "Nome",
+      "Igreja",
+      "Acertos",
+      "TotalQuestoes",
+      "Percentual",
+    ];
+    var lines = [headers.map(csvField).join(";")];
+    var alguma = false;
+    var provasAlvo = provasEscrita(state.evento);
+    if (!allProvas) {
+      var atual = getEscritaProvaAtual();
+      provasAlvo = atual ? [atual] : [];
+    }
+    provasAlvo.forEach(function (p) {
+      var catLabel = labelCategoria(p.categoriaId || p.categoria);
+      var totalQ = p.escritaTotalQuestoes;
+      (metricas[p.id] || []).forEach(function (part) {
+        var pct =
+          EM && totalQ && totalQ > 0 ? EM.percentual(part.acertos, totalQ).toFixed(1) + "%" : "";
+        lines.push(
+          [
+            p.titulo || p.id,
+            catLabel,
+            part.nome || "",
+            igrejaNome(part.igrejaId) || part.igrejaId || "",
+            part.acertos != null ? part.acertos : 0,
+            totalQ != null ? totalQ : "",
+            pct,
+          ]
+            .map(csvField)
+            .join(";")
+        );
+        alguma = true;
+      });
+    });
+    if (!alguma) {
+      showFeedback("Não há participantes para exportar.", "warn");
+      return;
+    }
+    var content = "\ufeff" + lines.join("\r\n");
+    var blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    var slug = (state.evento.meta && state.evento.meta.slug) || "evento";
+    a.download = slug + "-prova-escrita.csv";
+    a.click();
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 0);
+    showFeedback("Métricas da prova escrita exportadas como CSV.", "info");
+  }
+
   function renderPanels() {
     renderDashboard();
     wireDashboard();
@@ -5116,6 +5643,8 @@
     wireParticipacao();
     renderPodio();
     wirePodio();
+    renderEscrita();
+    wireEscrita();
     renderClassificacao();
     renderRelatorios();
     wireRelatorios();
@@ -5146,20 +5675,17 @@
     return document.documentElement.getAttribute("data-ui-theme") === "er";
   }
 
-  /** Regulamento ER: medalhas no pódio 500 / 300 / 150; extras de participação +100 cada (pastor, pontualidade, uniforme, bíblia). */
-  function applyErClassificationPreset(ev) {
-    if (!ev) return;
-    if (!ev.medalhas) ev.medalhas = {};
-    ev.medalhas.ou = 500;
-    ev.medalhas.pt = 300;
-    ev.medalhas.br = 150;
-    if (!ev.pesos) ev.pesos = {};
-    ev.pesos.inscricao = 100;
-    ev.pesos.pontualidade = 100;
-    ev.pesos.uniforme = 100;
-    ev.pesos.biblia = 100;
-    ev.pesos.visitante = 0;
-    ev.pesos.animacao = 0;
+  /** Paleta ER/MR a partir do nome ou slug do evento (só visual). */
+  function themeFromEvento(ev) {
+    var slug = String((ev && ev.meta && ev.meta.slug) || "").toLowerCase();
+    var nome = String((ev && ev.meta && ev.meta.nome) || "").toLowerCase();
+    if (/\ber\b/.test(nome) || slug.indexOf("-er-") !== -1 || slug.indexOf("er-") === 0) {
+      return "er";
+    }
+    if (/\bmr\b/.test(nome) || slug.indexOf("-mr-") !== -1 || slug.indexOf("mr-") === 0) {
+      return "mr";
+    }
+    return null;
   }
 
   function isObject(v) {
@@ -5393,13 +5919,15 @@
     state.persistFailed = false;
     state.evento = ev;
     normalizeEvento(state.evento);
-    if (isErUiTheme()) applyErClassificationPreset(state.evento);
+    var temaEvento = themeFromEvento(state.evento);
+    if (temaEvento) applyUiTheme(temaEvento, { silent: true });
     state.autoLoadFailed = false;
     state.podiumCollapsed = {};
     state.podiumProvaGroupCollapsed = {};
     state.configSectionCollapsed = {};
     state.relatorioSectionCollapsed = {};
     state.relatorioPodiumCollapsed = {};
+    state.escritaProvaId = null;
     resetRelatorioOficialGerado();
     var ids = state.evento.igrejas.map(function (g) {
       return g.id;
@@ -5412,6 +5940,7 @@
       syncDadosWithEvento();
     } else {
       state.dados = E.emptyDadosTemplate(ids, pids);
+      ensureMetricasEscrita();
     }
     validate();
     scheduleSave();
@@ -5825,7 +6354,7 @@
     count.textContent = stats.shown + " de " + stats.total + " provas";
     meta.appendChild(count);
 
-    if (PF.isActivePodioFilters(filters)) {
+    if (PF && PF.isActivePodioFilters(filters)) {
       var btnClear = document.createElement("button");
       btnClear.type = "button";
       btnClear.className = "podio-filter-clear-btn";
@@ -5846,30 +6375,9 @@
     return wrap;
   }
 
-  function getStoredUiTheme() {
-    try {
-      var t = localStorage.getItem(UI_THEME_KEY);
-      return t === "er" ? "er" : "mr";
-    } catch (_e) {
-      return "mr";
-    }
-  }
-
   function applyUiTheme(theme, opts) {
     opts = opts || {};
     var t = theme === "er" ? "er" : "mr";
-    var current = document.documentElement.getAttribute("data-ui-theme") || "mr";
-    if (!opts.skipConfirm && state.evento && t !== current && t === "er") {
-      requestConfirmation(
-        "Ao mudar para o tema ER, os pesos de participação e os valores de medalhas serão substituídos pelo preset do Encontro Real. Deseja continuar?",
-        function () {
-          applyUiTheme(t, { skipConfirm: true });
-        },
-        null,
-        { confirmLabel: "Aplicar preset ER" }
-      );
-      return;
-    }
     document.documentElement.setAttribute("data-ui-theme", t);
     try {
       localStorage.setItem(UI_THEME_KEY, t);
@@ -5878,10 +6386,15 @@
     }
     var mr = $("#theme-mr");
     var er = $("#theme-er");
-    if (mr) mr.classList.toggle("active", t === "mr");
-    if (er) er.classList.toggle("active", t === "er");
-    if (state.evento) {
-      if (t === "er") applyErClassificationPreset(state.evento);
+    if (mr) {
+      mr.classList.toggle("active", t === "mr");
+      mr.setAttribute("aria-pressed", t === "mr" ? "true" : "false");
+    }
+    if (er) {
+      er.classList.toggle("active", t === "er");
+      er.setAttribute("aria-pressed", t === "er" ? "true" : "false");
+    }
+    if (state.evento && !opts.silent) {
       scheduleSave();
       validate();
       render();
@@ -5949,6 +6462,10 @@
     });
     initMoreMenu();
     initFileProtocolHint();
+    window.addEventListener("pagehide", flushScheduledSave);
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden") flushScheduledSave();
+    });
   }
 
   /**
@@ -6077,14 +6594,33 @@
     });
   }
 
-  /** Sequência de colocações reveladas na cerimônia (5º→1º ou menos se &lt;5 igrejas). */
-  function getCeremonyRevealSequence(teamCount) {
+  /** Sequência de colocações reveladas na cerimônia (5º→1º, só posições que existem no ranking). */
+  function getCeremonyRevealSequence(teamCount, ord) {
+    if (ord && ord.length) {
+      var seen = {};
+      for (var i = 0; i < ord.length; i++) {
+        var p = ord[i].posicao;
+        if (p >= 1 && p <= 5) seen[p] = true;
+      }
+      var fromOrd = Object.keys(seen)
+        .map(function (k) {
+          return Number(k);
+        })
+        .sort(function (a, b) {
+          return b - a;
+        });
+      if (fromOrd.length) return fromOrd;
+    }
     var n = Math.max(0, Number(teamCount) || 0);
     if (!n) return [];
     var start = Math.min(5, n);
     var seq = [];
-    for (var p = start; p >= 1; p--) seq.push(p);
+    for (var pos = start; pos >= 1; pos--) seq.push(pos);
     return seq;
+  }
+
+  function positionInCeremony(ord, pos) {
+    return getCeremonyRevealSequence(ord.length, ord).indexOf(pos) >= 0;
   }
 
   /** true quando a colocação `pos` já foi revelada na cerimônia. */
@@ -6097,7 +6633,8 @@
 
   /** Avança o estado da cerimônia (função pura — retorna novo objeto). */
   function advanceCeremonyState(ceremony, teamCount) {
-    var seq = getCeremonyRevealSequence(teamCount);
+    var ord = (ceremony && ceremony.snapshot) || [];
+    var seq = getCeremonyRevealSequence(teamCount, ord);
     if (!ceremony || !seq.length || ceremony.phase === "complete") return ceremony;
     if (ceremony.phase === "intro") {
       var first = seq[0];
@@ -6143,6 +6680,7 @@
       phase: ord.length ? "intro" : "complete",
       revealedUpTo: null,
       snapshot: ord.length ? JSON.parse(JSON.stringify(ord)) : [],
+      ignoreAdvanceUntil: 0,
     };
   }
 
@@ -6151,6 +6689,7 @@
       phase: "intro",
       revealedUpTo: null,
       snapshot: null,
+      ignoreAdvanceUntil: 0,
     };
   }
 
@@ -6165,15 +6704,17 @@
     return null;
   }
 
-  function ceremonyStatusText(ceremony, teamCount) {
+  function ceremonyStatusText(ceremony, ord) {
+    var teamCount = ord.length;
     if (!ceremony || ceremony.phase === "complete") return "";
     if (ceremony.phase === "intro") return "Pronto para revelar?";
-    var seq = getCeremonyRevealSequence(teamCount);
+    var seq = getCeremonyRevealSequence(teamCount, ord);
     var idx = seq.indexOf(ceremony.revealedUpTo);
     if (idx >= 0 && idx < seq.length - 1) {
       return "Revelando o " + seq[idx + 1] + "º lugar…";
     }
-    if (ceremony.revealedUpTo === 1) return "Campeã revelada!";
+    if (ceremony.revealedUpTo === 1)
+      return isErUiTheme() ? "1.º lugar revelado!" : "Campeã revelada!";
     return "Revelando o " + ceremony.revealedUpTo + "º lugar";
   }
 
@@ -6231,7 +6772,9 @@
   function advancePresentationCeremony() {
     var ord = getCeremonyOrd();
     if (!ord.length) return;
-    state.presentationCeremony = advanceCeremonyState(state.presentationCeremony, ord.length);
+    var cer = state.presentationCeremony;
+    if (cer.ignoreAdvanceUntil && Date.now() < cer.ignoreAdvanceUntil) return;
+    state.presentationCeremony = advanceCeremonyState(cer, ord.length);
     var host = document.getElementById("presentation-host");
     if (host && !host.hidden) updateScoreboardReveal(host);
   }
@@ -6255,6 +6798,7 @@
 
     if (on) {
       resetPresentationCeremony();
+      state.presentationCeremony.ignoreAdvanceUntil = Date.now() + 450;
       if (host) {
         renderScoreboard(host, { force: true });
         host.hidden = false;
@@ -6322,7 +6866,106 @@
     if (sub) sub.textContent = [meta.data, meta.local].filter(Boolean).join(" · ");
   }
 
-  function fillScoreboardCard(card, row, posLabel) {
+  function prefersReducedMotion() {
+    try {
+      return (
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function cancelScoreboardPointAnim(card) {
+    if (!card || card._scoreAnimRaf == null) return;
+    cancelAnimationFrame(card._scoreAnimRaf);
+    card._scoreAnimRaf = null;
+  }
+
+  /** Contagem crescente do total de pontos (respeita prefers-reduced-motion). */
+  function animateScoreboardPoints(card, valueEl, target) {
+    cancelScoreboardPointAnim(card);
+    var goal = Number(target);
+    if (!Number.isFinite(goal)) goal = 0;
+    if (!valueEl) return;
+    if (prefersReducedMotion() || goal <= 0) {
+      valueEl.textContent = fmt(goal);
+      valueEl.classList.remove("is-counting");
+      return;
+    }
+    var duration = Math.min(1800, Math.max(900, Math.round(goal * 1.6)));
+    var startAt = performance.now();
+    valueEl.textContent = fmt(0);
+    valueEl.classList.add("is-counting");
+    function tick(now) {
+      var t = Math.min(1, (now - startAt) / duration);
+      var eased = 1 - Math.pow(1 - t, 3);
+      valueEl.textContent = fmt(goal * eased);
+      if (t < 1) {
+        card._scoreAnimRaf = requestAnimationFrame(tick);
+      } else {
+        valueEl.textContent = fmt(goal);
+        valueEl.classList.remove("is-counting");
+        card._scoreAnimRaf = null;
+      }
+    }
+    card._scoreAnimRaf = requestAnimationFrame(tick);
+  }
+
+  function scoreboardTrophyHtml(posLabel) {
+    var p = Number(posLabel);
+    if (p < 1 || p > 3) return "";
+    var tier = p === 1 ? "ou" : p === 2 ? "pt" : "br";
+    return (
+      '<span class="scoreboard-trophy scoreboard-trophy--' +
+      tier +
+      '" aria-hidden="true">' +
+      '<svg class="scoreboard-trophy-icon" viewBox="0 0 24 24" focusable="false" aria-hidden="true">' +
+      '<path fill="currentColor" d="M5 3h14v2h1a3 3 0 0 1 3 3v1a6 6 0 0 1-4.5 5.8L18 21H6l-.5-6.2A6 6 0 0 1 1 9V8a3 3 0 0 1 3-3h1V3zm2 2v2h10V5H7zm5 14.5 1.2-7.4A4 4 0 0 0 16.9 11H7.1a4 4 0 0 0 3.7 5.1L12 19.5z"/>' +
+      "</svg></span>"
+    );
+  }
+
+  function burstPresentationConfetti(host, pos) {
+    if (!host || prefersReducedMotion()) return;
+    var palettes = {
+      1: ["#fdd835", "#ffeb3b", "#ffc107", "#fff59d", "#ffb300"],
+      2: ["#cfd8dc", "#eceff1", "#b0bec5", "#ffffff", "#90a4ae"],
+      3: ["#ce8e44", "#ffe0b2", "#ffcc80", "#8d6e63", "#ffb74d"],
+    };
+    var colors = palettes[pos] || palettes[1];
+    var count = pos === 1 ? 96 : pos === 2 ? 72 : 56;
+    var layer = document.createElement("div");
+    layer.className = "scoreboard-confetti";
+    layer.setAttribute("aria-hidden", "true");
+    for (var i = 0; i < count; i++) {
+      var piece = document.createElement("span");
+      piece.className = "scoreboard-confetti-piece";
+      piece.style.left = Math.random() * 100 + "%";
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.setProperty("--drift", Math.round(Math.random() * 240 - 120) + "px");
+      piece.style.setProperty("--spin", Math.round(Math.random() * 720 + 360) + "deg");
+      piece.style.animationDuration = 1.1 + Math.random() * 1.4 + "s";
+      piece.style.animationDelay = Math.random() * 0.35 + "s";
+      if (Math.random() > 0.5) piece.style.borderRadius = "50%";
+      layer.appendChild(piece);
+    }
+    host.appendChild(layer);
+    window.setTimeout(function () {
+      if (layer.parentNode) layer.parentNode.removeChild(layer);
+    }, 2800);
+  }
+
+  function celebratePodiumReveal(host, pos, isNewReveal) {
+    if (!isNewReveal || pos < 1 || pos > 3) return;
+    burstPresentationConfetti(host, pos);
+  }
+
+  function fillScoreboardCard(card, row, posLabel, opts) {
+    opts = opts || {};
+    cancelScoreboardPointAnim(card);
     if (!row) {
       card.classList.add("is-hidden");
       card.classList.remove("is-revealed", "is-revealed-now");
@@ -6334,6 +6977,7 @@
     card.classList.remove("is-hidden");
     card.classList.add("is-revealed");
     card.innerHTML =
+      scoreboardTrophyHtml(posLabel) +
       '<span class="scoreboard-pos">' +
       posLabel +
       "º</span>" +
@@ -6342,8 +6986,11 @@
       "</span>" +
       '<span class="scoreboard-pts">' +
       '<span class="scoreboard-pts-label">Total</span>' +
-      fmt(row.total) +
+      '<span class="scoreboard-pts-value">0</span>' +
       "</span>";
+    var valueEl = card.querySelector(".scoreboard-pts-value");
+    if (opts.animatePoints) animateScoreboardPoints(card, valueEl, row.total);
+    else if (valueEl) valueEl.textContent = fmt(row.total);
   }
 
   function updateScoreboardReveal(host) {
@@ -6354,19 +7001,12 @@
 
     var ceremony = state.presentationCeremony;
     var ord = getCeremonyOrd();
-    var teamCount = ord.length;
 
     host.classList.toggle("scoreboard--intro", ceremony.phase === "intro");
     host.classList.toggle("scoreboard--complete", ceremony.phase === "complete");
 
-    var intro = host.querySelector(".scoreboard-intro");
-    if (intro) intro.hidden = ceremony.phase !== "intro";
-
     var status = host.querySelector(".scoreboard-status");
-    if (status) status.textContent = ceremonyStatusText(ceremony, teamCount);
-
-    var hint = host.querySelector(".scoreboard-hint");
-    if (hint) hint.hidden = ceremony.phase === "complete";
+    if (status) status.textContent = ceremonyStatusText(ceremony, ord);
 
     var revealAllBtn = host.querySelector(".scoreboard-reveal-all-btn");
     if (revealAllBtn) revealAllBtn.hidden = ceremony.phase === "complete";
@@ -6379,12 +7019,14 @@
     medals.forEach(function (m) {
       var card = host.querySelector('.scoreboard-card[data-medal="' + m.medal + '"]');
       if (!card) return;
+      card.hidden = false;
       var revealed = isPositionRevealed(ceremony, m.pos);
       var row = revealed ? getRowByPosition(ord, m.pos) : null;
       var wasHidden = card.classList.contains("is-hidden");
-      fillScoreboardCard(card, row, m.pos);
+      fillScoreboardCard(card, row, m.pos, { animatePoints: revealed && wasHidden });
       if (revealed && wasHidden) {
         card.classList.add("is-revealed-now");
+        celebratePodiumReveal(host, m.pos, true);
         window.setTimeout(function () {
           card.classList.remove("is-revealed-now");
         }, 800);
@@ -6396,7 +7038,7 @@
     [4, 5].forEach(function (pos) {
       var card = host.querySelector('.scoreboard-card-compact[data-pos="' + pos + '"]');
       if (!card) return;
-      if (teamCount < pos) {
+      if (!positionInCeremony(ord, pos)) {
         card.hidden = true;
         return;
       }
@@ -6404,7 +7046,7 @@
       var revealed = isPositionRevealed(ceremony, pos);
       var row = revealed ? getRowByPosition(ord, pos) : null;
       var wasHidden = card.classList.contains("is-hidden");
-      fillScoreboardCard(card, row, pos);
+      fillScoreboardCard(card, row, pos, { animatePoints: revealed && wasHidden });
       if (revealed && wasHidden) {
         card.classList.add("is-revealed-now");
         window.setTimeout(function () {
@@ -6413,30 +7055,12 @@
       }
     });
 
-    var rest = host.querySelector(".scoreboard-rest");
-    if (rest) {
-      var showRest = ceremony.phase === "complete" && ord.length > 5;
-      rest.hidden = !showRest;
-      if (showRest) {
-        var tbody = rest.querySelector("tbody");
-        if (tbody) {
-          tbody.innerHTML = "";
-          ord.slice(5).forEach(function (r) {
-            var tr = document.createElement("tr");
-            tr.innerHTML =
-              '<td class="pos">' +
-              r.posicao +
-              "º</td>" +
-              "<td>" +
-              escapeHtml(r.igreja) +
-              "</td>" +
-              '<td class="tot">' +
-              fmt(r.total) +
-              "</td>";
-            tbody.appendChild(tr);
-          });
-        }
-      }
+    var midstrip = host.querySelector(".scoreboard-midstrip");
+    if (midstrip) {
+      var hasMid = [4, 5].some(function (p) {
+        return positionInCeremony(ord, p);
+      });
+      midstrip.hidden = !hasMid;
     }
   }
 
@@ -6468,29 +7092,13 @@
       return;
     }
 
-    var intro = document.createElement("div");
-    intro.className = "scoreboard-intro";
-    intro.innerHTML =
-      '<p class="scoreboard-intro-kicker">Classificação final</p>' +
-      '<p class="scoreboard-intro-lead">Pronto para revelar?</p>' +
-      '<p class="scoreboard-intro-hint">Espaço ou clique para começar</p>';
-    host.appendChild(intro);
+    var main = document.createElement("div");
+    main.className = "scoreboard-main";
 
     var status = document.createElement("p");
     status.className = "scoreboard-status";
     status.setAttribute("aria-live", "polite");
-    host.appendChild(status);
-
-    var midstrip = document.createElement("section");
-    midstrip.className = "scoreboard-midstrip";
-    midstrip.setAttribute("aria-label", "Colocações intermediárias");
-    [5, 4].forEach(function (pos) {
-      var card = document.createElement("article");
-      card.className = "scoreboard-card scoreboard-card-compact is-hidden";
-      card.setAttribute("data-pos", String(pos));
-      midstrip.appendChild(card);
-    });
-    host.appendChild(midstrip);
+    main.appendChild(status);
 
     var top3 = document.createElement("section");
     top3.className = "scoreboard-top3";
@@ -6506,23 +7114,20 @@
       card.setAttribute("data-pos", String(m.pos));
       top3.appendChild(card);
     });
-    host.appendChild(top3);
+    main.appendChild(top3);
 
-    var rest = document.createElement("section");
-    rest.className = "scoreboard-rest";
-    rest.hidden = true;
-    rest.setAttribute("aria-label", "Demais classificadas");
-    var table = document.createElement("table");
-    table.innerHTML =
-      '<thead><tr><th scope="col">#</th><th scope="col">Igreja</th>' +
-      '<th scope="col" style="text-align:right;">Total</th></tr></thead><tbody></tbody>';
-    rest.appendChild(table);
-    host.appendChild(rest);
+    var midstrip = document.createElement("section");
+    midstrip.className = "scoreboard-midstrip";
+    midstrip.setAttribute("aria-label", "4º e 5º lugares");
+    [4, 5].forEach(function (pos) {
+      var card = document.createElement("article");
+      card.className = "scoreboard-card scoreboard-card-compact is-hidden";
+      card.setAttribute("data-pos", String(pos));
+      midstrip.appendChild(card);
+    });
+    main.appendChild(midstrip);
 
-    var hint = document.createElement("p");
-    hint.className = "scoreboard-hint";
-    hint.textContent = "Espaço ou clique para revelar a próxima colocação";
-    host.appendChild(hint);
+    host.appendChild(main);
 
     var revealAllBtn = document.createElement("button");
     revealAllBtn.type = "button";
@@ -6539,7 +7144,7 @@
   }
 
   /** Tenta carregar o evento de exemplo. Prioriza `window.ConclaveDefaultEvento`
-   *  (injetado por `eventos/conclave-2026-1.evento.embedded.js`), que funciona
+   *  (injetado por `eventos/conclave-er-2026-2.evento.embedded.js`), que funciona
    *  até em `file://` — cenário típico de pen-drive. Se não houver a constante,
    *  cai para `fetch()` do JSON, que só funciona via http(s). Resolve com uma
    *  cópia profunda (evita o usuário mutar o objeto global por engano). */
@@ -6551,7 +7156,7 @@
         return Promise.reject(e);
       }
     }
-    return fetch("eventos/conclave-2026-1.evento.json").then(function (r) {
+    return fetch("eventos/conclave-er-2026-2.evento.json").then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     });
@@ -6586,11 +7191,13 @@
           setEvento(saved.evento, saved.dados);
           return;
         }
-        if (saved && saved.evento && saved.dados) {
+        if (saved && saved.dados) {
           showFeedback(
-            "O evento salvo neste navegador estava incompleto (sem nome). Carregamos o exemplo — ou clique em «Novo evento» para começar do zero.",
+            "O evento salvo neste navegador estava incompleto. Restauramos a configuração atual e mantivemos os dados de participação e pódio.",
             "warn"
           );
+          setEvento(ev, saved.dados);
+          return;
         }
         setEvento(ev, null);
       })
@@ -6623,7 +7230,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    applyUiTheme(getStoredUiTheme());
+    applyUiTheme("er", { silent: true });
     initToolbar();
     initThemeToggle();
     if (shouldStartWithNovoEvento()) {

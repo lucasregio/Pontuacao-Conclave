@@ -21,7 +21,7 @@
     </header>
     <main id="conteudo" tabindex="-1" class="docs-main docs-prose">
       <article class="docs-article">
-<p>Guia passo a passo para o organizador/juiz usar o <strong>Pontuação Conclave</strong> no dia do evento. Tudo acontece no navegador, sem servidor, sem cadastro e sem login.</p>
+<p>Guia passo a passo para o organizador/juiz usar o <strong>Pontuação Conclave</strong> no dia do evento. Tudo acontece no navegador, sem servidor, sem cadastro e sem login. Há também um <a href="guia-visual.html">guia visual com capturas de todas as telas</a>.</p>
 <h2 id="sumario">Sumário</h2>
 <ul>
 <li><a href="#interface-início-e-navegação">Interface: Início e navegação</a></li>
@@ -45,7 +45,7 @@
 <ul>
 <li>Carregar evento / Carregar projeto</li>
 <li><strong>Exportar evento</strong> (só configuração) e <strong>Exportar projeto</strong> (completo)</li>
-<li>Novo evento, Eventos salvos, Modo apresentação</li>
+<li>Novo evento, Eventos salvos (menu <strong>Mais</strong>); <strong>Modo apresentação</strong> e <strong>Regulamento</strong> na topbar</li>
 <li>Limpar dados do evento</li>
 </ul>
 <p>Use as <strong>setas</strong> (← →) para mover entre abas quando o foco estiver na lista de navegação (padrão ARIA tablist).</p>
@@ -57,12 +57,13 @@
 <li><strong>Geral</strong>: nome, data, <strong>local</strong>, horários e <strong>regulamento</strong> (botão «Carregar arquivo» para escolher um PDF do computador, ou URL externa opcional).</li>
 <li><strong>Igrejas</strong>: adicione cada igreja participante. O <code>id</code> é gerado automaticamente a partir do nome e precisa ser único.</li>
 <li><strong>Categorias</strong>: por exemplo Junior, Adolescente, Juvenil. Define a ordem das colunas no pódio.</li>
-<li><strong>Provas</strong>: cada prova pertence a uma categoria e a um <strong>tipo</strong> (oral ou escrita). Reordene como quiser; a ordem vira a ordem de exibição dentro de cada tipo.</li>
+<li><strong>Provas</strong>: cada prova pertence a uma categoria e a um <strong>tipo</strong> (oral ou escrita). Reordene como quiser; a ordem vira a ordem de exibição dentro de cada tipo. Provas escrita podem ter <strong>Questões</strong> (total de itens) para percentuais nos gráficos.</li>
 <li><strong>Pesos</strong>: as 7 chaves obrigatórias são <code>inscricao</code>, <code>pontualidade</code>, <code>uniforme</code>, <code>biblia</code>, <code>visitante</code>, <code>animacao</code>, <code>mau_comportamento</code> (este último é negativo).</li>
 <li><strong>Medalhas</strong>: as 3 chaves obrigatórias são <code>ou</code> (ouro), <code>pt</code> (prata) e <code>br</code> (bronze). São os pontos somados quando uma igreja vence em uma prova.</li>
 </ul></li>
 <li>Vá para <strong>Participação</strong> e preencha cada linha (uma por igreja). Os totais de cada igreja aparecem ao vivo na coluna da direita.</li>
 <li>Vá para <strong>Pódio</strong>, marque ouro/prata/bronze por prova selecionando a igreja vencedora e (opcional) o nome do competidor.</li>
+<li>(Opcional) Vá para <strong>Prova escrita</strong> e cadastre acertos de cada MR nas provas do tipo escrita — gera gráficos analíticos; <strong>não altera</strong> a classificação geral.</li>
 <li>Vá para <strong>Classificação</strong> para ver o ranking ordenado com desempate aplicado.</li>
 <li>Salve com <strong>Exportar projeto</strong> (menu Mais) ou <strong>Exportar evento</strong> se quiser só a configuração. <strong>Exportar CSV</strong> fica na aba Classificação.</li>
 </ol>
@@ -138,6 +139,22 @@
 </ul>
 <p>O contador <code>N de M provas</code> reflete os filtros ativos. <strong>Limpar filtros</strong> restaura o padrão. Se nada corresponder, aparece mensagem e botão para limpar.</p>
 <p>Os filtros valem <strong>somente na aba Pódio</strong> (edição). A consulta rápida em Relatórios continua mostrando todas as provas.</p>
+<h2 id="prova-escrita-metricas">Prova escrita (métricas)</h2>
+<p>A aba <strong>Prova escrita</strong> registra <strong>acertos por participante MR</strong> (nome + igreja) em cada prova com <code>tipo: escrita</code>. É um fluxo <strong>analítico</strong>: os dados ficam em <code>dados.metricasEscrita[provaId]</code> e <strong>não entram</strong> no motor de classificação geral. Medalhas da gincana continuam sendo lançadas manualmente no <strong>Pódio</strong>.</p>
+<ul>
+<li>Selecione a prova no menu (agrupado por categoria).</li>
+<li><strong>Adicionar participante</strong> cria uma linha; preencha nome, igreja e acertos.</li>
+<li>Chips no topo mostram quantidade, média e maior nota da prova selecionada.</li>
+<li><strong>Gráficos</strong> (SVG nativos): ranking individual (top 15), média por igreja e histograma por faixas (quando <code>escritaTotalQuestoes</code> está definido em Configuração).</li>
+<li><strong>Exportar CSV</strong> baixa a prova selecionada (separador <code>;</code>, UTF-8 com BOM).</li>
+</ul>
+<p>Campos no JSON:</p>
+<pre><code>&quot;metricasEscrita&quot;: {
+  &quot;escrita-jun&quot;: [
+    { &quot;id&quot;: &quot;p-m1&quot;, &quot;nome&quot;: &quot;Ana Costa&quot;, &quot;igrejaId&quot;: &quot;alianca&quot;, &quot;acertos&quot;: 18 }
+  ]
+}</code></pre>
+<p>Em <code>evento.provas[]</code>, provas escrita podem ter <code>escritaTotalQuestoes</code> (inteiro ≥ 1) para calcular percentuais nos gráficos e no CSV.</p>
 <h2 id="classificacao-e-desempate">Classificacao e desempate</h2>
 <p>A aba <strong>Classificação</strong> mostra o ranking final ordenado por critérios em cascata:</p>
 <ol>
@@ -187,9 +204,8 @@
 <p>Use os dois juntos: o <code>localStorage</code> te salva da queda do navegador e o <code>.projeto.json</code> te salva da troca de máquina ou da limpeza de cache.</p>
 <h2 id="modo-apresentacao">Modo apresentacao</h2>
 <ul>
-<li><strong>Modo apresentação</strong> (menu Mais): abre um <strong>palco fullscreen</strong> para exibir a classificação num projetor ou telão, com <strong>cerimônia de revelação</strong> do 5º ao 1º lugar (ou do último lugar existente quando há menos de cinco igrejas).</li>
-<li>Ao entrar, <strong>nenhuma colocação aparece</strong> — só o nome do evento e a pergunta «Pronto para revelar?».</li>
-<li><strong>Espaço</strong>, <strong>Enter</strong> ou <strong>clique</strong> na tela revelam a próxima colocação, uma de cada vez, do 5º lugar até o campeão. Colocações a partir do 6º aparecem automaticamente na tabela após coroar o 1º lugar.</li>
+<li><strong>Modo apresentação</strong> (topbar, ao lado de <strong>Regulamento</strong>): abre um <strong>palco fullscreen</strong> para exibir a classificação num projetor ou telão, com <strong>cerimônia de revelação</strong> do 5º ao 1º lugar (ou do último lugar existente quando há menos de cinco igrejas).</li>
+<li>Ao entrar, <strong>nenhuma colocação aparece</strong> — o palco mostra os cinco slots com <strong>?</strong> (pódio + 4º/5º). <strong>Espaço</strong>, <strong>Enter</strong> ou <strong>clique</strong> revelam uma colocação por vez.</li>
 <li><strong>Shift+Espaço</strong> ou o botão discreto <strong>Revelar tudo</strong> (canto inferior direito) pula direto para a classificação completa (útil em ensaio).</li>
 <li>A classificação fica <strong>congelada</strong> enquanto a cerimônia não termina — ajustes de pontuação na UI normal não alteram o palco até você sair e reentrar.</li>
 <li>Sair: clique em <strong>Sair da apresentação</strong> ou pressione <code>Escape</code> (em algumas versões de iOS Safari, <code>Escape</code> pode não ser capturado; nesse caso, use o botão).</li>

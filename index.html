@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-ui-theme="mr">
+<html lang="pt-BR" data-ui-theme="er">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -22,9 +22,9 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self' blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     />
-    <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
-    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#0d47a1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#08306b" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icons/icon.svg" />
@@ -49,19 +49,21 @@
             <span class="theme-toggle-label">Tema</span>
             <button
               type="button"
-              class="theme-btn active"
+              class="theme-btn"
               id="theme-mr"
               data-ui-theme="mr"
               title="MR: verde, amarelo e branco"
+              aria-pressed="false"
             >
               MR
             </button>
             <button
               type="button"
-              class="theme-btn"
+              class="theme-btn active"
               id="theme-er"
               data-ui-theme="er"
-              title="ER: azul, amarelo e branco; medalhas 500/300/150 e extras +100"
+              title="ER: azul, amarelo e branco"
+              aria-pressed="true"
             >
               ER
             </button>
@@ -106,6 +108,15 @@
             title="Configure o regulamento em Configuração → Geral"
           >
             Regulamento
+          </button>
+          <button
+            type="button"
+            id="btn-pres"
+            class="pill-btn"
+            aria-pressed="false"
+            title="Cerimônia de revelação da classificação em tela cheia"
+          >
+            Modo apresentação
           </button>
           <span class="status-pill" id="status-pill"></span>
           <div class="menu-wrap">
@@ -173,16 +184,6 @@
               >
                 Eventos salvos
               </button>
-              <button
-                type="button"
-                role="menuitem"
-                tabindex="-1"
-                id="btn-pres"
-                class="more-menu__item"
-                aria-pressed="false"
-              >
-                Modo apresentação
-              </button>
               <div role="separator" class="more-menu__sep"></div>
               <button
                 type="button"
@@ -241,6 +242,14 @@
           aria-label="Pódio"
         ></section>
         <section
+          id="panel-escrita"
+          class="panel"
+          role="tabpanel"
+          aria-labelledby="tab-escrita"
+          hidden
+          aria-label="Prova escrita"
+        ></section>
+        <section
           id="panel-classificacao"
           class="panel"
           role="tabpanel"
@@ -282,8 +291,10 @@
          Permite que o auto-load funcione mesmo em `file://` (pen-drive, etc.).
          Gerado por `npm run build:embedded`. Carregamento opcional: se faltar,
          o app cai no fetch() do JSON original. -->
-    <script src="eventos/conclave-2026-1.evento.embedded.js" defer></script>
+    <script src="eventos/conclave-er-2026-2.evento.embedded.js" defer></script>
     <script src="web/engine.js" defer></script>
+    <script src="web/escrita-metrics.js" defer></script>
+    <script src="web/escrita-charts.js" defer></script>
     <script src="web/podio-filters.js" defer></script>
     <script src="web/relatorio.js" defer></script>
     <script src="web/app.js" defer></script>

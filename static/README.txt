@@ -1,13 +1,14 @@
 Pasta static/ — assets servidos pelo Pontuação Conclave
 ======================================================
 
-Coloque aqui ficheiros referenciados na Configuração → Geral:
+Arquivos opcionais referenciados por eventos legados ou pelo deploy (GitHub Pages):
 
-  - regulamento-2026.pdf  — PDF do regulamento (campo «Regulamento»)
+  - regulamento-2026.pdf  — PDF do regulamento do evento de exemplo
 
-No app, indique apenas o nome do ficheiro (ex.: regulamento-2026.pdf) ou uma URL
-completa (https://…). Caminhos locais são servidos a partir desta pasta na
-raiz do projeto.
+No app, o organizador pode carregar o regulamento diretamente do computador
+(Configuração → Geral → «Carregar arquivo»). O PDF fica embutido no projeto
+(localStorage e exportação JSON).
 
-PDFs grandes podem ficar fora do Git (adicione ao .gitignore local) se o
-organizador não quiser versioná-los.
+A pasta static/ continua útil para o evento de exemplo e para quem publica o
+app com um PDF pré-incluído no repositório. PDFs grandes podem ficar fora do
+Git (adicione ao .gitignore local) se não quiser versioná-los.

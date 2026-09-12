@@ -55,6 +55,12 @@ um pódio com três posições: ouro
 (`ou`), prata (`pt`) e bronze (`br`). A pontuação somada à classificação geral por
 medalha é definida em `evento.medalhas[ou|pt|br]`.
 
+### Métricas da prova escrita
+
+Cadastro opcional de **acertos por MR** (`dados.metricasEscrita`) nas provas com
+`tipo: escrita`. Serve para gráficos e exportação CSV; **não soma pontos** à
+classificação — o pódio manual continua sendo a fonte das medalhas na gincana.
+
 ### Pontuacao extra
 
 Pontos avulsos somados ao total da igreja, fora dos critérios padronizados. Aceita

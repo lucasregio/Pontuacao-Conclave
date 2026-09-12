@@ -1,7 +1,8 @@
 # Manual de uso
 
 Guia passo a passo para o organizador/juiz usar o **Pontuação Conclave** no dia do
-evento. Tudo acontece no navegador, sem servidor, sem cadastro e sem login.
+evento. Tudo acontece no navegador, sem servidor, sem cadastro e sem login. Há também
+um [guia visual com capturas de todas as telas](guia-visual.md).
 
 ## Sumário
 
@@ -40,7 +41,7 @@ concentra:
 
 - Carregar evento / Carregar projeto
 - **Exportar evento** (só configuração) e **Exportar projeto** (completo)
-- Novo evento, Eventos salvos, Modo apresentação
+- Novo evento, Eventos salvos (menu **Mais**); **Modo apresentação** e **Regulamento** na topbar
 - Limpar dados do evento
 
 Use as **setas** (← →) para mover entre abas quando o foco estiver na lista de
@@ -60,6 +61,7 @@ navegação (padrão ARIA tablist).
      no pódio.
    - **Provas**: cada prova pertence a uma categoria e a um **tipo** (oral ou escrita).
      Reordene como quiser; a ordem vira a ordem de exibição dentro de cada tipo.
+     Provas escrita podem ter **Questões** (total de itens) para percentuais nos gráficos.
    - **Pesos**: as 7 chaves obrigatórias são `inscricao`, `pontualidade`, `uniforme`,
      `biblia`, `visitante`, `animacao`, `mau_comportamento` (este último é negativo).
    - **Medalhas**: as 3 chaves obrigatórias são `ou` (ouro), `pt` (prata) e `br`
@@ -68,8 +70,10 @@ navegação (padrão ARIA tablist).
    igreja aparecem ao vivo na coluna da direita.
 5. Vá para **Pódio**, marque ouro/prata/bronze por prova selecionando a igreja vencedora
    e (opcional) o nome do competidor.
-6. Vá para **Classificação** para ver o ranking ordenado com desempate aplicado.
-7. Salve com **Exportar projeto** (menu Mais) ou **Exportar evento** se quiser só a
+6. (Opcional) Vá para **Prova escrita** e cadastre acertos de cada MR nas provas do tipo
+   escrita — gera gráficos analíticos; **não altera** a classificação geral.
+7. Vá para **Classificação** para ver o ranking ordenado com desempate aplicado.
+8. Salve com **Exportar projeto** (menu Mais) ou **Exportar evento** se quiser só a
    configuração. **Exportar CSV** fica na aba Classificação.
 
 Os dados também ficam guardados automaticamente no `localStorage` deste navegador, mas
@@ -192,6 +196,33 @@ padrão. Se nada corresponder, aparece mensagem e botão para limpar.
 Os filtros valem **somente na aba Pódio** (edição). A consulta rápida em Relatórios
 continua mostrando todas as provas.
 
+## Prova escrita (métricas)
+
+A aba **Prova escrita** registra **acertos por participante MR** (nome + igreja) em
+cada prova com `tipo: escrita`. É um fluxo **analítico**: os dados ficam em
+`dados.metricasEscrita[provaId]` e **não entram** no motor de classificação geral.
+Medalhas da gincana continuam sendo lançadas manualmente no **Pódio**.
+
+- Selecione a prova no menu (agrupado por categoria).
+- **Adicionar participante** cria uma linha; preencha nome, igreja e acertos.
+- Chips no topo mostram quantidade, média e maior nota da prova selecionada.
+- **Gráficos** (SVG nativos): ranking individual (top 15), média por igreja e
+  histograma por faixas (quando `escritaTotalQuestoes` está definido em Configuração).
+- **Exportar CSV** baixa a prova selecionada (separador `;`, UTF-8 com BOM).
+
+Campos no JSON:
+
+```json
+"metricasEscrita": {
+  "escrita-jun": [
+    { "id": "p-m1", "nome": "Ana Costa", "igrejaId": "alianca", "acertos": 18 }
+  ]
+}
+```
+
+Em `evento.provas[]`, provas escrita podem ter `escritaTotalQuestoes` (inteiro ≥ 1)
+para calcular percentuais nos gráficos e no CSV.
+
 ## Classificacao e desempate
 
 A aba **Classificação** mostra o ranking final ordenado por critérios em cascata:
@@ -282,14 +313,11 @@ Use os dois juntos: o `localStorage` te salva da queda do navegador e o
 
 ## Modo apresentacao
 
-- **Modo apresentação** (menu Mais): abre um **palco fullscreen** para exibir a
+- **Modo apresentação** (topbar, ao lado de **Regulamento**): abre um **palco fullscreen** para exibir a
   classificação num projetor ou telão, com **cerimônia de revelação** do 5º ao 1º
   lugar (ou do último lugar existente quando há menos de cinco igrejas).
-- Ao entrar, **nenhuma colocação aparece** — só o nome do evento e a pergunta
-  «Pronto para revelar?».
-- **Espaço**, **Enter** ou **clique** na tela revelam a próxima colocação, uma
-  de cada vez, do 5º lugar até o campeão. Colocações a partir do 6º aparecem
-  automaticamente na tabela após coroar o 1º lugar.
+- Ao entrar, **nenhuma colocação aparece** — o palco mostra os cinco slots com **?**
+  (pódio + 4º/5º). **Espaço**, **Enter** ou **clique** revelam uma colocação por vez.
 - **Shift+Espaço** ou o botão discreto **Revelar tudo** (canto inferior direito)
   pula direto para a classificação completa (útil em ensaio).
 - A classificação fica **congelada** enquanto a cerimônia não termina — ajustes

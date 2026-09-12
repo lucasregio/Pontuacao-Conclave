@@ -126,6 +126,11 @@
             "enum": ["oral", "escrita"],
             "description": "Modalidade da prova: oral (esgrima, debate, etc.) ou escrita. Quando ausente, inferido pelo título."
           },
+          "escritaTotalQuestoes": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Total de questões da prova escrita (para percentual nos gráficos). Apenas quando tipo=escrita."
+          },
           "ordem": { "type": "integer", "minimum": 0 }
         }
       }

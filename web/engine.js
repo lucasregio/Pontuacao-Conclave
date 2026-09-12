@@ -314,7 +314,7 @@
         br: { igrejaId: null, competidor: "" },
       };
     });
-    return { participacao: part, podium: pod };
+    return { participacao: part, podium: pod, metricasEscrita: {} };
   }
 
   function avisosPodiumDuplicado(podium) {

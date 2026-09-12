@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR" data-ui-theme="mr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Glossário — Pontuação Conclave</title>
+    <meta name="description" content="Glossário — documentação da Pontuação Conclave." />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+    <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="../../icons/icon.svg" />
+    <link rel="stylesheet" href="../../web/styles.css" />
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <header class="docs-header">
+      <p class="docs-eyebrow"><a href="../../index.html">← Voltar ao app</a> · <a href="../index.html">Documentação</a></p>
+      <h1>Glossário</h1>
+    </header>
+    <main id="conteudo" tabindex="-1" class="docs-main docs-prose">
+      <article class="docs-article">
+<p>Termos do Conclave que aparecem na interface, no JSON e nos relatórios. Use este documento como apoio rápido durante o evento.</p>
+<h2 id="sumario">Sumário</h2>
+<ul>
+<li><a href="#mr">MR</a></li>
+<li><a href="#er">ER</a></li>
+<li><a href="#embaixadas">Embaixadas</a></li>
+<li><a href="#mr-camisa-e-mr-biblia">MR-camisa e MR-biblia</a></li>
+<li><a href="#gincana-e-podio">Gincana e podio</a></li>
+<li><a href="#pontuacao-extra">Pontuacao extra</a></li>
+<li><a href="#mau-comportamento">Mau comportamento</a></li>
+<li><a href="#desempate">Desempate</a></li>
+<li><a href="#schema">Schema</a></li>
+<li><a href="#projeto-vs-evento">Projeto vs evento</a></li>
+</ul>
+<h3 id="mr">MR</h3>
+<p>Mensageiras do Rei. Programa de educação cristã para meninas e adolescentes em igrejas batistas. Quando o sistema fala em &quot;MR&quot; se refere às pessoas (ou unidades de contagem) participantes pela igreja: <code>mr_total</code>, <code>mr_camisa</code>, <code>mr_biblia</code>.</p>
+<h3 id="er">ER</h3>
+<p>Embaixadores do Rei. Programa equivalente para outra faixa etária. O Pontuação Conclave prevê um <strong>tema ER</strong> com paleta azul/amarelo/branco e valores típicos diferentes (medalhas 500/300/150 e bônus de participação +100). O tema é só visual — os pesos e medalhas finais sempre vêm do JSON do evento.</p>
+<h3 id="embaixadas">Embaixadas</h3>
+<p>Termo legado do regulamento antigo, hoje rebatizado como <strong>Pontuação extra</strong>. No JSON, o campo <code>embaixadas</code> em <code>dados.participacao[*]</code> ainda é aceito como <strong>fallback</strong> quando <code>pontuacao_extra</code> está ausente. Novos eventos devem usar apenas <code>pontuacao_extra</code>.</p>
+<h3 id="mr-camisa-e-mr-biblia">MR-camisa e MR-biblia</h3>
+<p>Indicadores binários de uniforme e Bíblia, contados por número de MR:</p>
+<ul>
+<li><strong>MR-camisa</strong>: número de MR presentes vestindo a camisa oficial. Para a igreja ganhar o ponto de uniforme, <strong>todos</strong> os MR têm que estar de camisa (<code>mr_camisa === mr_total</code> e <code>mr_total &gt; 0</code>). Faltou um, perde inteiro.</li>
+<li><strong>MR-bíblia</strong>: análogo, mas para quem está com a Bíblia em mãos (<code>mr_biblia === mr_total</code> e <code>mr_total &gt; 0</code>).</li>
+</ul>
+<h3 id="gincana-e-podio">Gincana e podio</h3>
+<p>A &quot;gincana&quot; é o conjunto das provas (Esgrima, Debate de Versículos, Conhecimentos Gerais, Prova Escrita etc.). Cada prova tem um <strong>tipo</strong> — <strong>oral</strong> ou <strong>escrita</strong> — e aparece agrupada no pódio e nos relatórios dentro dessa modalidade. Cada prova tem um pódio com três posições: ouro (<code>ou</code>), prata (<code>pt</code>) e bronze (<code>br</code>). A pontuação somada à classificação geral por medalha é definida em <code>evento.medalhas[ou|pt|br]</code>.</p>
+<h3 id="metricas-da-prova-escrita">Métricas da prova escrita</h3>
+<p>Cadastro opcional de <strong>acertos por MR</strong> (<code>dados.metricasEscrita</code>) nas provas com <code>tipo: escrita</code>. Serve para gráficos e exportação CSV; <strong>não soma pontos</strong> à classificação — o pódio manual continua sendo a fonte das medalhas na gincana.</p>
+<h3 id="pontuacao-extra">Pontuacao extra</h3>
+<p>Pontos avulsos somados ao total da igreja, fora dos critérios padronizados. Aceita positivo ou negativo. No JSON: <code>dados.participacao[igrejaId].pontuacao_extra</code>. Use para registrar bonificações específicas decididas pela comissão organizadora.</p>
+<h3 id="mau-comportamento">Mau comportamento</h3>
+<p>Sinalizador booleano em <code>dados.participacao[igrejaId].mau_comportamento</code>. Quando verdadeiro, soma <code>pesos.mau_comportamento</code> ao total da igreja. No JSON canônico, esse peso já é registrado como número <strong>negativo</strong> (ex.: <code>-150</code>), então o efeito é subtrair.</p>
+<h3 id="desempate">Desempate</h3>
+<p>Critérios em cascata aplicados quando duas ou mais igrejas terminam com a mesma pontuação total. Ordem completa:</p>
+<ol>
+<li>Medalhas de ouro (decrescente).</li>
+<li>Medalhas de prata (decrescente).</li>
+<li>Pontos em <strong>Conhecimentos Gerais da Bíblia</strong> (decrescente).</li>
+<li>Pontos em <strong>Debate de Versículos</strong> (decrescente).</li>
+<li>Pontos em <strong>Conhecimentos Gerais da Organização</strong> (decrescente).</li>
+<li>Nome da igreja, com ordenação pt-BR insensível a acentos/caixa (<code>localeCompare(&quot;pt&quot;, { sensitivity: &quot;base&quot;, numeric: true })</code>).</li>
+</ol>
+<p>A identificação de prova de desempate é feita pelo <strong>título normalizado</strong> (sem acentos, em minúsculas), não pelo <code>id</code>. Veja <a href="regulamento-mapeado.html">regulamento-mapeado</a> para os critérios de correspondência.</p>
+<h3 id="schema">Schema</h3>
+<p>Versão da estrutura de dados. O campo opcional <code>evento.meta.schemaVersion</code> indica em qual versão um evento foi salvo. Eventos sem o campo são tratados como <strong>versão 1</strong> e migrados em memória ao serem carregados; a versão atual é <strong>2</strong>. A migração é não-destrutiva: o arquivo original em disco não é alterado até você exportar de novo.</p>
+<h3 id="projeto-vs-evento">Projeto vs evento</h3>
+<p>Dois objetos com papéis distintos:</p>
+<ul>
+<li><strong>Evento</strong> (<code>.evento.json</code>): apenas a configuração. Contém <code>meta</code>, <code>pesos</code>, <code>medalhas</code>, <code>igrejas</code>, <code>categorias</code> e <code>provas</code>. Não contém pontuação.</li>
+<li><strong>Projeto</strong> (<code>.projeto.json</code>): configuração + dados preenchidos. É o objeto <code>{ evento, dados }</code>, em que <code>dados</code> traz <code>participacao</code> (por igreja) e <code>podium</code> (por prova). É o backup canônico para round-trip.</li>
+</ul>
+      </article>
+    </main>
+    <footer class="docs-footer">
+      <p>
+        <a href="../../index.html">Abrir o app</a> ·
+        <a href="../index.html">Índice</a> ·
+        <a href="../changelog.html">Changelog</a>
+      </p>
+    </footer>
+  </body>
+</html>

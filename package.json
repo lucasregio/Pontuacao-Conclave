@@ -9,11 +9,15 @@
     "format": "prettier --write \"**/*.{js,mjs,json,css,html,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{js,mjs,json,css,html,md,yml,yaml}\"",
     "build:embedded": "node scripts/build-embedded.mjs",
+    "build:docs": "node scripts/build-docs.mjs",
+    "guia:visual": "node scripts/capturar-guia.mjs",
+    "guia:install": "playwright install chromium",
     "serve": "python3 -m http.server 8765 --bind 127.0.0.1"
   },
   "devDependencies": {
     "eslint": "^9.0.0",
     "globals": "^16.0.0",
+    "playwright": "^1.63.0",
     "prettier": "^3.0.0"
   }
 }

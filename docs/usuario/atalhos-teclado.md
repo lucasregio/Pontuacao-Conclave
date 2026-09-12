@@ -47,7 +47,12 @@ a cada visita.
 
 ## Modo apresentacao
 
-- Acionar: `Tab` até o botão **Modo apresentação** na toolbar e pressione `Enter`.
+- Acionar: botão **Modo apresentação** na topbar (ao lado de **Regulamento**) ou `Tab` até ele e `Enter`.
+- **Cerimônia de revelação**: na tela cheia, **Espaço**, **Enter** ou **clique**
+  no palco revelam a próxima colocação (5º → 4º → 3º → 2º → 1º). O palco exibe
+  somente o **top 5**; consulte a aba Classificação para o ranking completo.
+- **Revelar tudo**: `Shift+Espaço` ou botão **Revelar tudo** (canto inferior
+  direito) — pula a cerimônia e mostra a classificação completa.
 - Sair: `Escape` ou clique/`Enter` no botão **Sair da apresentação** (visível no
   canto da tela). O foco volta para o botão original que ativou o modo, evitando
   perder o "lugar" no teclado.

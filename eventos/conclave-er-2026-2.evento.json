@@ -1,0 +1,176 @@
+{
+  "meta": {
+    "schemaVersion": 2,
+    "nome": "Conclave ER 2026/2",
+    "slug": "conclave-er-2026-2",
+    "data": "2026-09-12",
+    "horarioInicio": "14:00",
+    "horarioEncerramento": "17:00",
+    "local": "PIB em Alvorada — Av. Ernesto Canal, 1160, Alvorada, Vila Velha – ES"
+  },
+  "pesos": {
+    "inscricao": 100,
+    "pontualidade": 200,
+    "uniforme": 50,
+    "biblia": 50,
+    "visitante": 0,
+    "animacao": 50,
+    "mau_comportamento": -150
+  },
+  "medalhas": {
+    "ou": 300,
+    "pt": 200,
+    "br": 100
+  },
+  "igrejas": [
+    { "id": "alianca", "nome": "IB Aliança" },
+    { "id": "gloria", "nome": "IB da Glória (IBG)" },
+    { "id": "orla", "nome": "IB da Orla" },
+    { "id": "novo-mexico", "nome": "IB de Novo México" },
+    { "id": "santa-rita", "nome": "IB de Santa Rita" },
+    { "id": "ibes", "nome": "IB do IBES" },
+    { "id": "jardim-asteca", "nome": "IB em Jardim Asteca" },
+    { "id": "jardim-marilandia", "nome": "IB em Jardim Marilândia" },
+    { "id": "paul", "nome": "IB em Paul" },
+    { "id": "23-maio", "nome": "PIB 23 de Maio" },
+    { "id": "alecrim", "nome": "PIB Alecrim" },
+    { "id": "vila-batista", "nome": "PIB de Vila Batista" },
+    { "id": "alvorada", "nome": "PIB em Alvorada" },
+    { "id": "cobilandia", "nome": "PIB em Cobilândia" },
+    { "id": "vila-garrido", "nome": "PIB em Vila Garrido" },
+    { "id": "santa-monica", "nome": "PIB Santa Mônica" }
+  ],
+  "categorias": [
+    { "id": "junior", "nome": "Junior", "ordem": 0, "idade": "9–11" },
+    { "id": "adolescente", "nome": "Adolescente", "ordem": 1, "idade": "12–14" },
+    { "id": "juvenil", "nome": "Juvenil", "ordem": 2, "idade": "15–18" }
+  ],
+  "provas": [
+    {
+      "id": "escrita-evang-jun",
+      "titulo": "Prova escrita — Evangelhos — Junior",
+      "tipo": "escrita",
+      "categoriaId": "junior",
+      "categoria": "Junior",
+      "escritaTotalQuestoes": 20,
+      "ordem": 1
+    },
+    {
+      "id": "escrita-evang-adl",
+      "titulo": "Prova escrita — Evangelhos — Adolescente",
+      "tipo": "escrita",
+      "categoriaId": "adolescente",
+      "categoria": "Adolescente",
+      "escritaTotalQuestoes": 20,
+      "ordem": 2
+    },
+    {
+      "id": "escrita-evang-juv",
+      "titulo": "Prova escrita — Evangelhos — Juvenil",
+      "tipo": "escrita",
+      "categoriaId": "juvenil",
+      "categoria": "Juvenil",
+      "escritaTotalQuestoes": 20,
+      "ordem": 3
+    },
+    {
+      "id": "escrita-org-jun",
+      "titulo": "Prova escrita — Conhecimentos gerais da Organização — Junior",
+      "tipo": "escrita",
+      "categoriaId": "junior",
+      "categoria": "Junior",
+      "escritaTotalQuestoes": 20,
+      "ordem": 4
+    },
+    {
+      "id": "escrita-org-adl",
+      "titulo": "Prova escrita — Conhecimentos gerais da Organização — Adolescente",
+      "tipo": "escrita",
+      "categoriaId": "adolescente",
+      "categoria": "Adolescente",
+      "escritaTotalQuestoes": 20,
+      "ordem": 5
+    },
+    {
+      "id": "escrita-org-juv",
+      "titulo": "Prova escrita — Conhecimentos gerais da Organização — Juvenil",
+      "tipo": "escrita",
+      "categoriaId": "juvenil",
+      "categoria": "Juvenil",
+      "escritaTotalQuestoes": 20,
+      "ordem": 6
+    },
+    {
+      "id": "montagem-jun",
+      "titulo": "Montagem bíblica — Junior",
+      "tipo": "oral",
+      "categoriaId": "junior",
+      "categoria": "Junior",
+      "ordem": 7
+    },
+    {
+      "id": "montagem-adl",
+      "titulo": "Montagem bíblica — Adolescente",
+      "tipo": "oral",
+      "categoriaId": "adolescente",
+      "categoria": "Adolescente",
+      "ordem": 8
+    },
+    {
+      "id": "montagem-juv",
+      "titulo": "Montagem bíblica — Juvenil",
+      "tipo": "oral",
+      "categoriaId": "juvenil",
+      "categoria": "Juvenil",
+      "ordem": 9
+    },
+    {
+      "id": "esgrima-jun",
+      "titulo": "Esgrima bíblica — Junior",
+      "tipo": "oral",
+      "categoriaId": "junior",
+      "categoria": "Junior",
+      "ordem": 10
+    },
+    {
+      "id": "esgrima-adl",
+      "titulo": "Esgrima bíblica — Adolescente",
+      "tipo": "oral",
+      "categoriaId": "adolescente",
+      "categoria": "Adolescente",
+      "ordem": 11
+    },
+    {
+      "id": "esgrima-juv",
+      "titulo": "Esgrima bíblica — Juvenil",
+      "tipo": "oral",
+      "categoriaId": "juvenil",
+      "categoria": "Juvenil",
+      "ordem": 12
+    },
+    {
+      "id": "debate-jun",
+      "titulo": "Debate de versículos — Junior",
+      "tipo": "oral",
+      "categoriaId": "junior",
+      "categoria": "Junior",
+      "ordem": 13
+    },
+    {
+      "id": "debate-adl",
+      "titulo": "Debate de versículos — Adolescente",
+      "tipo": "oral",
+      "categoriaId": "adolescente",
+      "categoria": "Adolescente",
+      "ordem": 14
+    },
+    {
+      "id": "debate-juv",
+      "titulo": "Debate de versículos — Juvenil",
+      "tipo": "oral",
+      "categoriaId": "juvenil",
+      "categoria": "Juvenil",
+      "ordem": 15
+    }
+  ]
+}

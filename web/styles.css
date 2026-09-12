@@ -187,7 +187,7 @@
   );
   --theme-shell-shadow: 0 8px 32px rgba(13, 71, 161, 0.14);
   --theme-toolbar-btn-shadow: 0 2px 6px rgba(13, 71, 161, 0.12);
-  --theme-primary-gradient: linear-gradient(180deg, #42a5f5 0%, #1976d2 52%, #0d47a1 100%);
+  --theme-primary-gradient: linear-gradient(180deg, #1565c0 0%, #0d47a1 52%, #08306b 100%);
   --theme-table-row-border: rgba(25, 118, 210, 0.18);
   --theme-table-head-bg: rgba(227, 242, 253, 0.9);
   --theme-podium-title-border: rgba(25, 118, 210, 0.35);
@@ -516,6 +516,12 @@ body {
   align-items: center;
   gap: var(--space-2);
   flex-shrink: 0;
+}
+
+.topbar-actions .pill-btn[aria-pressed="true"] {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  color: var(--brand);
 }
 
 /* Botão "Mais" na topbar — outline discreto com hover destacado. Recebe
@@ -2392,16 +2398,20 @@ body.presentation-mode #tabs {
   position: fixed;
   inset: 0;
   z-index: 10001;
-  overflow: auto;
-  padding: clamp(1rem, 2vw, 2.5rem);
-  padding-bottom: clamp(3.5rem, 6vw, 5rem);
+  box-sizing: border-box;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  padding: 2.75rem clamp(0.65rem, 1.4vw, 1.15rem) 2.35rem;
   cursor: pointer;
 }
 
 body.presentation-mode .presentation-host {
   display: flex;
   flex-direction: column;
-  gap: clamp(0.75rem, 1.5vw, 1.5rem);
+  align-items: center;
+  gap: clamp(0.25rem, 0.6vh, 0.5rem);
+  position: relative;
   background:
     radial-gradient(ellipse 120% 80% at 50% 0%, var(--brand-soft) 0%, transparent 55%),
     radial-gradient(ellipse 90% 60% at 50% 100%, rgba(0, 0, 0, 0.08) 0%, transparent 50%),
@@ -2427,18 +2437,23 @@ body.presentation-mode .presentation-host {
 }
 
 .scoreboard-header {
+  flex-shrink: 0;
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding-bottom: var(--space-3);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  max-width: min(72rem, 100%);
+  gap: var(--space-1);
+  padding-bottom: 0.35rem;
   border-bottom: 1px solid var(--border);
 }
 
 .scoreboard-title {
   margin: 0;
-  font-size: clamp(1.35rem, 2.8vw, 2.35rem);
+  width: 100%;
+  font-size: clamp(1.2rem, 2.8vh, 1.85rem);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--brand);
@@ -2446,11 +2461,31 @@ body.presentation-mode .presentation-host {
 
 .scoreboard-sub {
   margin: 0;
-  font-size: clamp(0.75rem, 1.3vw, 1rem);
+  width: 100%;
+  font-size: clamp(0.75rem, 1.5vh, 1rem);
   color: var(--on-surface-muted);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+}
+
+.scoreboard-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: min(72rem, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.35rem, 1vh, 0.65rem);
+  overflow: hidden;
+}
+
+.scoreboard-intro,
+.scoreboard-hint {
+  width: 100%;
+  max-width: min(72rem, 100%);
 }
 
 .scoreboard-intro {
@@ -2460,9 +2495,9 @@ body.presentation-mode .presentation-host {
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: var(--space-3);
-  min-height: min(50vh, 28rem);
-  padding: var(--space-6) var(--space-4);
+  gap: var(--space-2);
+  min-height: 0;
+  padding: var(--space-4) var(--space-3);
 }
 
 .scoreboard-intro[hidden] {
@@ -2480,7 +2515,7 @@ body.presentation-mode .presentation-host {
 
 .scoreboard-intro-lead {
   margin: 0;
-  font-size: clamp(2rem, 6vw, 4.5rem);
+  font-size: clamp(1.5rem, 5vh, 3rem);
   font-weight: 900;
   line-height: 1.05;
   letter-spacing: -0.03em;
@@ -2489,63 +2524,162 @@ body.presentation-mode .presentation-host {
 
 .scoreboard-intro-hint {
   margin: var(--space-2) 0 0;
-  font-size: clamp(0.9rem, 1.6vw, 1.15rem);
+  font-size: clamp(0.8rem, 1.5vh, 1rem);
   color: var(--on-surface-muted);
   font-weight: 600;
 }
 
 .scoreboard-status {
   margin: 0;
+  flex-shrink: 0;
+  width: 100%;
   text-align: center;
-  font-size: clamp(1rem, 2vw, 1.45rem);
+  font-size: clamp(0.95rem, 2vh, 1.25rem);
   font-weight: 750;
   color: var(--brand);
   letter-spacing: 0.02em;
-  min-height: 1.5em;
+  min-height: 1.15em;
 }
 
-.scoreboard--intro .scoreboard-status,
-.scoreboard--intro .scoreboard-midstrip,
-.scoreboard--intro .scoreboard-top3,
-.scoreboard--intro .scoreboard-rest {
-  display: none !important;
+.scoreboard--intro .scoreboard-status {
+  font-size: clamp(1.1rem, 2.4vh, 1.45rem);
+  font-weight: 800;
+  margin-bottom: clamp(0.25rem, 0.8vh, 0.5rem);
 }
 
 .scoreboard-midstrip {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: clamp(0.75rem, 1.5vw, 1.25rem);
+  flex-shrink: 0;
+  width: 100%;
+  max-width: min(34rem, 100%);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.35rem, 0.8vh, 0.55rem);
+  max-height: 18vh;
+}
+
+.scoreboard-midstrip[hidden] {
+  display: none !important;
 }
 
 .scoreboard-top3 {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: min(56rem, 100%);
   display: grid;
   grid-template-columns: 1fr;
-  gap: clamp(0.75rem, 1.5vw, 1.5rem);
-  flex: 1;
+  gap: clamp(0.4rem, 1vh, 0.65rem);
   align-content: center;
+  justify-items: stretch;
+  max-height: min(62vh, 100%);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 640px) {
   .scoreboard-top3 {
-    grid-template-columns: repeat(3, 1fr);
-    align-items: end;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
   }
 }
 
 .scoreboard-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: clamp(1rem, 2.5vw, 2rem);
-  border-radius: var(--radius-lg);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.12rem;
+  padding: clamp(0.4rem, 1vh, 0.75rem) clamp(0.5rem, 1.2vw, 0.85rem);
+  border-radius: var(--radius-md);
   color: #0d2137;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
   position: relative;
+  min-height: 0;
+  overflow: hidden;
   transition:
     transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.35s ease,
     box-shadow 0.35s ease;
+}
+
+.scoreboard-top3 .scoreboard-card {
+  max-height: 100%;
+}
+
+.scoreboard-top3 .scoreboard-card.is-revealed {
+  overflow: visible;
+}
+
+.scoreboard-trophy {
+  display: block;
+  margin: 0 auto 0.1rem;
+  line-height: 0;
+}
+
+.scoreboard-trophy-icon {
+  width: clamp(2.25rem, 5.5vh, 3.5rem);
+  height: clamp(2.25rem, 5.5vh, 3.5rem);
+  display: block;
+}
+
+.scoreboard-trophy--ou {
+  color: #b8860b;
+  filter: drop-shadow(0 2px 6px rgba(184, 134, 11, 0.45));
+}
+
+.scoreboard-trophy--pt {
+  color: #607d8b;
+  filter: drop-shadow(0 2px 4px rgba(96, 125, 139, 0.35));
+}
+
+.scoreboard-trophy--br {
+  color: #8d6e63;
+  filter: drop-shadow(0 2px 4px rgba(141, 110, 99, 0.35));
+}
+
+.scoreboard-card.is-revealed-now .scoreboard-trophy {
+  animation: scoreboard-trophy-pop 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes scoreboard-trophy-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.2) translateY(0.5rem);
+  }
+  70% {
+    transform: scale(1.12) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.scoreboard-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.scoreboard-confetti-piece {
+  position: absolute;
+  top: -1rem;
+  width: clamp(6px, 0.55vw, 10px);
+  height: clamp(10px, 0.9vw, 16px);
+  opacity: 0.95;
+  animation: scoreboard-confetti-fall linear forwards;
+}
+
+@keyframes scoreboard-confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) translateX(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(110vh) translateX(var(--drift, 0)) rotate(var(--spin, 360deg));
+  }
 }
 
 .scoreboard-card.is-hidden {
@@ -2556,14 +2690,14 @@ body.presentation-mode .presentation-host {
 }
 
 .scoreboard-card.is-hidden .scoreboard-pos--placeholder {
-  font-size: clamp(3rem, 9vw, 6rem);
+  font-size: clamp(1.5rem, 4.5vh, 2.5rem);
   font-weight: 900;
   opacity: 0.35;
   line-height: 1;
 }
 
 .scoreboard-card.is-hidden .scoreboard-igreja--placeholder {
-  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-size: clamp(0.75rem, 1.6vh, 0.95rem);
   font-weight: 700;
   opacity: 0.5;
   font-style: italic;
@@ -2576,7 +2710,7 @@ body.presentation-mode .presentation-host {
 @keyframes scoreboard-reveal {
   0% {
     opacity: 0.2;
-    transform: scale(0.92) translateY(1rem);
+    transform: scale(0.96) translateY(0.35rem);
   }
   100% {
     opacity: 1;
@@ -2610,9 +2744,9 @@ body.presentation-mode .presentation-host {
 }
 
 .scoreboard-card-compact {
-  flex: 1 1 min(100%, 18rem);
-  max-width: 22rem;
-  min-height: 7rem;
+  max-height: 100%;
+  min-height: 0;
+  max-width: none;
 }
 
 .scoreboard-card-compact[data-pos="5"] {
@@ -2630,9 +2764,26 @@ body.presentation-mode .presentation-host {
   color: var(--on-surface-muted);
 }
 
-@media (min-width: 768px) {
-  .scoreboard-card[data-medal="ou"].is-revealed {
-    transform: translateY(-1rem);
+.scoreboard-midstrip .scoreboard-pos {
+  font-size: clamp(1.35rem, 4vh, 2.25rem);
+}
+
+.scoreboard-midstrip .scoreboard-igreja {
+  font-size: clamp(0.95rem, 2.2vh, 1.25rem);
+  -webkit-line-clamp: 2;
+}
+
+.scoreboard-midstrip .scoreboard-pts {
+  font-size: clamp(1.05rem, 2.6vh, 1.55rem);
+}
+
+.scoreboard-midstrip .scoreboard-pts-value {
+  font-size: 1.1em;
+}
+
+@media (min-width: 640px) and (min-height: 520px) {
+  .scoreboard-card[data-medal="ou"].is-revealed:not(.is-revealed-now) {
+    transform: translateY(-0.2rem);
   }
 
   .scoreboard-card[data-medal="ou"].is-revealed.is-revealed-now {
@@ -2643,69 +2794,95 @@ body.presentation-mode .presentation-host {
 @keyframes scoreboard-reveal-gold {
   0% {
     opacity: 0.2;
-    transform: scale(0.9) translateY(2rem);
+    transform: scale(0.92) translateY(0.5rem);
   }
   60% {
-    transform: scale(1.03) translateY(-1.2rem);
+    transform: scale(1.02) translateY(-0.35rem);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateY(-1rem);
+    transform: scale(1) translateY(-0.2rem);
   }
 }
 
 .scoreboard-pos {
-  font-size: clamp(2.5rem, 8vw, 6.5rem);
+  font-size: clamp(1.35rem, 4vh, 2.35rem);
   font-weight: 900;
   line-height: 1;
   letter-spacing: -0.05em;
   opacity: 0.96;
 }
 
+.scoreboard-top3 .scoreboard-pos {
+  font-size: clamp(2.25rem, 7.5vh, 4.5rem);
+}
+
+.scoreboard-top3 .scoreboard-igreja {
+  font-size: clamp(1.15rem, 3vh, 1.9rem);
+  -webkit-line-clamp: 3;
+}
+
+.scoreboard-top3 .scoreboard-pts {
+  font-size: clamp(1.35rem, 3.5vh, 2.4rem);
+}
+
+.scoreboard-top3 .scoreboard-pts-label {
+  font-size: clamp(0.65rem, 1.3vh, 0.85rem);
+  margin-bottom: 0.15rem;
+}
+
+.scoreboard-top3 .scoreboard-pts-value {
+  font-size: 1.2em;
+}
+
+.scoreboard-top3 .scoreboard-card {
+  padding: clamp(0.65rem, 1.6vh, 1.15rem) clamp(0.7rem, 1.6vw, 1.15rem);
+}
+
 .scoreboard-igreja {
-  font-size: clamp(1.15rem, 2.8vw, 2.1rem);
+  font-size: clamp(0.78rem, 1.9vh, 1.15rem);
   font-weight: 800;
-  line-height: var(--line-tight);
+  line-height: 1.15;
   overflow-wrap: anywhere;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .scoreboard-pts {
-  margin-top: auto;
-  font-size: clamp(1.35rem, 3.5vw, 2.75rem);
+  margin-top: 0.1rem;
+  font-size: clamp(0.85rem, 2vh, 1.35rem);
   font-weight: 800;
   line-height: 1;
+  width: 100%;
+}
+
+.scoreboard-pts-value {
+  display: block;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.15em;
+  letter-spacing: -0.02em;
+}
+
+.scoreboard-pts-value.is-counting {
+  color: var(--brand);
+  text-shadow: 0 0 18px var(--brand-soft);
 }
 
 .scoreboard-pts-label {
   display: block;
-  font-size: clamp(0.65rem, 1.1vw, 0.9rem);
+  font-size: clamp(0.55rem, 1vh, 0.72rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   opacity: 0.78;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
+/* Legado: tabela removida do palco; mantido para compatibilidade se reaparecer no DOM. */
 .scoreboard-rest {
-  flex: 0 1 auto;
-  min-height: 0;
-  overflow: auto;
-  padding: var(--space-3);
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  animation: scoreboard-rest-in 0.5s ease;
-}
-
-@keyframes scoreboard-rest-in {
-  from {
-    opacity: 0;
-    transform: translateY(1rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  display: none !important;
 }
 
 .scoreboard-rest table {
@@ -3438,6 +3615,11 @@ table.data.participacao-table tbody td:first-child {
   box-shadow: 2px 0 6px rgba(20, 60, 20, 0.06);
 }
 
+[data-ui-theme="er"] table.data.participacao-table thead th:first-child,
+[data-ui-theme="er"] table.data.participacao-table tbody td:first-child {
+  box-shadow: 2px 0 6px rgba(13, 71, 161, 0.1);
+}
+
 table.data.participacao-table thead th:first-child {
   z-index: 3;
   background: var(--theme-table-head-bg);
@@ -3871,6 +4053,28 @@ table.data.participacao-table thead th:first-child {
   border: none;
   background: transparent;
   font-size: inherit;
+}
+
+.docs-page .docs-prose figure.docs-shot {
+  margin: 1.25rem 0 1.6rem;
+  padding: 0;
+}
+
+.docs-page .docs-prose figure.docs-shot img,
+.docs-page .docs-prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  background: var(--card);
+}
+
+.docs-page .docs-prose figure.docs-shot figcaption {
+  margin-top: 0.45rem;
+  font-size: 0.875rem;
+  color: var(--muted);
 }
 
 .docs-page .docs-footer p {
@@ -4807,4 +5011,149 @@ table.data.participacao-table thead th:first-child {
     --brand-on: #0a1929;
     --focus-ring: 0 0 0 3px rgba(144, 202, 249, 0.55);
   }
+}
+
+/* —— Prova escrita: cadastro + gráficos —— */
+.escrita-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.escrita-panel-head label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--on-surface-muted);
+}
+
+.escrita-prova-select {
+  min-width: min(100%, 280px);
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--on-surface);
+  font: inherit;
+}
+
+.escrita-summary-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.escrita-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--on-surface-muted);
+}
+
+.escrita-chip strong {
+  color: var(--on-surface);
+  font-weight: 700;
+}
+
+.escrita-table-wrap {
+  margin-bottom: 1.25rem;
+}
+
+table.data.escrita-table th,
+table.data.escrita-table td {
+  vertical-align: middle;
+}
+
+table.data.escrita-table input[type="text"],
+table.data.escrita-table input[type="number"] {
+  width: 100%;
+  min-width: 4rem;
+  box-sizing: border-box;
+}
+
+table.data.escrita-table .escrita-col-acoes {
+  width: 5.5rem;
+  text-align: center;
+}
+
+.escrita-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 1rem;
+}
+
+.escrita-chart-card {
+  padding: 0.85rem 1rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.escrita-chart-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.escrita-chart-svg {
+  display: block;
+  max-width: 100%;
+}
+
+.escrita-chart-bar {
+  fill: var(--accent);
+  opacity: 0.88;
+}
+
+.escrita-chart-bar--igreja {
+  fill: var(--brand-strong);
+  opacity: 0.85;
+}
+
+.escrita-chart-bar--hist {
+  fill: var(--accent);
+  opacity: 0.75;
+}
+
+.escrita-chart-label {
+  fill: var(--on-surface-muted);
+  font-size: 11px;
+}
+
+.escrita-chart-value {
+  fill: var(--on-surface);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.escrita-chart-value--center {
+  font-size: 10px;
+}
+
+.escrita-empty-hint {
+  color: var(--on-surface-muted);
+  font-size: 0.92rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.config-prova-questoes {
+  width: 4.5rem;
+}
+
+.config-prova-questoes:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

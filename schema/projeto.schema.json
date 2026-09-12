@@ -43,11 +43,33 @@
               "br": { "$ref": "#/$defs/medalEntry" }
             }
           }
+        },
+        "metricasEscrita": {
+          "type": "object",
+          "description": "Mapa { provaId → lista de participantes MR na prova escrita }. Não afeta a classificação geral.",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/escritaParticipante" }
+          }
         }
       }
     }
   },
   "$defs": {
+    "escritaParticipante": {
+      "type": "object",
+      "required": ["id", "nome", "igrejaId", "acertos"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]+$",
+          "description": "Identificador estável gerado pelo app."
+        },
+        "nome": { "type": "string", "minLength": 1 },
+        "igrejaId": { "type": "string" },
+        "acertos": { "type": "number", "minimum": 0 }
+      }
+    },
     "medalEntry": {
       "type": "object",
       "properties": {

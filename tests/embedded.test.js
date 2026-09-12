@@ -5,8 +5,8 @@ const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
 const repoRoot = path.join(__dirname, "..");
-const src = path.join(repoRoot, "eventos", "conclave-2026-1.evento.json");
-const embedded = path.join(repoRoot, "eventos", "conclave-2026-1.evento.embedded.js");
+const src = path.join(repoRoot, "eventos", "conclave-er-2026-2.evento.json");
+const embedded = path.join(repoRoot, "eventos", "conclave-er-2026-2.evento.embedded.js");
 const buildScript = path.join(repoRoot, "scripts", "build-embedded.mjs");
 
 function parseEmbeddedEvento(code) {
