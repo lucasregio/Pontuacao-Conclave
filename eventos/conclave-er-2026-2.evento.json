@@ -6,7 +6,9 @@
     "data": "2026-09-12",
     "horarioInicio": "14:00",
     "horarioEncerramento": "17:00",
-    "local": "PIB em Alvorada — Av. Ernesto Canal, 1160, Alvorada, Vila Velha – ES"
+    "local": "PIB em Alvorada — Av. Ernesto Canal, 1160, Alvorada, Vila Velha – ES",
+    "regulamentoUrl": "static/regulamento-er-2026-2.pdf",
+    "regulamentoNome": "Regulamento Conclave ER 2026-2.pdf"
   },
   "pesos": {
     "inscricao": 100,

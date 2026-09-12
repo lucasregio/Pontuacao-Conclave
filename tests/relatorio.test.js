@@ -63,6 +63,10 @@ test("buildCapaMetaRows inclui local e omite slug no resumo", () => {
     schemaVersion: 2,
   };
   const resumoRows = R.buildCapaMetaRows(meta, "resumo", "01/01/2026 10:00", { temaTexto: "MR" });
+  const dataRow = resumoRows.find(function (r) {
+    return r.dt === "Data";
+  });
+  assert.equal(dataRow.dd, "01/01/2026");
   const localRow = resumoRows.find(function (r) {
     return r.dt === "Local";
   });
@@ -93,4 +97,11 @@ test("buildRodapeTexto — schema só no completo", () => {
 
   const completo = R.buildRodapeTexto(meta, "hoje", "completo", 2);
   assert.match(completo, /schema: v2/);
+});
+
+test("formatDataExibicao converte ISO para DD/MM/AAAA", () => {
+  assert.equal(R.formatDataExibicao("2026-09-12"), "12/09/2026");
+  assert.equal(R.formatDataExibicao("12 de setembro"), "12 de setembro");
+  assert.equal(R.formatDataExibicao(""), "");
+  assert.equal(R.formatDataExibicao(null), "");
 });

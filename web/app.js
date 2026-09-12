@@ -53,6 +53,10 @@
     /** Prova escrita: prova selecionada na aba métricas */
     escritaProvaId: null,
     escritaChartsRaf: null,
+    /** Tutorial guiado na tela (destaque das áreas reais). */
+    tourActive: false,
+    tourStep: 0,
+    tourLastFocus: null,
   };
 
   var presentationCeremonyClickHandler = null;
@@ -68,6 +72,24 @@
 
   function storageKey(slug) {
     return "conclave-projeto-" + slug;
+  }
+
+  /** ISO `AAAA-MM-DD` → `DD/MM/AAAA` para exibição. Texto livre permanece. */
+  function formatDataExibicao(value) {
+    var s = String(value || "").trim();
+    var iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!iso) return s;
+    return iso[3] + "/" + iso[2] + "/" + iso[1];
+  }
+
+  /** Aceita `DD/MM/AAAA` no cadastro e grava ISO no JSON. */
+  function parseDataInput(value) {
+    var s = String(value || "").trim();
+    var br = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+    if (!br) return s;
+    var dd = br[1].length === 1 ? "0" + br[1] : br[1];
+    var mm = br[2].length === 1 ? "0" + br[2] : br[2];
+    return br[3] + "-" + mm + "-" + dd;
   }
 
   function setHeader() {
@@ -86,7 +108,7 @@
     }
     if (h) h.textContent = ev.meta.nome || "Evento sem nome";
     var parts = [];
-    if (ev.meta.data) parts.push(ev.meta.data);
+    if (ev.meta.data) parts.push(formatDataExibicao(ev.meta.data));
     if (ev.meta.horarioInicio || ev.meta.horarioEncerramento) {
       var hs = [];
       if (ev.meta.horarioInicio) hs.push(ev.meta.horarioInicio);
@@ -953,7 +975,9 @@
     if (p.indexOf("data:") === 0 || p.indexOf("blob:") === 0) return p;
     if (p.indexOf("http://") === 0 || p.indexOf("https://") === 0 || p.indexOf("//") === 0)
       return p;
-    return encodeURI(p);
+    var rel = p.replace(/^\/+/g, "").replace(/\\/g, "/");
+    if (rel.indexOf("static/") !== 0) rel = "static/" + rel;
+    return encodeURI(rel);
   }
 
   /** Monta meta.regulamentoUrl a partir de URL externa ou caminho legado em static/. */
@@ -1843,7 +1867,7 @@
       var sub = document.createElement("span");
       sub.className = "eventos-modal-sub";
       var parts = [];
-      if (info.data) parts.push(info.data);
+      if (info.data) parts.push(formatDataExibicao(info.data));
       parts.push("slug: " + info.slug);
       parts.push((info.tamanhoBytes / 1024).toFixed(1) + " KB");
       sub.textContent = parts.join(" · ");
@@ -2205,10 +2229,14 @@
       var docs = document.createElement("section");
       docs.className = "dashboard-card";
       docs.innerHTML =
-        '<h3 class="dashboard-card-title">Comece pela documentação</h3>' +
-        '<p class="dashboard-card-text">Manual de uso, FAQ, glossário, atalhos de teclado e ' +
-        "como o regulamento mapeia para os campos do JSON.</p>" +
-        '<a class="pill-btn pill-btn--primary" href="docs/index.html">Abrir documentação</a>';
+        '<h3 class="dashboard-card-title">Tutorial de 5 minutos</h3>' +
+        '<p class="dashboard-card-text">Guia na tela: o app destaca cada área e você pratica no fluxo real. ' +
+        "Há também uma página ilustrada com capturas.</p>" +
+        '<div class="dashboard-actions-row">' +
+        '<button type="button" class="pill-btn pill-btn--primary" id="btn-dash-tutorial">Começar o tutorial na tela</button>' +
+        '<a class="pill-btn" href="docs/usuario/tutorial-5min.html">Página ilustrada</a>' +
+        '<a class="pill-btn" href="docs/index.html">Toda a documentação</a>' +
+        "</div>";
       wrap.appendChild(docs);
     } else {
       // -------------- Resumo (com evento) --------------
@@ -2224,7 +2252,10 @@
         "</h2>" +
         (meta.data || meta.local
           ? '<p class="dashboard-summary-sub">' +
-            [meta.data, meta.local].filter(Boolean).map(escapeHtml).join(" · ") +
+            [formatDataExibicao(meta.data), meta.local]
+              .filter(Boolean)
+              .map(escapeHtml)
+              .join(" · ") +
             "</p>"
           : "");
       wrap.appendChild(summary);
@@ -2251,6 +2282,7 @@
         '<button type="button" class="pill-btn" id="btn-dash-ir-podio">Pódio por prova</button>' +
         '<button type="button" class="pill-btn" id="btn-dash-ir-classificacao">Ver classificação</button>' +
         '<button type="button" class="pill-btn" id="btn-dash-ir-relatorios">Gerar relatório oficial</button>' +
+        '<button type="button" class="pill-btn" id="btn-dash-tutorial">Tutorial na tela</button>' +
         "</div>";
       wrap.appendChild(actions);
 
@@ -2312,7 +2344,9 @@
         escapeHtml(info.nome) +
         "</strong>" +
         '<span class="dashboard-saved-sub">' +
-        escapeHtml([info.data, "slug: " + info.slug].filter(Boolean).join(" · ")) +
+        escapeHtml(
+          [formatDataExibicao(info.data), "slug: " + info.slug].filter(Boolean).join(" · ")
+        ) +
         "</span>";
       li.appendChild(meta);
 
@@ -2406,13 +2440,16 @@
     if (btnRel) {
       btnRel.addEventListener("click", function () {
         goToTab("relatorios");
-        // Após render(), dispara o "Gerar relatório oficial" se existir.
+        // Após render(), dispara o perfil Completo (auditoria), não o Resumo.
         setTimeout(function () {
-          var bg = document.getElementById("btn-relatorio-gerar-resumo");
+          var bg = document.getElementById("btn-relatorio-gerar-completo");
           if (bg) bg.click();
         }, 0);
       });
     }
+
+    var btnTour = host.querySelector("#btn-dash-tutorial");
+    if (btnTour) btnTour.addEventListener("click", startTour);
   }
 
   function renderConfig() {
@@ -2458,9 +2495,9 @@
       escapeHtml(meta.nome || "") +
       '" /></label>' +
       '<label class="config-field"><span>Data</span>' +
-      '<input type="text" data-cfg="meta.data" value="' +
-      escapeHtml(meta.data || "") +
-      '" placeholder="AAAA-MM-DD ou texto" /></label>' +
+      '<input type="text" data-cfg="meta.data" inputmode="numeric" placeholder="DD/MM/AAAA" value="' +
+      escapeHtml(formatDataExibicao(meta.data)) +
+      '" /></label>' +
       '<label class="config-field config-field--full"><span>Local</span>' +
       '<input type="text" data-cfg="meta.local" value="' +
       escapeHtml(meta.local || "") +
@@ -2916,6 +2953,7 @@
         if (path.indexOf("medalhas.") === 0 || path.indexOf("pesos.") === 0) {
           setCfgPath(state.evento, path, Number(v));
         } else {
+          if (path === "meta.data") v = parseDataInput(v);
           setCfgPath(state.evento, path, v);
         }
         scheduleSave();
@@ -3508,14 +3546,16 @@
     trh.appendChild(
       thParticipacaoNum(
         er ? "Camisa" : "MR camisa",
-        participacaoPesoTxt(pz, "uniforme") + (er ? " se camisa = presentes" : " se MR camisa = MR tot."),
+        participacaoPesoTxt(pz, "uniforme") +
+          (er ? " se camisa = presentes" : " se MR camisa = MR tot."),
         "Pontua só se todos os presentes estiverem de camisa (contagem igual ao total)."
       )
     );
     trh.appendChild(
       thParticipacaoNum(
         er ? "Bíblia" : "MR bíblia",
-        participacaoPesoTxt(pz, "biblia") + (er ? " se bíblia = presentes" : " se MR bíblia = MR tot."),
+        participacaoPesoTxt(pz, "biblia") +
+          (er ? " se bíblia = presentes" : " se MR bíblia = MR tot."),
         "Pontua só se todos os presentes estiverem com Bíblia física (contagem igual ao total)."
       )
     );
@@ -3551,10 +3591,13 @@
         tdNum(g.id, "mr_total", row.mr_total, (er ? "Presentes" : "MR tot.") + " — " + g.nome) +
         tdNum(g.id, "mr_camisa", row.mr_camisa, (er ? "Camisa" : "MR camisa") + " — " + g.nome) +
         tdNum(g.id, "mr_biblia", row.mr_biblia, (er ? "Bíblia" : "MR bíblia") + " — " + g.nome) +
-        (showVisit
-          ? tdNum(g.id, "visitantes", row.visitantes, "Visitantes — " + g.nome)
-          : "") +
-        tdBool(g.id, "animacao", row.animacao, (er ? "Grito de guerra" : "Animação") + " — " + g.nome) +
+        (showVisit ? tdNum(g.id, "visitantes", row.visitantes, "Visitantes — " + g.nome) : "") +
+        tdBool(
+          g.id,
+          "animacao",
+          row.animacao,
+          (er ? "Grito de guerra" : "Animação") + " — " + g.nome
+        ) +
         tdBool(g.id, "mau_comportamento", row.mau_comportamento, "Mau comportamento — " + g.nome) +
         tdNum(g.id, "pontuacao_extra", extraVal, "Pontuação extra — " + g.nome);
       tbody.appendChild(tr);
@@ -4119,33 +4162,69 @@
     showFeedback("Pódio exportado como CSV.", "info");
   }
 
-  /** Copia texto para a área de transferência. Tenta a Clipboard API primeiro
-   *  (assíncrona, padrão); cai para textarea+execCommand quando indisponível
-   *  (ex.: contexto file:// em navegadores antigos). Retorna Promise. */
-  function copyToClipboard(text) {
-    if (
-      typeof navigator !== "undefined" &&
-      navigator.clipboard &&
-      typeof navigator.clipboard.writeText === "function"
-    ) {
-      return navigator.clipboard.writeText(text);
+  var CLIPBOARD_TIMEOUT_MS = 1500;
+
+  /** Cópia síncrona via textarea + execCommand. Precisa do gesto do clique
+   *  (foco no documento). Usada como fallback quando a Clipboard API falta,
+   *  rejeita ou nunca resolve (iframe/permissão pendurada). */
+  function copyViaExecCommand(text) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = document.execCommand && document.execCommand("copy");
+      document.body.removeChild(ta);
+      return !!ok;
+    } catch (_e) {
+      return false;
     }
+  }
+
+  /** Copia texto para a área de transferência. Tenta execCommand ainda no
+   *  gesto do clique; em paralelo usa a Clipboard API com tempo-limite.
+   *  Retorna Promise. */
+  function copyToClipboard(text) {
     return new Promise(function (resolve, reject) {
-      try {
-        var ta = document.createElement("textarea");
-        ta.value = text;
-        ta.setAttribute("readonly", "");
-        ta.style.position = "fixed";
-        ta.style.top = "-9999px";
-        document.body.appendChild(ta);
-        ta.select();
-        var ok = document.execCommand && document.execCommand("copy");
-        document.body.removeChild(ta);
+      var settled = false;
+      function finish(ok, err) {
+        if (settled) return;
+        settled = true;
         if (ok) resolve();
-        else reject(new Error("execCommand copy retornou false"));
-      } catch (e) {
-        reject(e);
+        else reject(err || new Error("falha ao copiar"));
       }
+
+      var hasApi =
+        typeof navigator !== "undefined" &&
+        navigator.clipboard &&
+        typeof navigator.clipboard.writeText === "function";
+
+      if (hasApi) {
+        navigator.clipboard.writeText(text).then(
+          function () {
+            finish(true);
+          },
+          function (err) {
+            if (copyViaExecCommand(text)) finish(true);
+            else finish(false, err);
+          }
+        );
+      }
+
+      if (copyViaExecCommand(text)) {
+        finish(true);
+        return;
+      }
+      if (!hasApi) {
+        finish(false, new Error("execCommand copy retornou false"));
+        return;
+      }
+      setTimeout(function () {
+        finish(false, new Error("clipboard timeout"));
+      }, CLIPBOARD_TIMEOUT_MS);
     });
   }
 
@@ -4161,7 +4240,7 @@
     if (!out) return "";
     var ord = E.classificacaoOrdenada(out.detalhes, out.ranks, out.tiebreakByIgreja);
     var titulo = (meta.nome || "").trim() || "Evento sem nome";
-    var data = (meta.data || "").trim();
+    var data = formatDataExibicao((meta.data || "").trim());
     var local = (meta.local || "").trim();
     var lines = [];
     lines.push("# Pontuação Conclave — " + titulo);
@@ -4312,16 +4391,6 @@
 
   function isRelatorioPerfilGerado(perfil) {
     return !!state.relatorioOficialGeradoPerfil[R.normalizePerfil(perfil)];
-  }
-
-  function gerarRelatorioOficial(perfil) {
-    perfil = R.normalizePerfil(perfil);
-    state.relatorioOficialGeradoPerfil[perfil] = true;
-    var host = document.getElementById(relatorioHostId(perfil));
-    if (host) {
-      renderRelatorioOficial(host, { perfil: perfil });
-    }
-    return host;
   }
 
   function ensureRelatorioDom(perfil) {
@@ -4837,7 +4906,8 @@
           temaTexto: temaTexto,
           schemaVersion: schemaVersion,
         }).forEach(function (row) {
-          defRow(dlMeta, row.dt, row.dd);
+          var dd = row.dt === "Data" ? formatDataExibicao(row.dd) : row.dd;
+          defRow(dlMeta, row.dt, dd);
         });
         blocoCapa.appendChild(dlMeta);
         doc.appendChild(blocoCapa);
@@ -4936,7 +5006,11 @@
           var gg = out.gincanaPorIgreja[g.id] || 0;
           return [g.nome || "—", String(m.ou), String(m.pt), String(m.br), fmt(gg)];
         });
-        appendTabela(blocoMed, ["Igreja", "Ouro", "Prata", "Bronze", isErUiTheme() ? "Pts medalhas" : "Pts gincana"], medRows);
+        appendTabela(
+          blocoMed,
+          ["Igreja", "Ouro", "Prata", "Bronze", isErUiTheme() ? "Pts medalhas" : "Pts gincana"],
+          medRows
+        );
         doc.appendChild(blocoMed);
         return;
       }
@@ -5021,11 +5095,7 @@
         blocoCrit.appendChild(el("h4", { text: "Pesos" }));
         var dlPesos = el("dl", { className: "relatorio-oficial__defs" });
         var pz = ev.pesos || {};
-        defRow(
-          dlPesos,
-          "Inscrição (pts se marcado)",
-          fmt(pz.inscricao || 0)
-        );
+        defRow(dlPesos, "Inscrição (pts se marcado)", fmt(pz.inscricao || 0));
         defRow(dlPesos, "Pontualidade (pts se marcado)", fmt(pz.pontualidade || 0));
         defRow(
           dlPesos,
@@ -5634,6 +5704,334 @@
     showFeedback("Métricas da prova escrita exportadas como CSV.", "info");
   }
 
+  /* TOUR_STEPS_START */
+  /** Passos do tutorial guiado (só dados; o DOM é resolvido em runtime). */
+  var TOUR_STEPS = [
+    {
+      id: "inicio",
+      tab: "dashboard",
+      targets: [".dashboard-summary", ".dashboard-hero", "#panel-dashboard"],
+      title: "Tutorial na tela",
+      body: "Vamos percorrer o fluxo do dia no app de verdade. A área clara é onde você age; o restante fica escurecido. Pode clicar e preencher o que estiver destacado.",
+    },
+    {
+      id: "abas",
+      tab: "dashboard",
+      targets: ["#sidebar-nav", "#bottom-nav"],
+      title: "As sete abas",
+      body: "No dia do evento você usa principalmente Participação e Pódio. Classificação e Relatórios leem o que você lançou. Configuração já vem pronta no evento oficial.",
+    },
+    {
+      id: "mais",
+      tab: "dashboard",
+      targets: ["#btn-mais", ".topbar-actions"],
+      title: "Menu Mais — backup",
+      body: "Aqui você carrega e exporta arquivos. O backup que funciona em outro computador é Exportar projeto (não só evento). O selo «Salvo localmente» guarda só neste navegador.",
+    },
+    {
+      id: "participacao",
+      tab: "participacao",
+      targets: ["#panel-participacao .participacao-table", "#panel-participacao"],
+      title: "Lance a participação",
+      body: "Uma linha por igreja. Marque inscrição, pontualidade, uniforme e extra. Uniforme e Bíblia só pontuam se a contagem for igual aos presentes. Pode preencher agora — o total atualiza na hora.",
+    },
+    {
+      id: "podio",
+      tab: "podio",
+      targets: ["#panel-podio"],
+      title: "Lance o pódio",
+      body: "Ouro, prata e bronze em cada prova. Isso é o que soma medalha no ranking. A aba Prova escrita documenta acertos, mas não substitui o pódio.",
+    },
+    {
+      id: "classificacao",
+      tab: "classificacao",
+      targets: ["#panel-classificacao"],
+      title: "Veja o ranking",
+      body: "A classificação soma participação, punições, medalhas e extra, e desempatam sozinhas. Use Exportar CSV se precisar de planilha.",
+    },
+    {
+      id: "relatorios",
+      tab: "relatorios",
+      targets: ["#panel-relatorios .relatorio-docs", "#panel-relatorios"],
+      title: "Relatório e palco",
+      body: "Gere o Resumo (divulgação) ou o Oficial completo (arquivo) e salve como PDF na impressão do navegador. O botão Modo apresentação, na barra de cima, é o projetor. Antes de encerrar: Mais → Exportar projeto.",
+    },
+  ];
+  /* TOUR_STEPS_END */
+
+  var tourLayoutRaf = null;
+  var tourListenersBound = false;
+
+  function tourPad() {
+    return window.matchMedia && window.matchMedia("(max-width: 720px)").matches ? 6 : 10;
+  }
+
+  function isTourTargetVisible(el) {
+    if (!el || !el.getBoundingClientRect) return false;
+    var r = el.getBoundingClientRect();
+    return r.width > 4 && r.height > 4;
+  }
+
+  function pickTourTarget(step) {
+    var list = (step && step.targets) || [];
+    var i;
+    var el;
+    for (i = 0; i < list.length; i++) {
+      el = document.querySelector(list[i]);
+      if (isTourTargetVisible(el)) return el;
+    }
+    if (step && step.tab) {
+      el = document.getElementById("panel-" + step.tab);
+      if (isTourTargetVisible(el)) return el;
+    }
+    return document.getElementById("conteudo-principal") || document.body;
+  }
+
+  function updateTourCard(step) {
+    var title = document.getElementById("tour-title");
+    var body = document.getElementById("tour-body");
+    var progress = document.getElementById("tour-progress");
+    var next = document.getElementById("tour-next");
+    var prev = document.getElementById("tour-prev");
+    var idx = state.tourStep;
+    var total = TOUR_STEPS.length;
+    if (title) title.textContent = step.title;
+    if (body) body.textContent = step.body;
+    if (progress) progress.textContent = "Passo " + (idx + 1) + " de " + total;
+    if (next) next.textContent = idx >= total - 1 ? "Concluir" : "Próximo";
+    if (prev) prev.disabled = idx <= 0;
+  }
+
+  function layoutTourStep() {
+    if (!state.tourActive) return;
+    var step = TOUR_STEPS[state.tourStep];
+    if (!step) return;
+    var target = pickTourTarget(step);
+    var rect = target.getBoundingClientRect();
+    var pad = tourPad();
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var top = Math.max(0, rect.top - pad);
+    var left = Math.max(0, rect.left - pad);
+    var right = Math.min(vw, rect.right + pad);
+    var bottom = Math.min(vh, rect.bottom + pad);
+    if (right - left < 48) {
+      left = Math.max(0, rect.left);
+      right = Math.min(vw, left + Math.max(rect.width, 48));
+    }
+    if (bottom - top < 48) {
+      top = Math.max(0, rect.top);
+      bottom = Math.min(vh, top + Math.max(rect.height, 48));
+    }
+
+    function setPart(id, t, l, w, h) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.style.top = Math.max(0, t) + "px";
+      el.style.left = Math.max(0, l) + "px";
+      el.style.width = Math.max(0, w) + "px";
+      el.style.height = Math.max(0, h) + "px";
+    }
+
+    setPart("tour-veil-t", 0, 0, vw, top);
+    setPart("tour-veil-l", top, 0, left, bottom - top);
+    setPart("tour-veil-r", top, right, vw - right, bottom - top);
+    setPart("tour-veil-b", bottom, 0, vw, vh - bottom);
+
+    var ring = document.getElementById("tour-ring");
+    if (ring) {
+      ring.style.top = top + "px";
+      ring.style.left = left + "px";
+      ring.style.width = right - left + "px";
+      ring.style.height = bottom - top + "px";
+    }
+
+    var card = document.getElementById("tour-card");
+    if (!card) return;
+    var compact = window.matchMedia && window.matchMedia("(max-width: 720px)").matches;
+    card.classList.toggle("tour-card--dock", compact);
+    if (compact) {
+      card.style.top = "";
+      card.style.left = "";
+      return;
+    }
+    var cardW = Math.min(360, vw - 24);
+    card.style.width = cardW + "px";
+    var cardH = card.offsetHeight || 180;
+    var spaceBelow = vh - bottom;
+    var spaceAbove = top;
+    var cardTop;
+    if (spaceBelow >= cardH + 16 || spaceBelow >= spaceAbove) {
+      cardTop = Math.min(vh - cardH - 12, bottom + 12);
+    } else {
+      cardTop = Math.max(12, top - cardH - 12);
+    }
+    var cardLeft = Math.min(Math.max(12, left), vw - cardW - 12);
+    card.style.top = cardTop + "px";
+    card.style.left = cardLeft + "px";
+  }
+
+  function scheduleTourLayout() {
+    if (!state.tourActive) return;
+    if (tourLayoutRaf) return;
+    tourLayoutRaf = requestAnimationFrame(function () {
+      tourLayoutRaf = null;
+      layoutTourStep();
+    });
+  }
+
+  function bindTourLayoutListeners(on) {
+    if (on === tourListenersBound) return;
+    tourListenersBound = on;
+    if (on) {
+      window.addEventListener("resize", scheduleTourLayout);
+      window.addEventListener("scroll", scheduleTourLayout, true);
+    } else {
+      window.removeEventListener("resize", scheduleTourLayout);
+      window.removeEventListener("scroll", scheduleTourLayout, true);
+    }
+  }
+
+  function showTourStep(index) {
+    if (index < 0 || index >= TOUR_STEPS.length) return;
+    state.tourStep = index;
+    var step = TOUR_STEPS[index];
+    if (step.tab && step.tab !== state.tab) {
+      state.tab = step.tab;
+      render();
+    }
+    var root = document.getElementById("tour-root");
+    if (root) {
+      root.hidden = false;
+      root.setAttribute("aria-hidden", "false");
+    }
+    document.body.classList.add("tour-active");
+    updateTourCard(step);
+    var target = pickTourTarget(step);
+    if (target && target.scrollIntoView) {
+      try {
+        target.scrollIntoView({ block: "nearest", inline: "nearest" });
+      } catch (_e) {
+        /* Safari antigo */
+      }
+    }
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        layoutTourStep();
+        var next = document.getElementById("tour-next");
+        if (next) next.focus();
+      });
+    });
+  }
+
+  function stopTour() {
+    if (!state.tourActive) return;
+    state.tourActive = false;
+    bindTourLayoutListeners(false);
+    document.body.classList.remove("tour-active");
+    var root = document.getElementById("tour-root");
+    if (root) {
+      root.hidden = true;
+      root.setAttribute("aria-hidden", "true");
+    }
+    var last = state.tourLastFocus;
+    state.tourLastFocus = null;
+    if (last && last.focus) {
+      try {
+        last.focus();
+      } catch (_e) {
+        /* best-effort */
+      }
+    }
+  }
+
+  function startTour() {
+    if (document.body.classList.contains("presentation-mode")) {
+      setPresentationMode(false);
+    }
+    var menu = document.getElementById("more-menu");
+    var mais = document.getElementById("btn-mais");
+    if (menu) menu.hidden = true;
+    if (mais) mais.setAttribute("aria-expanded", "false");
+
+    function begin() {
+      state.tourActive = true;
+      state.tourStep = 0;
+      state.tourLastFocus = document.activeElement;
+      bindTourLayoutListeners(true);
+      showTourStep(0);
+    }
+
+    if (!state.evento) {
+      tryLoadDefaultEventoWeb().then(
+        function (ev) {
+          if (setEvento(ev, null)) {
+            showFeedback("Exemplo carregado para o tutorial.", "info");
+          }
+          begin();
+        },
+        function () {
+          begin();
+        }
+      );
+      return;
+    }
+    begin();
+  }
+
+  function nextTourStep() {
+    if (!state.tourActive) return;
+    if (state.tourStep >= TOUR_STEPS.length - 1) {
+      stopTour();
+      goToTab("dashboard");
+      showFeedback("Tutorial concluído. No dia: Participação → Pódio → Exportar projeto.", "info");
+      return;
+    }
+    showTourStep(state.tourStep + 1);
+  }
+
+  function prevTourStep() {
+    if (!state.tourActive || state.tourStep <= 0) return;
+    showTourStep(state.tourStep - 1);
+  }
+
+  function onTourKeydown(ev) {
+    if (!state.tourActive) return;
+    if (ev.key === "Escape") {
+      ev.preventDefault();
+      stopTour();
+      return;
+    }
+    var inField =
+      ev.target &&
+      (ev.target.tagName === "INPUT" ||
+        ev.target.tagName === "TEXTAREA" ||
+        ev.target.tagName === "SELECT" ||
+        ev.target.isContentEditable);
+    if (inField) return;
+    if (ev.key === "ArrowRight") {
+      ev.preventDefault();
+      nextTourStep();
+    } else if (ev.key === "ArrowLeft") {
+      ev.preventDefault();
+      prevTourStep();
+    }
+  }
+
+  function initTour() {
+    var root = document.getElementById("tour-root");
+    if (!root) return;
+    var next = document.getElementById("tour-next");
+    var prev = document.getElementById("tour-prev");
+    var skip = document.getElementById("tour-skip");
+    if (next) next.addEventListener("click", nextTourStep);
+    if (prev) prev.addEventListener("click", prevTourStep);
+    if (skip) skip.addEventListener("click", stopTour);
+    var footer = document.getElementById("btn-footer-tutorial");
+    if (footer) footer.addEventListener("click", startTour);
+    document.addEventListener("keydown", onTourKeydown);
+  }
+
   function renderPanels() {
     renderDashboard();
     wireDashboard();
@@ -5669,6 +6067,7 @@
         }
       }
     });
+    if (state.tourActive) scheduleTourLayout();
   }
 
   function isErUiTheme() {
@@ -5902,6 +6301,42 @@
     );
   }
 
+  /** CER na reunião pré-conclave do ER 2026/2: +100 em Extra, uma vez por projeto. */
+  var CER_PRE_CONCLAVE_SLUG = "conclave-er-2026-2";
+  var CER_PRE_CONCLAVE_PONTOS = 100;
+  var CER_PRE_CONCLAVE_IGREJA_IDS = ["orla", "paul", "alecrim", "vila-batista", "gloria", "ibes"];
+
+  function applyCerPreConclaveExtraOnce(evento, dados) {
+    if (!evento || !evento.meta || !dados || !dados.participacao) return [];
+    if (evento.meta.slug !== CER_PRE_CONCLAVE_SLUG) return [];
+    if (dados.cerPreConclaveAplicado) return [];
+    var applied = [];
+    CER_PRE_CONCLAVE_IGREJA_IDS.forEach(function (id) {
+      var row = dados.participacao[id];
+      if (!row) return;
+      var cur = Number(row.pontuacao_extra);
+      if (!isFinite(cur)) cur = 0;
+      row.pontuacao_extra = cur + CER_PRE_CONCLAVE_PONTOS;
+      applied.push(id);
+    });
+    dados.cerPreConclaveAplicado = true;
+    return applied;
+  }
+
+  function notifyCerPreConclaveIfApplied(ids) {
+    if (!ids || !ids.length || !state.evento) return;
+    var nomes = ids.map(function (id) {
+      var g = (state.evento.igrejas || []).find(function (x) {
+        return x.id === id;
+      });
+      return g && g.nome ? g.nome : id;
+    });
+    showFeedback(
+      "CER pré-conclave: +" + CER_PRE_CONCLAVE_PONTOS + " no Extra para " + nomes.join(", ") + ".",
+      "info"
+    );
+  }
+
   function eventoValidationErrors(ev) {
     return validateEventoSchemaLike(ev).concat(E.validateEventoMinimal(ev));
   }
@@ -5942,9 +6377,11 @@
       state.dados = E.emptyDadosTemplate(ids, pids);
       ensureMetricasEscrita();
     }
+    var cerIds = applyCerPreConclaveExtraOnce(state.evento, state.dados);
     validate();
     scheduleSave();
     render();
+    notifyCerPreConclaveIfApplied(cerIds);
     return true;
   }
 
@@ -6109,12 +6546,24 @@
           return p.id;
         });
         state.dados = E.emptyDadosTemplate(ids, pids);
+        var cerIds = applyCerPreConclaveExtraOnce(state.evento, state.dados);
         state.podiumCollapsed = {};
         state.podiumProvaGroupCollapsed = {};
         resetRelatorioOficialGerado();
         scheduleSave();
         render();
-        showFeedback("Dados do evento foram limpos.", "info");
+        if (cerIds.length) {
+          showFeedback(
+            "Dados limpos. CER pré-conclave relançado (+" +
+              CER_PRE_CONCLAVE_PONTOS +
+              " no Extra de " +
+              cerIds.length +
+              " igrejas).",
+            "info"
+          );
+        } else {
+          showFeedback("Dados do evento foram limpos.", "info");
+        }
       },
       null,
       { destructive: true, confirmLabel: "Limpar" }
@@ -6454,9 +6903,10 @@
     // rápida quando o controle remoto não está acessível).
     document.addEventListener("keydown", function (ev) {
       if (ev.key === "Escape" && document.body.classList.contains("presentation-mode")) {
-        // Se o modal de confirmação estiver aberto, deixe-o tratar primeiro.
+        // Se o modal de confirmação ou o tutorial estiver aberto, deixe-os tratar primeiro.
         var confirmEl = document.getElementById("modal-confirm");
         if (confirmEl && confirmEl.classList.contains("open")) return;
+        if (state.tourActive) return;
         setPresentationMode(false);
       }
     });
@@ -6789,6 +7239,7 @@
    *  Quando ligado, popula `#presentation-host` com a cerimônia de revelação
    *  (5º→1º) e esconde toda a UI regular via `body.presentation-mode`. */
   function setPresentationMode(on) {
+    if (on && state.tourActive) stopTour();
     var was = document.body.classList.contains("presentation-mode");
     document.body.classList.toggle("presentation-mode", !!on);
     var pres = document.getElementById("btn-pres");
@@ -6850,7 +7301,7 @@
     titulo.textContent = (meta.nome || "Evento sem nome") + " — Classificação";
     var sub = document.createElement("p");
     sub.className = "scoreboard-sub";
-    sub.textContent = [meta.data, meta.local].filter(Boolean).join(" · ");
+    sub.textContent = [formatDataExibicao(meta.data), meta.local].filter(Boolean).join(" · ");
     header.appendChild(titulo);
     if (sub.textContent) header.appendChild(sub);
     return header;
@@ -6863,7 +7314,8 @@
     var titulo = host.querySelector("#presentation-title");
     var sub = host.querySelector(".scoreboard-sub");
     if (titulo) titulo.textContent = (meta.nome || "Evento sem nome") + " — Classificação";
-    if (sub) sub.textContent = [meta.data, meta.local].filter(Boolean).join(" · ");
+    if (sub)
+      sub.textContent = [formatDataExibicao(meta.data), meta.local].filter(Boolean).join(" · ");
   }
 
   function prefersReducedMotion() {
@@ -7181,6 +7633,19 @@
     }
   }
 
+  /** Completa o PDF do regulamento em projetos já salvos do evento padrão. */
+  function fillBundledRegulamentoIfMissing(savedEvento, bundledEvento) {
+    if (!savedEvento || !savedEvento.meta || !bundledEvento || !bundledEvento.meta) return;
+    if (String(savedEvento.meta.slug || "") !== String(bundledEvento.meta.slug || "")) return;
+    var bundledUrl = String(bundledEvento.meta.regulamentoUrl || "").trim();
+    if (!bundledUrl) return;
+    if (String(savedEvento.meta.regulamentoUrl || "").trim()) return;
+    savedEvento.meta.regulamentoUrl = bundledUrl;
+    if (bundledEvento.meta.regulamentoNome) {
+      savedEvento.meta.regulamentoNome = bundledEvento.meta.regulamentoNome;
+    }
+  }
+
   function tryFetchDefaultEvento() {
     tryLoadDefaultEventoWeb()
       .then(function (ev) {
@@ -7188,6 +7653,7 @@
         var slug = ev.meta && ev.meta.slug;
         var saved = slug ? loadFromStorage(slug) : null;
         if (saved && saved.evento && saved.dados && !eventoValidationErrors(saved.evento).length) {
+          fillBundledRegulamentoIfMissing(saved.evento, ev);
           setEvento(saved.evento, saved.dados);
           return;
         }
@@ -7233,6 +7699,7 @@
     applyUiTheme("er", { silent: true });
     initToolbar();
     initThemeToggle();
+    initTour();
     if (shouldStartWithNovoEvento()) {
       startWithNovoEvento();
     } else {
@@ -7241,4 +7708,18 @@
     render();
     registerServiceWorker();
   });
+
+  window.ConclaveTour = {
+    steps: TOUR_STEPS,
+    start: startTour,
+    stop: stopTour,
+    next: nextTourStep,
+    prev: prevTourStep,
+    isActive: function () {
+      return !!state.tourActive;
+    },
+    currentIndex: function () {
+      return state.tourStep;
+    },
+  };
 })();

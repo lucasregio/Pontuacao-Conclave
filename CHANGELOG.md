@@ -9,6 +9,30 @@ A versão registrada em `package.json` reflete a versão da aplicação web. Com
 não há build e o app é 100% estático, o "release" corresponde a um deploy do
 GitHub Pages.
 
+## [Unreleased]
+
+### Corrigido
+
+- **Pódio / Relatórios**: os botões «Faixa etária» e «Tipo de prova» (e a
+  barra de filtros) deixam de ficar atrás do título sticky do evento ao
+  rolar. O scroll passa a ocorrer em `.content`; as barras ficam sticky
+  abaixo da topbar.
+- **Copiar resumo**: se a Clipboard API não resolver (permissão pendurada),
+  a cópia cai para `execCommand` ainda no clique e avisa falha após 1,5 s —
+  a UI não fica muda.
+- **Início → «Gerar relatório oficial»**: gera o perfil **Oficial completo**
+  (auditoria), não o Resumo de divulgação.
+
+### Adicionado
+
+- **Tutorial de 5 minutos** (`docs/usuario/tutorial-5min.md`): fluxo ilustrado
+  do dia (abrir evento, conferir cadastro, participação, pódio, ranking e
+  backup), com capturas do guia visual. A landing `docs/index.html` abre nesse
+  tour; o Início do app aponta para a mesma página.
+- **Tutorial guiado na tela**: o botão «Tutorial na tela» (Início e rodapé)
+  percorre as abas reais com destaque, deixa lançar dados no passo atual e
+  carrega o evento de exemplo se ainda não houver evento.
+
 ## [2.0.0] - 2026-06-20
 
 ### Removido

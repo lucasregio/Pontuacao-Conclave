@@ -222,6 +222,7 @@
 
 html {
   font-size: 16px;
+  height: 100%;
 }
 
 /* Foco visível padrão: vale para qualquer elemento focável (botão, input,
@@ -285,6 +286,8 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
   font-family:
     system-ui,
     -apple-system,
@@ -313,7 +316,12 @@ body {
 
 .app-grid {
   display: grid;
+  /* Viewport travado: o scroll mora em `.content`, não no document.
+     Assim a topbar (irmã no grid) não cobre controles do pódio/relatórios. */
   min-height: 100vh;
+  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
   grid-template-rows: auto 1fr auto;
   grid-template-columns: 1fr;
   grid-template-areas:
@@ -652,12 +660,17 @@ body {
   color: var(--warn-on);
 }
 
-/* Content (substitui o main.shell). Painéis vivem dentro. */
+/* Content (substitui o main.shell). Painéis vivem dentro.
+   Este é o scrollport: `min-height: 0` deixa a célula 1fr encolher;
+   `overflow-y: auto` concentra o scroll abaixo da topbar. */
 .content {
   grid-area: content;
   padding: var(--space-4);
   background: transparent;
   min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -1630,12 +1643,21 @@ table.data.config-table select {
     0 1px 0 rgba(0, 0, 0, 0.04);
 }
 
-/* Toggle de layout na aba Pódio */
+/* Toggle de layout na aba Pódio.
+   Sticky em `top: 0` relativo ao scrollport `.content` (já abaixo da
+   topbar). z-index 40: abaixo da topbar (50) e da bottom-nav (60),
+   acima dos cards do pódio. */
 .podio-toolbar {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
   margin: 0 0 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  padding-block: var(--space-2);
+  background: var(--surface-sunken);
+  box-shadow: 0 8px 10px -8px rgba(15, 23, 42, 0.16);
 }
 
 .podio-layout-toolbar {
@@ -2320,6 +2342,10 @@ table.data.config-table select {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+}
+
+a.pill-btn {
+  text-decoration: none;
 }
 
 .pill-btn:hover:not(:disabled) {
@@ -3027,6 +3053,11 @@ body.presentation-mode .presentation-exit-btn {
 
 .relatorio-podio-panel .podio-layout-toolbar {
   margin-bottom: 0.85rem;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--card-solid);
+  box-shadow: 0 8px 10px -8px rgba(15, 23, 42, 0.16);
 }
 
 .config-section {
@@ -3496,8 +3527,29 @@ body.presentation-mode .app-footer {
 }
 
 @media print {
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+  }
   body {
     background: #fff !important;
+  }
+  /* Libera o shell travado (100dvh + scroll em `.content`) para a página
+     imprimir com altura natural. */
+  .app-grid {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  main.content {
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .podio-toolbar,
+  .relatorio-podio-panel .podio-layout-toolbar {
+    position: static;
+    box-shadow: none;
   }
   /* Esconder toda a navegação/UI temporária; manter apenas o conteúdo. */
   .toolbar,
@@ -3599,6 +3651,19 @@ body.presentation-mode .app-footer {
 .app-footer a {
   color: var(--accent);
   font-weight: 600;
+}
+
+.app-footer .app-footer-link {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
 }
 
 .app-footer a:hover {
@@ -3703,6 +3768,99 @@ table.data.participacao-table thead th:first-child {
   border-color: rgba(211, 47, 47, 0.4);
   background: rgba(255, 235, 238, 0.8);
   color: #b71c1c;
+}
+
+/* Tutorial guiado: véu em 4 painéis + anel + cartão. z-index abaixo do
+   confirm-overlay (10003) e acima do modo apresentação (10001). */
+.tour-root[hidden] {
+  display: none !important;
+}
+
+.tour-veil-part {
+  position: fixed;
+  z-index: 10002;
+  background: rgba(15, 23, 42, 0.55);
+  pointer-events: auto;
+}
+
+.tour-ring {
+  position: fixed;
+  z-index: 10002;
+  box-sizing: border-box;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.65);
+  pointer-events: none;
+}
+
+.tour-card {
+  position: fixed;
+  z-index: 10003;
+  width: min(22.5rem, calc(100vw - 1.5rem));
+  max-height: min(70vh, 28rem);
+  overflow: auto;
+  padding: 0.9rem 1rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-solid);
+  color: var(--on-surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+}
+
+.tour-progress {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.tour-card h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+  line-height: 1.25;
+  color: var(--accent);
+}
+
+.tour-card #tour-body {
+  margin: 0 0 0.85rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.tour-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.tour-actions #tour-skip {
+  margin-right: auto;
+}
+
+.tour-docs {
+  margin: 0.65rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.tour-docs a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tour-card--dock {
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  top: auto;
+  width: auto;
+}
+
+body.tour-active .bottom-nav {
+  z-index: 1;
 }
 
 /* Modal de eventos salvos: container largo o suficiente para exibir
@@ -4077,6 +4235,170 @@ table.data.participacao-table thead th:first-child {
   color: var(--muted);
 }
 
+.docs-page .docs-callout {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--card);
+}
+
+.docs-page .docs-callout p {
+  margin: 0;
+}
+
+.docs-page .docs-tutorial-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+}
+
+.docs-page .docs-main a.docs-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 1.05rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.docs-page .docs-main a.docs-cta:hover,
+.docs-page .docs-main a.docs-cta:focus-visible {
+  filter: brightness(1.08);
+  text-decoration: none;
+}
+
+.docs-page .docs-minute-track {
+  list-style: none;
+  margin: 1.1rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+}
+
+.docs-page .docs-minute-track a {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--theme-card-shadow);
+  color: var(--theme-text-main);
+  text-decoration: none;
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease;
+}
+
+.docs-page .docs-minute-track a:hover,
+.docs-page .docs-minute-track a:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  text-decoration: none;
+}
+
+.docs-page .docs-minute-track img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  object-position: 42% 6%;
+  background: var(--card);
+}
+
+.docs-page .docs-minute-track .docs-minute-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.7rem 0.85rem 0.85rem;
+}
+
+.docs-page .docs-minute-track .docs-minute {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.docs-page .docs-minute-track strong {
+  font-size: 0.98rem;
+  color: var(--theme-text-main);
+}
+
+.docs-page .docs-minute-track span.docs-minute-desc {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.docs-page .docs-tab-map {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+}
+
+.docs-page .docs-tab-map li {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.docs-page .docs-tab-map strong {
+  color: var(--accent);
+  font-size: 0.92rem;
+}
+
+.docs-page .docs-tab-map span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.docs-page .docs-tab-map li.is-core {
+  border-color: var(--accent);
+  box-shadow: var(--theme-card-shadow);
+}
+
+.docs-page .docs-tutorial h2[id^="minuto"] {
+  padding-top: 0.35rem;
+}
+
+.docs-page .docs-tutorial h2[id="mapa-das-abas"] + ul,
+.docs-page .docs-tutorial h2[id="folha-de-cola"] + ul {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.docs-page .docs-tutorial h2[id="mapa-das-abas"] + ul li,
+.docs-page .docs-tutorial h2[id="folha-de-cola"] + ul li {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  margin-bottom: 0;
+}
+
 .docs-page .docs-footer p {
   margin: 0;
   color: var(--muted);
@@ -4117,6 +4439,31 @@ table.data.participacao-table thead th:first-child {
 
   .docs-page .docs-cards {
     gap: 1rem;
+  }
+
+  .docs-page .docs-minute-track {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .docs-page .docs-tab-map {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .docs-page .docs-tutorial h2[id="mapa-das-abas"] + ul {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 960px) {
+  .docs-page .docs-minute-track {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 519px) {
+  .docs-page .docs-tab-map li {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
   }
 }
 
@@ -4754,6 +5101,8 @@ table.data.participacao-table thead th:first-child {
   body.relatorio-print-mode .app-grid {
     display: block !important;
     min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
   }
   body:has(.relatorio-oficial) main.content,
   body.relatorio-print-mode main.content {
@@ -4763,6 +5112,8 @@ table.data.participacao-table thead th:first-child {
     box-shadow: none !important;
     border-radius: 0 !important;
     max-width: none !important;
+    overflow: visible !important;
+    height: auto !important;
   }
 
   @page {

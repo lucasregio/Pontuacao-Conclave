@@ -3,7 +3,8 @@ Pasta static/ — assets servidos pelo Pontuação Conclave
 
 Arquivos opcionais referenciados por eventos legados ou pelo deploy (GitHub Pages):
 
-  - regulamento-2026.pdf  — PDF do regulamento do evento de exemplo
+  - regulamento-er-2026-2.pdf — Regulamento do Conclave ER 2026/2 (botão Regulamento)
+  - regulamento-2026.pdf  — PDF do regulamento do evento MR de exemplo
 
 No app, o organizador pode carregar o regulamento diretamente do computador
 (Configuração → Geral → «Carregar arquivo»). O PDF fica embutido no projeto

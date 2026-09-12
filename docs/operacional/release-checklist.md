@@ -61,9 +61,10 @@ Em `index.html` servido via `http(s)://` (preferir; `file://` desativa SW):
 
 - [ ] `README.md` atualizado se mudou comando/fluxo.
 - [ ] `AGENTS.md` atualizado se mudou invariante/contrato (engine/UI/dados).
-- [ ] Se a mudança afeta o fluxo do organizador, atualizar `docs/usuario/manual-uso.md`,
-      `docs/usuario/faq.md`, `docs/usuario/glossario.md`, `docs/usuario/troubleshooting.md`,
-      `docs/usuario/regulamento-mapeado.md` ou `docs/usuario/guia-visual.md` conforme aplicável.
+- [ ] Se a mudança afeta o fluxo do organizador, atualizar `docs/usuario/tutorial-5min.md`,
+      `docs/usuario/manual-uso.md`, `docs/usuario/faq.md`, `docs/usuario/glossario.md`,
+      `docs/usuario/troubleshooting.md`, `docs/usuario/regulamento-mapeado.md` ou
+      `docs/usuario/guia-visual.md` conforme aplicável.
 - [ ] Se a UI visível mudou, regenerar capturas com `npm run guia:visual` e `npm run build:docs`.
 - [ ] `CHANGELOG.md` recebe entrada nova (versão + data + tipo de mudança).
 - [ ] `docs/operacional/metrics-baseline.md` revisado se houve mudança que afete

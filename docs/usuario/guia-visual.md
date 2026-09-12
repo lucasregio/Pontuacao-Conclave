@@ -2,6 +2,8 @@
 
 Tour ilustrado de **todas as telas** do app, com capturas geradas pelo Playwright a partir do evento **Conclave ER 2026/2**. Os números nas telas são de demonstração — no dia do evento você lança os dados reais.
 
+Para aprender o fluxo em 5 minutos, use o [tutorial rápido](tutorial-5min.md).
+
 Para regenerar as imagens:
 
 ```

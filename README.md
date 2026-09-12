@@ -182,8 +182,8 @@ Ver [`CONTRIBUTING.md`](CONTRIBUTING.md) e [`AGENTS.md`](AGENTS.md).
 
 ## Documentação adicional
 
-**Usuário:** [`docs/index.html`](docs/index.html) — manual, FAQ, glossário, troubleshooting,
-atalhos, regulamento mapeado em `docs/usuario/`.
+**Usuário:** [`docs/index.html`](docs/index.html) — tutorial de 5 minutos, manual, FAQ, glossário, troubleshooting,
+atalhos, regulamento mapeado e guia visual em `docs/usuario/`.
 
 **Operacional:** `docs/operacional/metrics-baseline.md`, `performance-budget.md`,
 `release-checklist.md`.

@@ -31,3 +31,15 @@ test("build:embedded regenera arquivo idêntico ao conteúdo canônico", () => {
   const fromEmbedded = parseEmbeddedEvento(fs.readFileSync(embedded, "utf8"));
   assert.deepEqual(fromEmbedded, fromJson);
 });
+
+test("evento ER aponta para PDF de regulamento existente", () => {
+  const ev = JSON.parse(fs.readFileSync(src, "utf8"));
+  const url = String((ev.meta && ev.meta.regulamentoUrl) || "").trim();
+  assert.ok(url, "meta.regulamentoUrl ausente");
+  const rel = url.replace(/\\/g, "/").replace(/^\/+/, "");
+  const pdfPath = path.join(repoRoot, ...rel.split("/"));
+  assert.equal(fs.existsSync(pdfPath), true, "PDF não encontrado: " + pdfPath);
+  const buf = fs.readFileSync(pdfPath);
+  assert.ok(buf.length > 1000, "PDF vazio ou inválido");
+  assert.equal(buf.slice(0, 4).toString("ascii"), "%PDF");
+});

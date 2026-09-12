@@ -43,6 +43,14 @@
   /**
    * Linhas da meta da capa. Resumo omite slug/schema na capa (ficam no rodapé).
    */
+  /** ISO `AAAA-MM-DD` → `DD/MM/AAAA` para exibição. Texto livre permanece. */
+  function formatDataExibicao(value) {
+    var s = String(value || "").trim();
+    var iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!iso) return s;
+    return iso[3] + "/" + iso[2] + "/" + iso[1];
+  }
+
   function buildCapaMetaRows(meta, perfil, agoraTxt, opts) {
     meta = meta || {};
     opts = opts || {};
@@ -56,7 +64,7 @@
     else horarioTxt = "—";
 
     var rows = [
-      { dt: "Data", dd: meta.data || "" },
+      { dt: "Data", dd: formatDataExibicao(meta.data) || "" },
       { dt: "Local", dd: meta.local || "" },
       { dt: "Horário", dd: horarioTxt },
       { dt: "Tema", dd: opts.temaTexto || "—" },
@@ -99,6 +107,7 @@
     buildRelatorioDocumentTitle: buildRelatorioDocumentTitle,
     buildCapaMetaRows: buildCapaMetaRows,
     buildRodapeTexto: buildRodapeTexto,
+    formatDataExibicao: formatDataExibicao,
     TEXTO_ATA: TEXTO_ATA,
   };
 })();

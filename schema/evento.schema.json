@@ -16,7 +16,10 @@
         },
         "nome": { "type": "string", "minLength": 1 },
         "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-        "data": { "type": "string", "description": "ISO date ou texto livre" },
+        "data": {
+          "type": "string",
+          "description": "ISO AAAA-MM-DD no JSON (exibido como DD/MM/AAAA) ou texto livre"
+        },
         "local": {
           "type": "string",
           "description": "Local do evento (exibido na capa do relatório oficial)"

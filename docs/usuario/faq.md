@@ -1,7 +1,8 @@
 # Perguntas frequentes (FAQ)
 
 Respostas curtas para as dúvidas mais comuns de organizadores e juízes da **Pontuação Conclave**.
-Para o passo a passo completo, veja [`manual-uso.md`](manual-uso.md).
+Para o fluxo do dia com capturas, veja o [`tutorial-5min.md`](tutorial-5min.md). Para o passo a
+passo completo, veja [`manual-uso.md`](manual-uso.md).
 
 ## Sumário
 

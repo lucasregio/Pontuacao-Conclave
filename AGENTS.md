@@ -17,7 +17,7 @@ A **100% static web application** for Conclave scoring (**Pontuação Conclave**
 - `schema/evento.schema.json` / `schema/projeto.schema.json` — canonical JSON contracts.
 - `static/` — PDF regulamento, imagens de fundo (servidos pelo app).
 - `eventos/` — sample event and project files + `.evento.embedded.js` (generated).
-- `docs/usuario/` — manual, FAQ, glossário, troubleshooting, atalhos, regulamento mapeado.
+- `docs/usuario/` — tutorial de 5 min, manual, FAQ, glossário, troubleshooting, atalhos, regulamento mapeado, guia visual.
 - `docs/operacional/` — metrics-baseline, performance-budget, release-checklist.
 - `docs/index.html` — documentation landing.
 - `referencia/` — historical xlsx/docx (excluded from GitHub Pages deploy).

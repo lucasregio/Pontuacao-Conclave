@@ -1,11 +1,14 @@
 # Manual de uso
 
 Guia passo a passo para o organizador/juiz usar o **Pontuação Conclave** no dia do
-evento. Tudo acontece no navegador, sem servidor, sem cadastro e sem login. Há também
-um [guia visual com capturas de todas as telas](guia-visual.md).
+evento. Tudo acontece no navegador, sem servidor, sem cadastro e sem login.
+
+Comece pelo [tutorial de 5 minutos](tutorial-5min.md) (com capturas). Há também um
+[guia visual com todas as telas](guia-visual.md).
 
 ## Sumário
 
+- [Tutorial de 5 minutos](tutorial-5min.md)
 - [Interface: Início e navegação](#interface-início-e-navegação)
 - [Primeiro evento em 5 minutos](#primeiro-evento-em-5-minutos)
 - [Carregar um evento ou projeto existente](#carregar-um-evento-ou-projeto-existente)
@@ -25,7 +28,8 @@ Sem evento carregado, a tela de boas-vindas oferece atalhos para **Novo evento**
 **Carregar projeto**, **Carregar exemplo** e a lista de **Eventos salvos** no
 navegador. Com evento aberto, mostra resumo (nome, data, local), KPIs (igrejas,
 provas, % pódios preenchidos, líder atual) e atalhos para Participação, Pódio,
-Classificação e geração do relatório oficial.
+Classificação e **Gerar relatório oficial** (abre Relatórios e gera o perfil
+Completo de auditoria).
 
 ### Sidebar e barra inferior
 
@@ -48,6 +52,8 @@ Use as **setas** (← →) para mover entre abas quando o foco estiver na lista 
 navegação (padrão ARIA tablist).
 
 ## Primeiro evento em 5 minutos
+
+Siga o [tutorial de 5 minutos](tutorial-5min.md), com capturas de cada tela. Resumo:
 
 1. Abra `index.html` no navegador. Para que o app funcione offline depois (PWA), prefira
    servir via `http://` ou `https://` em vez de abrir direto como `file://`.
@@ -247,7 +253,8 @@ Quando a apuração estiver concluída, gere um **relatório oficial** em PDF pa
 arquivar e divulgar. Este é o **único** caminho de impressão/PDF do app — não há
 mais botão genérico no menu «Mais».
 
-1. Vá na aba **Relatórios**.
+1. Vá na aba **Relatórios**, ou use **Gerar relatório oficial** na aba **Início**
+   (esse atalho gera o **Oficial completo**).
 2. Há **dois documentos** independentes, cada um com **Gerar** e **Imprimir / Salvar PDF**:
    - **Resumo (divulgação)** — enxuto para compartilhar.
    - **Oficial completo (auditoria)** — com classificação integral, participação, avisos e critérios.

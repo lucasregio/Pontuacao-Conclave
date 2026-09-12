@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
 
-/** @type {{ src: string, dest: string, depth: number, navTitle?: string }[]} */
+/** @type {{ src: string, dest: string, depth: number, navTitle?: string, articleClass?: string }[]} */
 const PAGES = [
   { src: "docs/usuario/manual-uso.md", dest: "docs/usuario/manual-uso.html", depth: 2 },
   { src: "docs/usuario/faq.md", dest: "docs/usuario/faq.html", depth: 2 },
@@ -38,6 +38,12 @@ const PAGES = [
     src: "docs/usuario/regulamento-mapeado.md",
     dest: "docs/usuario/regulamento-mapeado.html",
     depth: 2,
+  },
+  {
+    src: "docs/usuario/tutorial-5min.md",
+    dest: "docs/usuario/tutorial-5min.html",
+    depth: 2,
+    articleClass: "docs-tutorial",
   },
   {
     src: "docs/usuario/guia-visual.md",
@@ -146,6 +152,7 @@ function parseListBlock(lines, startIndex, minIndent) {
       if (peekMk && peekMk.indent > baseIndent) break;
       if (/^#{1,3} /.test(peek.trim())) break;
       if (/^```/.test(peek.trim())) break;
+      if (/^> /.test(peek.trim())) break;
       parts.push(peek.trim());
       i += 1;
     }
@@ -210,6 +217,20 @@ function markdownToHtml(md, opts) {
       continue;
     }
 
+    if (trimmed.startsWith("> ")) {
+      var quotes = [];
+      while (i < lines.length && lines[i].trim().startsWith("> ")) {
+        quotes.push(lines[i].trim().replace(/^>\s?/, ""));
+        i += 1;
+      }
+      html.push(
+        '<blockquote class="docs-callout"><p>' +
+          inlineMarkdown(quotes.join(" ")) +
+          "</p></blockquote>"
+      );
+      continue;
+    }
+
     var imgOnly = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
     if (imgOnly) {
       html.push(
@@ -246,7 +267,8 @@ function markdownToHtml(md, opts) {
         /^#{1,3} /.test(next) ||
         listMarker(lines[i]) ||
         /^```/.test(next) ||
-        /^!\[/.test(next)
+        /^!\[/.test(next) ||
+        /^> /.test(next)
       ) {
         break;
       }
@@ -309,7 +331,9 @@ function buildPageHtml(page, title, bodyHtml) {
     "</h1>\n" +
     "    </header>\n" +
     '    <main id="conteudo" tabindex="-1" class="docs-main docs-prose">\n' +
-    '      <article class="docs-article">\n' +
+    '      <article class="docs-article' +
+    (page.articleClass ? " " + page.articleClass : "") +
+    '">\n' +
     bodyHtml +
     "\n" +
     "      </article>\n" +

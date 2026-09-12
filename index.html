@@ -72,7 +72,7 @@
             class="sidebar-link"
             href="docs/index.html"
             id="link-docs"
-            title="Abrir documentação (manual, FAQ, glossário)"
+            title="Abrir tutorial de 5 minutos e documentação"
           >
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
               <path
@@ -268,7 +268,14 @@
 
         <footer class="app-footer">
           <p class="app-footer-text">
-            Precisa de ajuda? <a href="docs/index.html">Documentação do Pontuação Conclave</a>
+            Precisa de ajuda?
+            <button type="button" class="app-footer-link" id="btn-footer-tutorial">
+              Tutorial na tela
+            </button>
+            ·
+            <a href="docs/usuario/tutorial-5min.html">Página ilustrada</a>
+            ·
+            <a href="docs/index.html">Documentação</a>
           </p>
         </footer>
       </main>
@@ -286,6 +293,35 @@
     <button type="button" id="btn-exit-presentation" class="presentation-exit-btn">
       Sair da apresentação
     </button>
+
+    <div id="tour-root" class="tour-root" hidden aria-hidden="true">
+      <div class="tour-veil-part" id="tour-veil-t"></div>
+      <div class="tour-veil-part" id="tour-veil-l"></div>
+      <div class="tour-veil-part" id="tour-veil-r"></div>
+      <div class="tour-veil-part" id="tour-veil-b"></div>
+      <div class="tour-ring" id="tour-ring" aria-hidden="true"></div>
+      <div
+        class="tour-card"
+        id="tour-card"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="tour-title"
+        aria-describedby="tour-body"
+      >
+        <p class="tour-progress" id="tour-progress">Passo 1 de 7</p>
+        <h2 id="tour-title">Tutorial na tela</h2>
+        <p id="tour-body"></p>
+        <div class="tour-actions">
+          <button type="button" class="pill-btn" id="tour-skip">Pular</button>
+          <button type="button" class="pill-btn" id="tour-prev">Anterior</button>
+          <button type="button" class="pill-btn pill-btn--primary" id="tour-next">Próximo</button>
+        </div>
+        <p class="tour-docs">
+          Prefere capturas?
+          <a href="docs/usuario/tutorial-5min.html">Abrir a página ilustrada</a>
+        </p>
+      </div>
+    </div>
 
     <!-- Evento de exemplo embarcado como `window.ConclaveDefaultEvento`.
          Permite que o auto-load funcione mesmo em `file://` (pen-drive, etc.).

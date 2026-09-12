@@ -6,6 +6,7 @@ const path = require("node:path");
 const repoRoot = path.join(__dirname, "..");
 
 const DOC_PAGES = [
+  "docs/usuario/tutorial-5min.html",
   "docs/usuario/manual-uso.html",
   "docs/usuario/faq.html",
   "docs/usuario/glossario.html",
@@ -28,6 +29,11 @@ test("páginas HTML da documentação existem e não linkam .md", () => {
 
   const indexHtml = fs.readFileSync(path.join(repoRoot, "docs/index.html"), "utf8");
   assert.doesNotMatch(indexHtml, /href="[^"]*\.md"/, "docs/index.html não deve linkar .md");
+  assert.match(
+    indexHtml,
+    /usuario\/tutorial-5min\.html/,
+    "índice deve apontar o tutorial de 5 minutos"
+  );
   assert.match(indexHtml, /usuario\/guia-visual\.html/, "índice deve apontar o guia visual");
 });
 
@@ -57,4 +63,14 @@ test("guia visual tem capturas PNG e as referencia no HTML", () => {
     assert.ok(fs.statSync(png).size > 1000, file + " parece vazio");
     assert.match(html, new RegExp("guia-visual/" + file.replace(".", "\\.")), file);
   });
+});
+
+test("tutorial de 5 minutos usa as capturas do fluxo do dia", () => {
+  const html = fs.readFileSync(path.join(repoRoot, "docs/usuario/tutorial-5min.html"), "utf8");
+  ["01-inicio.png", "09-participacao.png", "10-podio.png", "12-classificacao.png"].forEach(
+    function (file) {
+      assert.match(html, new RegExp("guia-visual/" + file.replace(".", "\\.")), file);
+    }
+  );
+  assert.match(html, /docs-tutorial/, "página do tutorial deve usar .docs-tutorial");
 });
