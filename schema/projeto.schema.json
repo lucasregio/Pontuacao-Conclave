@@ -33,6 +33,10 @@
             }
           }
         },
+        "conservacaoTemploDescumprida": {
+          "type": "boolean",
+          "description": "Quando verdadeiro, soma `evento.pesos.conservacao_templo` às punições de todas as igrejas."
+        },
         "podium": {
           "type": "object",
           "additionalProperties": {
@@ -43,11 +47,68 @@
               "br": { "$ref": "#/$defs/medalEntry" }
             }
           }
+        },
+        "metricasEscrita": {
+          "type": "object",
+          "description": "Mapa { provaId → lista de participantes MR na prova escrita }. Não afeta a classificação geral.",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/escritaParticipante" }
+          }
+        },
+        "sorteioEsgrima": {
+          "type": "object",
+          "description": "Mapa { provaId → sessão de sorteio da Esgrima }. Não afeta a classificação geral.",
+          "additionalProperties": {
+            "$ref": "#/$defs/sorteioEsgrimaSessao"
+          }
         }
       }
     }
   },
   "$defs": {
+    "escritaParticipante": {
+      "type": "object",
+      "required": ["id", "nome", "igrejaId", "acertos"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]+$",
+          "description": "Identificador estável gerado pelo app."
+        },
+        "nome": { "type": "string", "minLength": 1 },
+        "igrejaId": { "type": "string" },
+        "acertos": { "type": "number", "minimum": 0 }
+      }
+    },
+    "sorteioEsgrimaSessao": {
+      "type": "object",
+      "properties": {
+        "corpus": {
+          "type": "string",
+          "enum": ["biblia", "at", "nt", "evangelhos"]
+        },
+        "tempoSegundos": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 120
+        },
+        "usados": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Chaves já sorteadas (livro-capítulo-versículo), sem repetição."
+        },
+        "atual": {
+          "type": ["string", "null"],
+          "description": "Chave da referência em tela."
+        },
+        "historico": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ordem em que as referências foram ditadas nesta sessão."
+        }
+      }
+    },
     "medalEntry": {
       "type": "object",
       "properties": {

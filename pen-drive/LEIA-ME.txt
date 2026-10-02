@@ -16,7 +16,7 @@ JEITO 1 — CLIQUE DUAS VEZES NO index.html (mais simples)
       index.html
 
 3) O navegador padrão abre o Pontuação Conclave. O evento de exemplo
-   (Conclave MR 2026/1) já vem embarcado e carrega sozinho.
+   (Conclave ER 2026/2) já vem embarcado e carrega sozinho.
 
 Limitações deste jeito (todas leves):
  - O cache offline / "instalar como app" (PWA) não funciona.
@@ -66,7 +66,7 @@ PROBLEMAS COMUNS
 -----------------------------------------------------------------
 
 "O evento de exemplo não foi carregado automaticamente"
-  → Use "Mais → Carregar evento" e escolha eventos/conclave-2026-1.evento.json.
+  → Use "Mais → Carregar evento" e escolha eventos/conclave-mr-2026-2.evento.json.
 
 "Python 3 não foi encontrado"
   → Instale Python 3 ou use o JEITO 1 (duplo clique em index.html).

@@ -10,20 +10,21 @@
     />
     <!--
       Política de Segurança de Conteúdo (CSP):
-      - script-src 'self': só carrega web/engine.js, web/app.js, sw.js (mesma origem).
+      - script-src 'self': só carrega scripts da mesma origem (engine, app, sorteio, sw).
       - style-src 'self' 'unsafe-inline': necessário para atribuições style.X via JS
         (theme-color dinâmico, etc.). Não há <style> inline no HTML.
       - img-src 'self' data: blob: https:: ícones locais (icons/) e blobs de download.
+      - default-src 'self' blob:: abrir PDF embutido via blob: URL.
       - connect-src 'self': fetch de eventos/*.json no mesmo origem.
       - object/frame-ancestors negados; base-uri/form-action limitados a 'self'.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      content="default-src 'self' blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     />
-    <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
-    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#0d47a1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#08306b" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icons/icon.svg" />
@@ -52,6 +53,7 @@
               id="theme-mr"
               data-ui-theme="mr"
               title="MR: verde, amarelo e branco"
+              aria-pressed="true"
             >
               MR
             </button>
@@ -60,7 +62,8 @@
               class="theme-btn"
               id="theme-er"
               data-ui-theme="er"
-              title="ER: azul, amarelo e branco; medalhas 500/300/150 e extras +100"
+              title="ER: azul, amarelo e branco"
+              aria-pressed="false"
             >
               ER
             </button>
@@ -69,7 +72,7 @@
             class="sidebar-link"
             href="docs/index.html"
             id="link-docs"
-            title="Abrir documentação (manual, FAQ, glossário)"
+            title="Abrir tutorial de 5 minutos e documentação"
           >
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
               <path
@@ -105,6 +108,15 @@
             title="Configure o regulamento em Configuração → Geral"
           >
             Regulamento
+          </button>
+          <button
+            type="button"
+            id="btn-pres"
+            class="pill-btn"
+            aria-pressed="false"
+            title="Cerimônia de revelação da classificação em tela cheia"
+          >
+            Modo apresentação
           </button>
           <span class="status-pill" id="status-pill"></span>
           <div class="menu-wrap">
@@ -172,25 +184,6 @@
               >
                 Eventos salvos
               </button>
-              <button
-                type="button"
-                role="menuitem"
-                tabindex="-1"
-                id="btn-pres"
-                class="more-menu__item"
-                aria-pressed="false"
-              >
-                Modo apresentação
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                tabindex="-1"
-                id="btn-print"
-                class="more-menu__item"
-              >
-                Imprimir / Salvar como PDF
-              </button>
               <div role="separator" class="more-menu__sep"></div>
               <button
                 type="button"
@@ -249,6 +242,22 @@
           aria-label="Pódio"
         ></section>
         <section
+          id="panel-escrita"
+          class="panel"
+          role="tabpanel"
+          aria-labelledby="tab-escrita"
+          hidden
+          aria-label="Prova escrita"
+        ></section>
+        <section
+          id="panel-esgrima"
+          class="panel"
+          role="tabpanel"
+          aria-labelledby="tab-esgrima"
+          hidden
+          aria-label="Esgrima"
+        ></section>
+        <section
           id="panel-classificacao"
           class="panel"
           role="tabpanel"
@@ -267,7 +276,14 @@
 
         <footer class="app-footer">
           <p class="app-footer-text">
-            Precisa de ajuda? <a href="docs/index.html">Documentação do Pontuação Conclave</a>
+            Precisa de ajuda?
+            <button type="button" class="app-footer-link" id="btn-footer-tutorial">
+              Tutorial na tela
+            </button>
+            ·
+            <a href="docs/usuario/tutorial-5min.html">Página ilustrada</a>
+            ·
+            <a href="docs/index.html">Documentação</a>
           </p>
         </footer>
       </main>
@@ -286,12 +302,72 @@
       Sair da apresentação
     </button>
 
+    <div
+      id="esgrima-stage"
+      class="esgrima-stage"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="esgrima-stage-ref"
+    >
+      <p class="esgrima-stage-kicker" id="esgrima-stage-kicker">Esgrima bíblica</p>
+      <p id="esgrima-stage-ref" class="esgrima-stage-ref">—</p>
+      <p id="esgrima-stage-timer" class="esgrima-stage-timer" aria-live="polite">0:30</p>
+      <div class="esgrima-stage-actions">
+        <button type="button" class="pill-btn" id="esgrima-stage-timer-btn">
+          Iniciar cronômetro
+        </button>
+        <button type="button" class="pill-btn pill-btn--primary" id="esgrima-stage-next">
+          Sortear
+        </button>
+        <button type="button" class="pill-btn" id="esgrima-stage-anular">
+          Anular e sortear outra
+        </button>
+        <button type="button" class="pill-btn" id="esgrima-stage-close">Sair da tela cheia</button>
+      </div>
+    </div>
+
+    <div id="tour-root" class="tour-root" hidden aria-hidden="true">
+      <div class="tour-veil-part" id="tour-veil-t"></div>
+      <div class="tour-veil-part" id="tour-veil-l"></div>
+      <div class="tour-veil-part" id="tour-veil-r"></div>
+      <div class="tour-veil-part" id="tour-veil-b"></div>
+      <div class="tour-ring" id="tour-ring" aria-hidden="true"></div>
+      <div
+        class="tour-card"
+        id="tour-card"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="tour-title"
+        aria-describedby="tour-body"
+      >
+        <p class="tour-progress" id="tour-progress">Passo 1 de 7</p>
+        <h2 id="tour-title">Tutorial na tela</h2>
+        <p id="tour-body"></p>
+        <div class="tour-actions">
+          <button type="button" class="pill-btn" id="tour-skip">Pular</button>
+          <button type="button" class="pill-btn" id="tour-prev">Anterior</button>
+          <button type="button" class="pill-btn pill-btn--primary" id="tour-next">Próximo</button>
+        </div>
+        <p class="tour-docs">
+          Prefere capturas?
+          <a href="docs/usuario/tutorial-5min.html">Abrir a página ilustrada</a>
+        </p>
+      </div>
+    </div>
+
     <!-- Evento de exemplo embarcado como `window.ConclaveDefaultEvento`.
          Permite que o auto-load funcione mesmo em `file://` (pen-drive, etc.).
          Gerado por `npm run build:embedded`. Carregamento opcional: se faltar,
          o app cai no fetch() do JSON original. -->
-    <script src="eventos/conclave-2026-1.evento.embedded.js" defer></script>
+    <script src="eventos/conclave-mr-2026-2.evento.embedded.js" defer></script>
     <script src="web/engine.js" defer></script>
+    <script src="web/escrita-metrics.js" defer></script>
+    <script src="web/escrita-charts.js" defer></script>
+    <script src="web/biblia-estrutura.js" defer></script>
+    <script src="web/sorteio-esgrima.js" defer></script>
+    <script src="web/podio-filters.js" defer></script>
+    <script src="web/relatorio.js" defer></script>
     <script src="web/app.js" defer></script>
   </body>
 </html>

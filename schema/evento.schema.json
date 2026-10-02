@@ -16,10 +16,21 @@
         },
         "nome": { "type": "string", "minLength": 1 },
         "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-        "data": { "type": "string", "description": "ISO date ou texto livre" },
+        "data": {
+          "type": "string",
+          "description": "ISO AAAA-MM-DD no JSON (exibido como DD/MM/AAAA) ou texto livre"
+        },
+        "local": {
+          "type": "string",
+          "description": "Local do evento (exibido na capa do relatório oficial)"
+        },
         "horarioInicio": { "type": "string", "description": "HH:MM (input time)" },
         "horarioEncerramento": { "type": "string", "description": "HH:MM (input time)" },
         "regulamentoUrl": { "type": "string" },
+        "regulamentoNome": {
+          "type": "string",
+          "description": "Nome do arquivo PDF carregado pelo organizador (exibição na UI; opcional)."
+        },
         "tema": {
           "type": "object",
           "properties": {
@@ -55,7 +66,11 @@
         "biblia": { "type": "number" },
         "visitante": { "type": "number" },
         "animacao": { "type": "number" },
-        "mau_comportamento": { "type": "number" }
+        "mau_comportamento": { "type": "number" },
+        "conservacao_templo": {
+          "type": "number",
+          "description": "Opcional. Punição aplicada a todas as igrejas quando `dados.conservacaoTemploDescumprida` é verdadeiro (geralmente negativo). Ausente = 0."
+        }
       }
     },
     "categorias": {
@@ -118,7 +133,29 @@
             "enum": ["oral", "escrita"],
             "description": "Modalidade da prova: oral (esgrima, debate, etc.) ou escrita. Quando ausente, inferido pelo título."
           },
+          "escritaTotalQuestoes": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Total de questões da prova escrita (para percentual nos gráficos). Apenas quando tipo=escrita."
+          },
           "ordem": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "sorteioEsgrima": {
+      "type": "object",
+      "description": "Padrão do sorteio de referências da Esgrima (Debate Bíblico). Não afeta a pontuação.",
+      "properties": {
+        "corpus": {
+          "type": "string",
+          "enum": ["biblia", "at", "nt", "evangelhos"],
+          "description": "Universo padrão do sorteio. Padrão: biblia (Bíblia toda)."
+        },
+        "tempoSegundos": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 120,
+          "description": "Tempo máximo para localizar a passagem (20 s no MR, 30 s no ER)."
         }
       }
     }

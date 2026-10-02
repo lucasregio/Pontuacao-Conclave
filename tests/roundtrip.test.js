@@ -85,3 +85,21 @@ test("emptyDadosTemplate é JSON-estável (round-trip de serialização)", () =>
   const json2 = JSON.stringify(JSON.parse(json1));
   assert.equal(json1, json2);
 });
+
+test("round-trip preserva sessão de sorteio da Esgrima sem mudar totais", () => {
+  const original = loadProjetoSample();
+  original.dados.sorteioEsgrima = {
+    "esgrima-jun": {
+      corpus: "biblia",
+      tempoSegundos: 20,
+      usados: ["jo-3-16"],
+      atual: "jo-3-16",
+      historico: ["jo-3-16"],
+    },
+  };
+  const out1 = E.computeTotals(original.evento, original.dados);
+  const reparsed = JSON.parse(JSON.stringify(original));
+  const out2 = E.computeTotals(reparsed.evento, reparsed.dados);
+  assert.equal(JSON.stringify(Array.from(out1.totais)), JSON.stringify(Array.from(out2.totais)));
+  assert.deepEqual(reparsed.dados.sorteioEsgrima, original.dados.sorteioEsgrima);
+});

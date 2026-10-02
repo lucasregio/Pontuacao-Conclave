@@ -3,8 +3,12 @@
 Guia passo a passo para o organizador/juiz usar o **Pontuação Conclave** no dia do
 evento. Tudo acontece no navegador, sem servidor, sem cadastro e sem login.
 
+Comece pelo [tutorial de 5 minutos](tutorial-5min.md) (com capturas). Há também um
+[guia visual com todas as telas](guia-visual.md).
+
 ## Sumário
 
+- [Tutorial de 5 minutos](tutorial-5min.md)
 - [Interface: Início e navegação](#interface-início-e-navegação)
 - [Primeiro evento em 5 minutos](#primeiro-evento-em-5-minutos)
 - [Carregar um evento ou projeto existente](#carregar-um-evento-ou-projeto-existente)
@@ -24,11 +28,12 @@ Sem evento carregado, a tela de boas-vindas oferece atalhos para **Novo evento**
 **Carregar projeto**, **Carregar exemplo** e a lista de **Eventos salvos** no
 navegador. Com evento aberto, mostra resumo (nome, data, local), KPIs (igrejas,
 provas, % pódios preenchidos, líder atual) e atalhos para Participação, Pódio,
-Classificação e geração do relatório oficial.
+Classificação e **Gerar relatório oficial** (abre Relatórios e gera o perfil
+Completo de auditoria).
 
 ### Sidebar e barra inferior
 
-Em telas largas (≥ 1024px), a **sidebar** à esquerda lista as seis abas com ícones,
+Em telas largas (≥ 1024px), a **sidebar** à esquerda lista as abas com ícones,
 o seletor de tema **MR / ER** e o link para esta documentação. Em celular e tablet,
 a **barra inferior** repete as mesmas abas com rótulos curtos.
 
@@ -40,7 +45,7 @@ concentra:
 
 - Carregar evento / Carregar projeto
 - **Exportar evento** (só configuração) e **Exportar projeto** (completo)
-- Novo evento, Eventos salvos, Modo apresentação, Imprimir / Salvar PDF
+- Novo evento, Eventos salvos (menu **Mais**); **Modo apresentação** e **Regulamento** na topbar
 - Limpar dados do evento
 
 Use as **setas** (← →) para mover entre abas quando o foco estiver na lista de
@@ -48,18 +53,21 @@ navegação (padrão ARIA tablist).
 
 ## Primeiro evento em 5 minutos
 
+Siga o [tutorial de 5 minutos](tutorial-5min.md), com capturas de cada tela. Resumo:
+
 1. Abra `index.html` no navegador. Para que o app funcione offline depois (PWA), prefira
    servir via `http://` ou `https://` em vez de abrir direto como `file://`.
 2. Na aba **Início**, clique em **Novo evento** ou use o menu **Mais** → **Novo evento**.
    A aba **Configuração** é aberta em seguida.
 3. Em **Configuração**, ajuste:
-   - **Geral**: nome, data, **local**, horários e regulamento (PDF em `static/`).
+   - **Geral**: nome, data, **local**, horários e **regulamento** (botão «Carregar arquivo» para escolher um PDF do computador, ou URL externa opcional).
    - **Igrejas**: adicione cada igreja participante. O `id` é gerado automaticamente a
      partir do nome e precisa ser único.
    - **Categorias**: por exemplo Junior, Adolescente, Juvenil. Define a ordem das colunas
      no pódio.
    - **Provas**: cada prova pertence a uma categoria e a um **tipo** (oral ou escrita).
      Reordene como quiser; a ordem vira a ordem de exibição dentro de cada tipo.
+     Provas escrita podem ter **Questões** (total de itens) para percentuais nos gráficos.
    - **Pesos**: as 7 chaves obrigatórias são `inscricao`, `pontualidade`, `uniforme`,
      `biblia`, `visitante`, `animacao`, `mau_comportamento` (este último é negativo).
    - **Medalhas**: as 3 chaves obrigatórias são `ou` (ouro), `pt` (prata) e `br`
@@ -68,8 +76,12 @@ navegação (padrão ARIA tablist).
    igreja aparecem ao vivo na coluna da direita.
 5. Vá para **Pódio**, marque ouro/prata/bronze por prova selecionando a igreja vencedora
    e (opcional) o nome do competidor.
-6. Vá para **Classificação** para ver o ranking ordenado com desempate aplicado.
-7. Salve com **Exportar projeto** (menu Mais) ou **Exportar evento** se quiser só a
+6. (Opcional) Vá para **Prova escrita** e cadastre acertos de cada MR nas provas do tipo
+   escrita — gera gráficos analíticos; **não altera** a classificação geral.
+7. (Opcional) Na aba **Esgrima**, sorteie as referências para o líder ditar. Também **não
+   altera** a classificação — o pódio da prova continua no passo 5.
+8. Vá para **Classificação** para ver o ranking ordenado com desempate aplicado.
+9. Salve com **Exportar projeto** (menu Mais) ou **Exportar evento** se quiser só a
    configuração. **Exportar CSV** fica na aba Classificação.
 
 Os dados também ficam guardados automaticamente no `localStorage` deste navegador, mas
@@ -165,6 +177,81 @@ Se a mesma igreja for selecionada em dois lugares da mesma prova (ex.: ouro e pr
 para a mesma igreja), aparece um aviso em `#warnings`. O cálculo continua, mas vale
 revisar.
 
+### Layout e filtros
+
+No topo da aba **Pódio por prova** há duas barras de ferramentas:
+
+**Ver por** (persiste no navegador):
+
+- **Faixa etária** — colunas por categoria (Junior, Adolescente, …).
+- **Tipo de prova** — blocos por título base (Esgrima, Debate, …) com mini-colunas
+  por faixa.
+
+**Filtrar** (persiste no navegador; combina entre si):
+
+- **Status** — Todas / Pendente (nenhuma medalha) / Parcial (alguma medalha, pódio
+  incompleto) / Completa (ouro, prata e bronze com igreja).
+- **Faixa etária** — Restringe a uma categoria.
+- **Buscar** — Título da prova, categoria, igreja ou competidor.
+- **Igreja** — Provas em que a igreja tem ouro, prata ou bronze.
+- **Com avisos** — Igreja repetida na mesma prova.
+- **Sem competidor** — Medalha preenchida sem nome do competidor.
+- **Desempate** — Provas usadas no critério de desempate da classificação.
+
+O contador `N de M provas` reflete os filtros ativos. **Limpar filtros** restaura o
+padrão. Se nada corresponder, aparece mensagem e botão para limpar.
+
+Os filtros valem **somente na aba Pódio** (edição). A consulta rápida em Relatórios
+continua mostrando todas as provas.
+
+## Prova escrita (métricas)
+
+A aba **Prova escrita** registra **acertos por participante MR** (nome + igreja) em
+cada prova com `tipo: escrita`. É um fluxo **analítico**: os dados ficam em
+`dados.metricasEscrita[provaId]` e **não entram** no motor de classificação geral.
+Medalhas da gincana continuam sendo lançadas manualmente no **Pódio**.
+
+- Selecione a prova no menu (agrupado por categoria).
+- **Adicionar participante** cria uma linha; preencha nome, igreja e acertos.
+- Chips no topo mostram quantidade, média e maior nota da prova selecionada.
+- **Gráficos** (SVG nativos): ranking individual (top 15), média por igreja e
+  histograma por faixas (quando `escritaTotalQuestoes` está definido em Configuração).
+- **Exportar CSV** baixa a prova selecionada (separador `;`, UTF-8 com BOM).
+
+Campos no JSON:
+
+```json
+"metricasEscrita": {
+  "escrita-jun": [
+    { "id": "p-m1", "nome": "Ana Costa", "igrejaId": "alianca", "acertos": 18 }
+  ]
+}
+```
+
+Em `evento.provas[]`, provas escrita podem ter `escritaTotalQuestoes` (inteiro ≥ 1)
+para calcular percentuais nos gráficos e no CSV.
+
+## Esgrima (sorteio de referências)
+
+A aba **Esgrima** ajuda o líder da prova **Esgrima Bíblico (Debate Bíblico)** a ditar
+passagens aleatórias **sem repetir** na mesma categoria (Junior, Adolescente, Juvenil).
+O app **não calcula** quem marcou o ponto — ouro/prata/bronze continuam no **Pódio**.
+
+- Selecione a prova (uma sessão por categoria).
+- **Sortear** mostra livro, capítulo e versículo. Livros de um só capítulo (Obadias,
+  Filemom, 2 João, 3 João, Judas) aparecem só com livro e versículo, como o regulamento
+  pede.
+- **Anular e sortear outra** usa uma nova passagem no empate; a anulada não volta ao
+  pool.
+- O **cronômetro** vem em 20 s (MR) ou 30 s (ER). Inicie depois do comando **CARREGAR**.
+- **Tela cheia da referência** é um palco próprio (Esc sai); não mistura com o modo
+  apresentação da classificação.
+- O corpus padrão é a **Bíblia toda**. Dá para restringir a AT, NT ou Evangelhos; trocar
+  o corpus com histórico pede confirmação e reinicia a sessão da categoria.
+
+Os dados ficam em `dados.sorteioEsgrima[provaId]` e saem no **Exportar projeto**. O
+motor de pontuação ignora esse campo.
+
 ## Classificacao e desempate
 
 A aba **Classificação** mostra o ranking final ordenado por critérios em cascata:
@@ -186,29 +273,42 @@ a prova vira inerte para fins de desempate (mas continua valendo medalhas normal
 ## Gerar relatorio oficial
 
 Quando a apuração estiver concluída, gere um **relatório oficial** em PDF para
-arquivar e divulgar.
+arquivar e divulgar. Este é o **único** caminho de impressão/PDF do app — não há
+mais botão genérico no menu «Mais».
 
-1. Vá na aba **Relatórios**.
-2. Clique em **Gerar relatório oficial** no topo da aba.
-3. Confira o documento gerado (capa, sumário executivo, classificação geral
-   com top 3 destacado, medalhas por igreja, pódio por prova, detalhe de
-   participação, avisos e apêndice de critérios).
-4. Clique em **Imprimir / Salvar PDF** e escolha **Salvar como PDF** no
-   diálogo nativo do navegador. O `@media print` esconde a interface; o PDF
-   sai com apenas o relatório, em A4.
+1. Vá na aba **Relatórios**, ou use **Gerar relatório oficial** na aba **Início**
+   (esse atalho gera o **Oficial completo**).
+2. Há **dois documentos** independentes, cada um com **Gerar** e **Imprimir / Salvar PDF**:
+   - **Resumo (divulgação)** — enxuto para compartilhar.
+   - **Oficial completo (auditoria)** — com classificação integral, participação, avisos e critérios.
+3. Gere o modelo desejado (ou os dois) e confira a prévia na tela.
+4. Clique em **Imprimir / Salvar PDF** na linha correspondente e escolha **Salvar como PDF** no
+   diálogo nativo do navegador.
+
+**Resumo** inclui: capa, sumário executivo (Top 3), pódio por prova, encerramento com
+assinaturas e rodapé.
+
+**Oficial completo** inclui tudo do resumo mais: classificação geral, medalhas por igreja,
+detalhe de participação, avisos e apêndice de critérios.
+
+Você pode gerar e imprimir **os dois** no mesmo evento — cada um mantém sua própria prévia
+(com botão **Pré-visualização** para expandir ou recolher) e botão de PDF.
 
 Dicas:
 
+- Preencha **Local** em Configuração → Geral para aparecer na capa.
 - Se as faixas coloridas das medalhas não aparecerem no PDF, marque
   **Imprimir gráficos de fundo** (ou similar) no diálogo do navegador.
 - O relatório se mantém visível enquanto você navega entre as abas dentro da
   sessão; um F5 ou troca de evento exige gerá-lo novamente — comportamento
   proposital para garantir que o relatório sempre reflita o estado atual.
 
-### Outras formas de compartilhar
+### Consulta rápida e outros atalhos
 
-Na mesma linha de ações do relatório oficial você encontra dois atalhos
-extras, úteis quando o PDF é demais ou de menos:
+Abaixo do relatório oficial ficam as seções **Consulta rápida** (medalhas por
+igreja e pódio colapsável) — úteis na tela, mas **não** entram no PDF.
+
+Na mesma área você encontra dois atalhos extras:
 
 - **Exportar CSV (pódio)**: baixa um `.csv` com uma linha por (prova,
   posição), incluindo categoria, igreja e nome do(a) competidor(a). Abre
@@ -241,13 +341,16 @@ dados:
 Use os dois juntos: o `localStorage` te salva da queda do navegador e o
 `.projeto.json` te salva da troca de máquina ou da limpeza de cache.
 
-## Modo apresentacao e impressao em PDF
+## Modo apresentacao
 
-- **Modo apresentação** (botão na toolbar): esconde menus e amplia tabelas para
-  exibir o ranking num projetor ou telão. Sair: clique em **Sair da apresentação**
-  ou pressione `Escape` (em algumas versões de iOS Safari, `Escape` pode não ser
-  capturado; nesse caso, use o botão).
-- **Imprimir / Salvar como PDF** (botão na toolbar): abre o diálogo de impressão do
-  navegador. Selecione **Salvar como PDF** como destino para gerar um PDF. A folha de
-  estilo `@media print` esconde a toolbar e expande tabelas. Para tabelas muito
-  largas, prefira **orientação paisagem** no diálogo do navegador.
+- **Modo apresentação** (topbar, ao lado de **Regulamento**): abre um **palco fullscreen** para exibir a
+  classificação num projetor ou telão, com **cerimônia de revelação** do 5º ao 1º
+  lugar (ou do último lugar existente quando há menos de cinco igrejas).
+- Ao entrar, **nenhuma colocação aparece** — o palco mostra os cinco slots com **?**
+  (pódio + 4º/5º). **Espaço**, **Enter** ou **clique** revelam uma colocação por vez.
+- **Shift+Espaço** ou o botão discreto **Revelar tudo** (canto inferior direito)
+  pula direto para a classificação completa (útil em ensaio).
+- A classificação fica **congelada** enquanto a cerimônia não termina — ajustes
+  de pontuação na UI normal não alteram o palco até você sair e reentrar.
+- Sair: clique em **Sair da apresentação** ou pressione `Escape` (em algumas
+  versões de iOS Safari, `Escape` pode não ser capturado; nesse caso, use o botão).

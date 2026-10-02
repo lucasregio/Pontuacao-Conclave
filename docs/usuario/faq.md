@@ -1,7 +1,8 @@
 # Perguntas frequentes (FAQ)
 
 Respostas curtas para as dúvidas mais comuns de organizadores e juízes da **Pontuação Conclave**.
-Para o passo a passo completo, veja [`manual-uso.md`](manual-uso.md).
+Para o fluxo do dia com capturas, veja o [`tutorial-5min.md`](tutorial-5min.md). Para o passo a
+passo completo, veja [`manual-uso.md`](manual-uso.md).
 
 ## Sumário
 
@@ -13,6 +14,9 @@ Para o passo a passo completo, veja [`manual-uso.md`](manual-uso.md).
 - [Os dados saem da minha maquina](#os-dados-saem-da-minha-maquina)
 - [Posso editar o JSON manualmente](#posso-editar-o-json-manualmente)
 - [O que muda entre tema MR e ER](#o-que-muda-entre-tema-mr-e-er)
+- [Por que inscrição começa desmarcada no ER](#por-que-inscricao-comeca-desmarcada-no-er)
+- [A prova escrita entra sozinha na classificacao](#a-prova-escrita-entra-sozinha-na-classificacao)
+- [Como funciona o sorteio da Esgrima](#como-funciona-o-sorteio-da-esgrima)
 - [Como exporto para o Excel](#como-exporto-para-o-excel)
 
 ## Perdi meus dados ao trocar de navegador
@@ -93,6 +97,30 @@ O botão **Tema** na toolbar troca entre dois conjuntos de cores e valores típi
 Importante: o tema **não sobrescreve** os valores do JSON do evento. Os pesos e
 medalhas finais são sempre os que estão em `evento.pesos` e `evento.medalhas`. O tema
 só ajusta a aparência (cores, foco, contraste).
+
+## Por que inscrição começa desmarcada no ER
+
+No Conclave ER 2026/2 o check-in começa com **inscrição** e **pontualidade**
+desmarcadas. Marque cada igreja na chegada; quem não vier fica em branco (não
+ganha os 100+200). O Extra do CER (+100 nas 6 igrejas da reunião pré-conclave)
+já vem lançado e **não some** se a inscrição estiver desmarcada.
+
+## A prova escrita entra sozinha na classificacao
+
+Não. A aba **Prova escrita** é só métrica (gráfico/CSV). A medalha entra na
+classificação pelo **Pódio**. No ER, Evangelhos e Organização: **≥12 acertos em
+20** (60%). Montagem bíblica é escrita em papel, mas a regra é outra: **mais de
+10 erros desclassifica**. Se o pódio de Evangelhos/Organização ficar abaixo de
+12/20, o app mostra um aviso amarelo no topo — os totais não se corrigem
+sozinhos.
+
+## Como funciona o sorteio da Esgrima
+
+A aba **Esgrima** sorteia livro, capítulo e versículo para o líder **ditar**
+(Debate Bíblico), sem repetir na mesma categoria. O cronômetro segue o regulamento
+(20 s no MR, 30 s no ER). **Anular e sortear outra** serve para empate. Isso **não**
+pontua: ouro, prata e bronze continuam no **Pódio**. O Debate de versículos
+(recitação) e a Esgrima avançada (palavra) não usam este sorteio.
 
 ## Como exporto para o Excel
 

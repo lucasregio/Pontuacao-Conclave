@@ -48,6 +48,36 @@ test("emptyDadosTemplate cria participacao e podium para todos os ids", () => {
   assert.equal(dados.participacao.a.inscricao, true);
 });
 
+test("conservacao do templo descumprida desconta de todas as igrejas", () => {
+  const evento = buildEventoBase();
+  evento.pesos.conservacao_templo = -100;
+  const ids = evento.igrejas.map((x) => x.id);
+  const dados = E.emptyDadosTemplate(
+    ids,
+    evento.provas.map((x) => x.id)
+  );
+  const antes = E.computeTotals(evento, dados).detalhes.map((d) => d.total);
+
+  dados.conservacaoTemploDescumprida = true;
+  const out = E.computeTotals(evento, dados);
+  out.detalhes.forEach((d, i) => {
+    assert.equal(d.punicoes, -100);
+    assert.equal(d.total, antes[i] - 100);
+  });
+});
+
+test("conservacao do templo sem peso no evento nao altera totais", () => {
+  const evento = buildEventoBase();
+  const dados = E.emptyDadosTemplate(
+    evento.igrejas.map((x) => x.id),
+    evento.provas.map((x) => x.id)
+  );
+  dados.conservacaoTemploDescumprida = true;
+  E.computeTotals(evento, dados).detalhes.forEach((d) => {
+    assert.equal(d.punicoes, 0);
+  });
+});
+
 test("computeTotals soma participacao, punicao, gincana e extra", () => {
   const evento = buildEventoBase();
   const dados = E.emptyDadosTemplate(
@@ -280,9 +310,9 @@ test("contarMedalhasPorIgreja agrega ou/pt/br e ignora igreja desconhecida", () 
     p2: { ou: { igrejaId: "a" }, pt: { igrejaId: "c" }, br: { igrejaId: "x" } },
   };
   const counts = E.contarMedalhasPorIgreja(podium, ["a", "b", "c"]);
-  assert.deepEqual(counts.a, { ou: 2, pt: 0, br: 1 });
-  assert.deepEqual(counts.b, { ou: 0, pt: 1, br: 0 });
-  assert.deepEqual(counts.c, { ou: 0, pt: 1, br: 0 });
+  assert.deepEqual(JSON.parse(JSON.stringify(counts.a)), { ou: 2, pt: 0, br: 1 });
+  assert.deepEqual(JSON.parse(JSON.stringify(counts.b)), { ou: 0, pt: 1, br: 0 });
+  assert.deepEqual(JSON.parse(JSON.stringify(counts.c)), { ou: 0, pt: 1, br: 0 });
 });
 
 test("pontosPunicoes aplica peso negativo quando mau_comportamento truthy", () => {
@@ -348,8 +378,9 @@ test("bronze nao entra no desempate por ouro/prata", () => {
     br: { igrejaId: "b" },
   };
   const out = E.computeTotals(evento, dados);
-  assert.equal(out.detalhes.find((d) => d.igrejaId === "a").total, 300);
-  assert.equal(out.detalhes.find((d) => d.igrejaId === "b").total, 300);
+  // emptyDadosTemplate marca inscrição+pontualidade: 150 + medalha 300 = 450 em ambos.
+  assert.equal(out.detalhes.find((d) => d.igrejaId === "a").total, 450);
+  assert.equal(out.detalhes.find((d) => d.igrejaId === "b").total, 450);
   const ord = E.classificacaoOrdenada(out.detalhes, out.ranks, out.tiebreakByIgreja);
   assert.equal(ord[0].igrejaId, "a");
 });

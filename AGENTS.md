@@ -10,36 +10,40 @@ A **100% static web application** for Conclave scoring (**Pontuação Conclave**
 
 ## Repository layout
 
-- `index.html` — main entry point (Dashboard, Config, Participation, Podium, Ranking, Reports tabs).
+- `index.html` — main entry point (Dashboard, Config, Participation, Podium, Written, Esgrima, Ranking, Reports tabs).
 - `web/engine.js` — **pure scoring engine** (`window.ConclaveEngine`). No DOM.
+- `web/escrita-metrics.js` — métricas da prova escrita (`window.ConclaveEscritaMetrics`); não altera totais.
+- `web/biblia-estrutura.js` / `web/sorteio-esgrima.js` — catálogo de referências e sorteio da Esgrima (`window.ConclaveSorteioEsgrima`); não altera totais.
 - `web/app.js` — UI / DOM / state / persistence.
 - `web/styles.css` — MR/ER themes, presentation mode, print.
 - `schema/evento.schema.json` / `schema/projeto.schema.json` — canonical JSON contracts.
 - `static/` — PDF regulamento, imagens de fundo (servidos pelo app).
 - `eventos/` — sample event and project files + `.evento.embedded.js` (generated).
-- `docs/usuario/` — manual, FAQ, glossário, troubleshooting, atalhos, regulamento mapeado.
+- `docs/usuario/` — tutorial de 5 min, manual, FAQ, glossário, troubleshooting, atalhos, regulamento mapeado, guia visual.
 - `docs/operacional/` — metrics-baseline, performance-budget, release-checklist.
 - `docs/index.html` — documentation landing.
 - `referencia/` — historical xlsx/docx (excluded from GitHub Pages deploy).
 - `pen-drive/` — offline launcher scripts.
 - `tests/` — engine, roundtrip, escape, schema, embedded, perf.
-- `scripts/build-embedded.mjs`, `scripts/quality-check.mjs`, `scripts/publicar-github.ps1`.
+- `scripts/build-embedded.mjs`, `scripts/build-docs.mjs`, `scripts/quality-check.mjs`, `scripts/publicar-github.ps1`.
 
 Root metadata: `CHANGELOG.md`, `CONTRIBUTING.md`, `LICENSE`, `package.json`, ESLint/Prettier configs.
 The `.cursor/` folder is gitignored (local Cursor IDE config only).
 
 ## Commands
 
-| Task                | Command                                                                                                   |
-| ------------------- | --------------------------------------------------------------------------------------------------------- |
-| Lint                | `npm run lint`                                                                                            |
-| Tests               | `npm test`                                                                                                |
-| Format check        | `npm run format:check`                                                                                    |
-| Format apply        | `npm run format`                                                                                          |
-| Serve local         | `npm run serve`                                                                                           |
-| Regenerate embedded | `npm run build:embedded`                                                                                  |
-| Quality without npm | `node scripts/quality-check.mjs`                                                                          |
-| Publish to GitHub   | `.\scripts\publicar-github.ps1` (requires `gh auth login`; default repo: `lucasregio/Pontuacao-Conclave`) |
+| Task                 | Command                                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------------------------------- |
+| Lint                 | `npm run lint`                                                                                            |
+| Tests                | `npm test`                                                                                                |
+| Format check         | `npm run format:check`                                                                                    |
+| Format apply         | `npm run format`                                                                                          |
+| Serve local          | `npm run serve`                                                                                           |
+| Regenerate embedded  | `npm run build:embedded`                                                                                  |
+| Regenerate docs      | `npm run build:docs` (fallback: `py scripts/build-docs.py`)                                               |
+| Guia visual (prints) | `npm run guia:install` (Chromium, 1ª vez) e `npm run guia:visual` — **não** faz parte de `npm test`       |
+| Quality without npm  | `node scripts/quality-check.mjs`                                                                          |
+| Publish to GitHub    | `.\scripts\publicar-github.ps1` (requires `gh auth login`; default repo: `lucasregio/Pontuacao-Conclave`) |
 
 Before finalizing changes in `web/`, `tests/`, or configs: **lint + test + format:check**. CI (Node 22) runs the same.
 

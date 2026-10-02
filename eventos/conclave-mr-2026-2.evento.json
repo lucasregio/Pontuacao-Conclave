@@ -1,0 +1,183 @@
+{
+  "meta": {
+    "schemaVersion": 2,
+    "nome": "Conclave MR 2026/2",
+    "slug": "conclave-mr-2026-2",
+    "data": "2026-10-03",
+    "horarioInicio": "14:00",
+    "horarioEncerramento": "17:00",
+    "local": "Igreja Batista Aliança — R. Itapina, 03, Rio Marinho, Vila Velha – ES",
+    "regulamentoUrl": "static/regulamento-mr-2026-2.pdf",
+    "regulamentoNome": "Regulamento Conclave MR 2026-2.pdf"
+  },
+  "pesos": {
+    "inscricao": 100,
+    "pontualidade": 200,
+    "uniforme": 50,
+    "biblia": 50,
+    "visitante": 10,
+    "animacao": 150,
+    "mau_comportamento": -150,
+    "conservacao_templo": -100
+  },
+  "medalhas": {
+    "ou": 300,
+    "pt": 200,
+    "br": 100
+  },
+  "sorteioEsgrima": {
+    "corpus": "biblia",
+    "tempoSegundos": 30
+  },
+  "igrejas": [
+    { "id": "aribiri", "nome": "PIB ARIBIRI" },
+    { "id": "alecrim", "nome": "Primeira igreja batista do Alecrim" },
+    { "id": "vila-batista", "nome": "PIB Vila Batista" },
+    { "id": "ibes", "nome": "Igreja Batista do Ibes" },
+    { "id": "novo-mexico", "nome": "Igreja Batista em Novo México" },
+    { "id": "cocal", "nome": "Pib Cocal" },
+    { "id": "alianca", "nome": "Primeira Igreja Batista Aliança" },
+    { "id": "23-maio", "nome": "PIB 23 de Maio" },
+    { "id": "pibjg", "nome": "PIB João Goulart" },
+    { "id": "vila-garrido", "nome": "PIB Vila Garrido" },
+    { "id": "ilha-das-flores", "nome": "PIB Ilha das Flores" },
+    { "id": "cobilandia", "nome": "Primeira Igreja Batista em Cobilândia" },
+    { "id": "gloria", "nome": "Batista da Glória" },
+    { "id": "santa-rita", "nome": "Igreja Batista de Santa Rita" },
+    { "id": "alvorada", "nome": "PIBA Alvorada" },
+    { "id": "brunellas", "nome": "IB Brunellas" }
+  ],
+  "categorias": [
+    { "id": "junior", "nome": "Junior", "ordem": 0, "idade": "9–11" },
+    { "id": "adolescente", "nome": "Adolescente", "ordem": 1, "idade": "12–14" },
+    { "id": "juvenil", "nome": "Juvenil", "ordem": 2, "idade": "15–18" }
+  ],
+  "provas": [
+    {
+      "id": "escrita-evang-jun",
+      "titulo": "Prova escrita — Evangelhos — Junior",
+      "tipo": "escrita",
+      "categoriaId": "junior",
+      "categoria": "Junior",
+      "escritaTotalQuestoes": 20,
+      "ordem": 1
+    },
+    {
+      "id": "escrita-evang-adl",
+      "titulo": "Prova escrita — Evangelhos — Adolescente",
+      "tipo": "escrita",
+      "categoriaId": "adolescente",
+      "categoria": "Adolescente",
+      "escritaTotalQuestoes": 20,
+      "ordem": 2
+    },
+    {
+      "id": "escrita-evang-juv",
+      "titulo": "Prova escrita — Evangelhos — Juvenil",
+      "tipo": "escrita",
+      "categoriaId": "juvenil",
+      "categoria": "Juvenil",
+      "escritaTotalQuestoes": 20,
+      "ordem": 3
+    },
+    {
+      "id": "escrita-bio-jun",
+      "titulo": "Prova escrita — Biografia O Gigante que Dorme — Junior",
+      "tipo": "escrita",
+      "categoriaId": "junior",
+      "categoria": "Junior",
+      "escritaTotalQuestoes": 20,
+      "ordem": 4
+    },
+    {
+      "id": "escrita-bio-adl",
+      "titulo": "Prova escrita — Biografia O Gigante que Dorme — Adolescente",
+      "tipo": "escrita",
+      "categoriaId": "adolescente",
+      "categoria": "Adolescente",
+      "escritaTotalQuestoes": 20,
+      "ordem": 5
+    },
+    {
+      "id": "escrita-bio-juv",
+      "titulo": "Prova escrita — Biografia O Gigante que Dorme — Juvenil",
+      "tipo": "escrita",
+      "categoriaId": "juvenil",
+      "categoria": "Juvenil",
+      "escritaTotalQuestoes": 20,
+      "ordem": 6
+    },
+    {
+      "id": "esgrima-jun",
+      "titulo": "Esgrima bíblica — Junior",
+      "tipo": "oral",
+      "categoriaId": "junior",
+      "categoria": "Junior",
+      "ordem": 7
+    },
+    {
+      "id": "esgrima-adl",
+      "titulo": "Esgrima bíblica — Adolescente",
+      "tipo": "oral",
+      "categoriaId": "adolescente",
+      "categoria": "Adolescente",
+      "ordem": 8
+    },
+    {
+      "id": "esgrima-juv",
+      "titulo": "Esgrima bíblica — Juvenil",
+      "tipo": "oral",
+      "categoriaId": "juvenil",
+      "categoria": "Juvenil",
+      "ordem": 9
+    },
+    {
+      "id": "esgrima-av-jun",
+      "titulo": "Esgrima avançada — Junior",
+      "tipo": "oral",
+      "categoriaId": "junior",
+      "categoria": "Junior",
+      "ordem": 10
+    },
+    {
+      "id": "esgrima-av-adl",
+      "titulo": "Esgrima avançada — Adolescente",
+      "tipo": "oral",
+      "categoriaId": "adolescente",
+      "categoria": "Adolescente",
+      "ordem": 11
+    },
+    {
+      "id": "esgrima-av-juv",
+      "titulo": "Esgrima avançada — Juvenil",
+      "tipo": "oral",
+      "categoriaId": "juvenil",
+      "categoria": "Juvenil",
+      "ordem": 12
+    },
+    {
+      "id": "debate-jun",
+      "titulo": "Debate de versículos — Junior",
+      "tipo": "oral",
+      "categoriaId": "junior",
+      "categoria": "Junior",
+      "ordem": 13
+    },
+    {
+      "id": "debate-adl",
+      "titulo": "Debate de versículos — Adolescente",
+      "tipo": "oral",
+      "categoriaId": "adolescente",
+      "categoria": "Adolescente",
+      "ordem": 14
+    },
+    {
+      "id": "debate-juv",
+      "titulo": "Debate de versículos — Juvenil",
+      "tipo": "oral",
+      "categoriaId": "juvenil",
+      "categoria": "Juvenil",
+      "ordem": 15
+    }
+  ]
+}

@@ -3,6 +3,12 @@
  */
 (function () {
   var E = window.ConclaveEngine;
+  var R = window.ConclaveRelatorio;
+  var PF = window.ConclavePodioFilters;
+  var EM = window.ConclaveEscritaMetrics;
+  var EC = window.ConclaveEscritaCharts;
+  var SE = window.ConclaveSorteioEsgrima;
+  var BE = window.ConclaveBibliaEstrutura;
   var state = {
     evento: null,
     dados: null,
@@ -23,19 +29,45 @@
     confirmOnCancel: null,
     confirmLastFocus: null,
     eventosModalLastFocus: null,
-    /** { [provaId]: true } — true = seção colapsada */
+    /** { [provaId]: true } — true = card colapsado */
     podiumCollapsed: {},
+    /** { [tipo:slug]: true } — true = bloco de prova colapsado (layout por tipo) */
+    podiumProvaGroupCollapsed: {},
     /** { geral | categorias | provas: true } — true = colapsada */
     configSectionCollapsed: {},
     /** Relatórios: igreja | prova — true = seção colapsada */
     relatorioSectionCollapsed: {},
     /** Relatório «Por prova»: colapso por prova (igual ideia ao pódio) */
     relatorioPodiumCollapsed: {},
-    /** true → o "Relatório oficial" já foi gerado nesta sessão (mantém-se
-     *  visível em re-renders de Relatórios; resetado ao trocar de evento ou
-     *  limpar dados). */
-    relatorioOficialGerado: false,
+    /** { resumo: boolean, completo: boolean } — PDFs já gerados nesta sessão */
+    relatorioOficialGeradoPerfil: { resumo: false, completo: false },
+    /** { resumo: boolean, completo: boolean } — pré-visualização colapsada */
+    relatorioPreviewCollapsed: { resumo: false, completo: false },
+    /** blob: URL temporária do PDF embutido aberto na sessão (revogada ao trocar). */
+    regulamentoBlobUrl: null,
+    /** Cerimônia de revelação no modo apresentação (snapshot congelado). */
+    presentationCeremony: {
+      phase: "intro",
+      revealedUpTo: null,
+      snapshot: null,
+      ignoreAdvanceUntil: 0,
+    },
+    /** Prova escrita: prova selecionada na aba métricas */
+    escritaProvaId: null,
+    escritaChartsRaf: null,
+    /** Esgrima: prova selecionada, cronômetro e tela cheia da referência */
+    esgrimaProvaId: null,
+    esgrimaTimer: { running: false, remainingMs: 0, deadline: 0 },
+    esgrimaTimerId: null,
+    esgrimaStageOpen: false,
+    /** Tutorial guiado na tela (destaque das áreas reais). */
+    tourActive: false,
+    tourStep: 0,
+    tourLastFocus: null,
   };
+
+  var presentationCeremonyClickHandler = null;
+  var presentationCeremonyKeyHandler = null;
 
   function $(sel) {
     return document.querySelector(sel);
@@ -47,6 +79,24 @@
 
   function storageKey(slug) {
     return "conclave-projeto-" + slug;
+  }
+
+  /** ISO `AAAA-MM-DD` → `DD/MM/AAAA` para exibição. Texto livre permanece. */
+  function formatDataExibicao(value) {
+    var s = String(value || "").trim();
+    var iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!iso) return s;
+    return iso[3] + "/" + iso[2] + "/" + iso[1];
+  }
+
+  /** Aceita `DD/MM/AAAA` no cadastro e grava ISO no JSON. */
+  function parseDataInput(value) {
+    var s = String(value || "").trim();
+    var br = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+    if (!br) return s;
+    var dd = br[1].length === 1 ? "0" + br[1] : br[1];
+    var mm = br[2].length === 1 ? "0" + br[2] : br[2];
+    return br[3] + "-" + mm + "-" + dd;
   }
 
   function setHeader() {
@@ -65,7 +115,7 @@
     }
     if (h) h.textContent = ev.meta.nome || "Evento sem nome";
     var parts = [];
-    if (ev.meta.data) parts.push(ev.meta.data);
+    if (ev.meta.data) parts.push(formatDataExibicao(ev.meta.data));
     if (ev.meta.horarioInicio || ev.meta.horarioEncerramento) {
       var hs = [];
       if (ev.meta.horarioInicio) hs.push(ev.meta.horarioInicio);
@@ -78,8 +128,8 @@
   }
 
   /** Popula `#kpi-strip` na topbar com chips compactos (igrejas, provas,
-   *  % pódios e líder atual). Vazio quando não há evento — o CSS esconde
-   *  o container automaticamente via `.kpi-strip:not(:empty)`. */
+   *  % pódios). Vazio quando não há evento — o CSS esconde o container
+   *  automaticamente via `.kpi-strip:not(:empty)`. */
   function renderKpiStrip() {
     var strip = $("#kpi-strip");
     if (!strip) return;
@@ -105,7 +155,7 @@
     strip.appendChild(chip("Igrejas", k.igrejas));
     strip.appendChild(chip("Provas", k.provas));
     var tonePodio = k.podiosPct >= 100 ? "success" : k.podiosPct >= 50 ? "warn" : null;
-    strip.appendChild(chip("Pódios", k.podiosPct + "%", tonePodio));
+    strip.appendChild(chip("Pódios", k.podiosPreenchidos + "/" + k.provas, tonePodio));
   }
 
   /**
@@ -339,7 +389,17 @@
   }
 
   /** Infere modalidade a partir do título quando `tipo` está ausente (legado). */
+  function isProvaMontagemBiblica(p) {
+    var id = String((p && p.id) || "").toLowerCase();
+    if (id.indexOf("montagem") !== -1) return true;
+    var t = String((p && p.titulo) || "")
+      .trim()
+      .toLowerCase();
+    return t.indexOf("montagem") !== -1;
+  }
+
   function inferProvaTipo(p) {
+    if (isProvaMontagemBiblica(p)) return "escrita";
     var t = String((p && p.titulo) || "")
       .trim()
       .toLowerCase();
@@ -349,7 +409,239 @@
 
   function normalizeProvaTipos(ev) {
     (ev.provas || []).forEach(function (p) {
+      if (isProvaMontagemBiblica(p)) {
+        p.tipo = "escrita";
+        return;
+      }
       if (p.tipo !== "oral" && p.tipo !== "escrita") p.tipo = inferProvaTipo(p);
+    });
+  }
+
+  function provasEscrita(ev) {
+    return (ev && ev.provas ? ev.provas : []).filter(function (p) {
+      return p.tipo === "escrita";
+    });
+  }
+
+  function ensureMetricasEscrita() {
+    if (!state.evento || !state.dados) return;
+    if (!state.dados.metricasEscrita || typeof state.dados.metricasEscrita !== "object") {
+      state.dados.metricasEscrita = {};
+    }
+    var escritaIds = provasEscrita(state.evento).map(function (p) {
+      return p.id;
+    });
+    escritaIds.forEach(function (pid) {
+      if (!Array.isArray(state.dados.metricasEscrita[pid])) {
+        state.dados.metricasEscrita[pid] = [];
+      }
+    });
+    Object.keys(state.dados.metricasEscrita).forEach(function (pid) {
+      if (escritaIds.indexOf(pid) < 0) delete state.dados.metricasEscrita[pid];
+    });
+  }
+
+  function provasEsgrima(ev) {
+    return (ev && ev.provas ? ev.provas : []).filter(function (p) {
+      return SE && SE.isProvaEsgrima(p.titulo);
+    });
+  }
+
+  function defaultSorteioEsgrimaEvento() {
+    var cfg = (state.evento && state.evento.sorteioEsgrima) || {};
+    var tempoFallback = themeFromEvento(state.evento) === "er" ? 30 : 20;
+    return {
+      corpus: SE ? SE.normalizeCorpus(cfg.corpus) : "biblia",
+      tempoSegundos: SE ? SE.normalizeTempo(cfg.tempoSegundos, tempoFallback) : tempoFallback,
+    };
+  }
+
+  function ensureSorteioEsgrima() {
+    if (!state.evento || !state.dados || !SE) return;
+    if (!state.dados.sorteioEsgrima || typeof state.dados.sorteioEsgrima !== "object") {
+      state.dados.sorteioEsgrima = {};
+    }
+    var ids = provasEsgrima(state.evento).map(function (p) {
+      return p.id;
+    });
+    var defaults = defaultSorteioEsgrimaEvento();
+    ids.forEach(function (pid) {
+      state.dados.sorteioEsgrima[pid] = SE.normalizeSessao(
+        state.dados.sorteioEsgrima[pid],
+        defaults
+      );
+    });
+    Object.keys(state.dados.sorteioEsgrima).forEach(function (pid) {
+      if (ids.indexOf(pid) < 0) delete state.dados.sorteioEsgrima[pid];
+    });
+  }
+
+  function getEsgrimaProvaAtual() {
+    if (!state.evento) return null;
+    var list = provasEsgrima(state.evento);
+    if (!list.length) return null;
+    if (state.esgrimaProvaId) {
+      var found = list.find(function (p) {
+        return p.id === state.esgrimaProvaId;
+      });
+      if (found) return found;
+    }
+    return list[0];
+  }
+
+  function getEsgrimaSessao() {
+    ensureSorteioEsgrima();
+    var prova = getEsgrimaProvaAtual();
+    if (!prova || !state.dados || !state.dados.sorteioEsgrima) return null;
+    return state.dados.sorteioEsgrima[prova.id] || null;
+  }
+
+  function setEsgrimaSessao(sessao) {
+    var prova = getEsgrimaProvaAtual();
+    if (!prova || !state.dados) return;
+    ensureSorteioEsgrima();
+    state.dados.sorteioEsgrima[prova.id] = sessao;
+  }
+
+  function esgrimaTempoLimiteMs() {
+    var sessao = getEsgrimaSessao();
+    var sec = sessao && sessao.tempoSegundos ? sessao.tempoSegundos : 20;
+    return sec * 1000;
+  }
+
+  function formatEsgrimaTempo(ms) {
+    var sec = Math.max(0, Math.ceil(Number(ms) / 1000));
+    if (!Number.isFinite(sec)) sec = 0;
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  function esgrimaTimerRemaining() {
+    var t = state.esgrimaTimer;
+    if (!t) return 0;
+    if (t.running && t.deadline) return Math.max(0, t.deadline - Date.now());
+    return Math.max(0, t.remainingMs || 0);
+  }
+
+  function resetEsgrimaTimer() {
+    var ms = esgrimaTempoLimiteMs();
+    state.esgrimaTimer = {
+      running: false,
+      remainingMs: ms,
+      deadline: 0,
+    };
+    stopEsgrimaTimerTickIfIdle();
+  }
+
+  function stopEsgrimaTimerTickIfIdle() {
+    if (state.esgrimaTimer && state.esgrimaTimer.running) return;
+    if (state.esgrimaTimerId) {
+      clearInterval(state.esgrimaTimerId);
+      state.esgrimaTimerId = null;
+    }
+  }
+
+  function ensureEsgrimaTimerTick() {
+    if (state.esgrimaTimerId) return;
+    state.esgrimaTimerId = setInterval(tickEsgrimaTimer, 200);
+  }
+
+  function tickEsgrimaTimer() {
+    var t = state.esgrimaTimer;
+    if (!t || !t.running) {
+      stopEsgrimaTimerTickIfIdle();
+      return;
+    }
+    t.remainingMs = Math.max(0, t.deadline - Date.now());
+    if (t.remainingMs <= 0) {
+      t.running = false;
+      t.remainingMs = 0;
+      t.deadline = 0;
+      stopEsgrimaTimerTickIfIdle();
+    }
+    updateEsgrimaTimerDom();
+  }
+
+  function toggleEsgrimaTimer() {
+    var t = state.esgrimaTimer || { running: false, remainingMs: 0, deadline: 0 };
+    if (t.running) {
+      t.remainingMs = esgrimaTimerRemaining();
+      t.running = false;
+      t.deadline = 0;
+      state.esgrimaTimer = t;
+      stopEsgrimaTimerTickIfIdle();
+    } else {
+      var left = t.remainingMs > 0 ? t.remainingMs : esgrimaTempoLimiteMs();
+      t.remainingMs = left;
+      t.running = left > 0;
+      t.deadline = t.running ? Date.now() + left : 0;
+      state.esgrimaTimer = t;
+      if (t.running) ensureEsgrimaTimerTick();
+    }
+    updateEsgrimaTimerDom();
+  }
+
+  function buildIgrejaNomeMap(ev) {
+    var m = {};
+    (ev && ev.igrejas ? ev.igrejas : []).forEach(function (g) {
+      m[g.id] = g.nome;
+    });
+    return m;
+  }
+
+  function newEscritaParticipanteId() {
+    var n = 1;
+    var used = {};
+    var all = (state.dados && state.dados.metricasEscrita) || {};
+    Object.keys(all).forEach(function (pid) {
+      (all[pid] || []).forEach(function (p) {
+        if (p && p.id) used[p.id] = true;
+      });
+    });
+    var cand = "p-" + n;
+    while (used[cand]) {
+      n += 1;
+      cand = "p-" + n;
+    }
+    return cand;
+  }
+
+  function getEscritaProvaAtual() {
+    if (!state.evento) return null;
+    var list = provasEscrita(state.evento);
+    if (!list.length) return null;
+    if (state.escritaProvaId) {
+      var found = list.find(function (p) {
+        return p.id === state.escritaProvaId;
+      });
+      if (found) return found;
+    }
+    return list[0];
+  }
+
+  function scheduleEscritaChartsRefresh() {
+    if (state.escritaChartsRaf) cancelAnimationFrame(state.escritaChartsRaf);
+    state.escritaChartsRaf = requestAnimationFrame(function () {
+      state.escritaChartsRaf = null;
+      refreshEscritaCharts();
+    });
+  }
+
+  function refreshEscritaCharts() {
+    var host = document.getElementById("escrita-charts-host");
+    if (!host || !EC || !EM) return;
+    var prova = getEscritaProvaAtual();
+    if (!prova || !state.dados) {
+      host.innerHTML = "";
+      return;
+    }
+    var list = (state.dados.metricasEscrita && state.dados.metricasEscrita[prova.id]) || [];
+    EC.renderEscritaCharts(host, {
+      list: list,
+      igrejaNomeMap: buildIgrejaNomeMap(state.evento),
+      totalQuestoes: prova.escritaTotalQuestoes,
+      provaTitulo: prova.titulo,
     });
   }
 
@@ -395,7 +687,27 @@
   }
 
   function isProvaCollapsed(provaId) {
-    return !!state.podiumCollapsed[provaId];
+    if (state.podiumCollapsed[provaId] === true) return true;
+    if (state.podiumCollapsed[provaId] === false) return false;
+    if (!provaPodiumCompleto(provaId)) return false;
+    return true;
+  }
+
+  function provaGroupKey(tipo, tituloBase) {
+    return tipo + ":" + slugify(tituloBase);
+  }
+
+  function isPodiumProvaGroupCollapsed(groupKey) {
+    if (state.podiumProvaGroupCollapsed[groupKey] === true) return true;
+    if (state.podiumProvaGroupCollapsed[groupKey] === false) return false;
+    return false;
+  }
+
+  function provaGroupKeysForTipo(tipo) {
+    var grouped = groupProvasByTituloBase(tipo);
+    return grouped.order.map(function (tituloBase) {
+      return provaGroupKey(tipo, tituloBase);
+    });
   }
 
   /** Ouro, prata e bronze com igreja escolhida */
@@ -455,6 +767,53 @@
     var cat = labelCategoria(categoriaKey(p));
     if (!t) return cat;
     return t + " - " + cat;
+  }
+
+  function escapeRegex(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  /** Nome da categoria sem faixa etária, para remover sufixo do título da prova. */
+  function categoriaNomeCurto(p) {
+    if (state.evento && state.evento.categorias) {
+      var c = state.evento.categorias.find(function (x) {
+        return x.id === categoriaKey(p);
+      });
+      if (c && c.nome) return String(c.nome).trim();
+    }
+    var leg = p.categoria != null ? String(p.categoria).trim() : "";
+    return leg;
+  }
+
+  /** Título base da prova sem sufixo « — Categoria» (coluna já exibe a faixa etária). */
+  function tituloProvaBase(p) {
+    var t = (p.titulo != null ? String(p.titulo) : "").trim();
+    if (!t) return "";
+    var catNome = categoriaNomeCurto(p);
+    if (!catNome) return t;
+    var re = new RegExp("\\s*[—\\-–]\\s*" + escapeRegex(catNome) + "\\s*$", "i");
+    var stripped = t.replace(re, "").trim();
+    return stripped || t;
+  }
+
+  function labelCategoriaParts(key) {
+    var full = labelCategoria(key);
+    var m = full.match(/^(.+?)\s+\((.+)\)$/);
+    if (m) return { nome: m[1], idade: m[2] };
+    return { nome: full, idade: "" };
+  }
+
+  /** Título do card de prova no pódio (coluna já exibe categoria e idade). */
+  function tituloProvaCard(p) {
+    var t = tituloProvaBase(p);
+    if (t) return t;
+    if (state.evento && state.evento.categorias) {
+      var c = state.evento.categorias.find(function (x) {
+        return x.id === categoriaKey(p);
+      });
+      if (c) return c.nome;
+    }
+    return labelCategoria(categoriaKey(p));
   }
 
   function syncCategoriaNomes(ev) {
@@ -642,6 +1001,8 @@
       }
     });
     syncIgrejasIntoDados();
+    ensureMetricasEscrita();
+    ensureSorteioEsgrima();
   }
 
   function ensureUniqueIgrejaId(ev, baseId) {
@@ -674,31 +1035,119 @@
     return cand;
   }
 
+  /** Limite prático para PDF embutido (localStorage + export JSON). */
+  var REGULAMENTO_MAX_BYTES = 4 * 1024 * 1024;
+
+  function isRegulamentoEmbedded(url) {
+    return (
+      String(url || "")
+        .trim()
+        .indexOf("data:") === 0
+    );
+  }
+
+  function isRegulamentoExternal(url) {
+    var s = String(url || "").trim();
+    return s.indexOf("http://") === 0 || s.indexOf("https://") === 0 || s.indexOf("//") === 0;
+  }
+
+  function revokeRegulamentoBlobUrl() {
+    if (state.regulamentoBlobUrl) {
+      URL.revokeObjectURL(state.regulamentoBlobUrl);
+      state.regulamentoBlobUrl = null;
+    }
+  }
+
+  /** Converte data URL (PDF embutido) em Blob — necessário porque window.open(data:…) falha com URLs longas. */
+  function dataUrlToBlob(dataUrl) {
+    try {
+      var s = String(dataUrl || "");
+      var comma = s.indexOf(",");
+      if (comma < 0) return null;
+      var header = s.slice(0, comma);
+      var b64 = s.slice(comma + 1);
+      var mime = "application/pdf";
+      var mimeMatch = header.match(/^data:([^;,]+)/);
+      if (mimeMatch) mime = mimeMatch[1];
+      var binary = atob(b64);
+      var len = binary.length;
+      var bytes = new Uint8Array(len);
+      for (var i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+      return new Blob([bytes], { type: mime });
+    } catch (e) {
+      console.warn(e);
+      return null;
+    }
+  }
+
+  function openRegulamentoViaAnchor(href) {
+    var a = document.createElement("a");
+    a.href = href;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  /** Abre o regulamento numa nova aba (PDF embutido, URL externa ou static/). */
+  function openRegulamentoUrl(url) {
+    var u = String(url || "").trim();
+    if (!u) return;
+
+    if (isRegulamentoEmbedded(u)) {
+      var blob = dataUrlToBlob(u);
+      if (!blob) {
+        showFeedback("Não foi possível abrir o PDF carregado.", "error");
+        return;
+      }
+      revokeRegulamentoBlobUrl();
+      state.regulamentoBlobUrl = URL.createObjectURL(blob);
+      var opened = window.open(state.regulamentoBlobUrl, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        openRegulamentoViaAnchor(state.regulamentoBlobUrl);
+        showFeedback(
+          "Se o PDF não abriu, permita pop-ups para esta página e tente novamente.",
+          "warn"
+        );
+      }
+      return;
+    }
+
+    var resolved = resolveAssetUrl(u);
+    var win = window.open(resolved, "_blank", "noopener,noreferrer");
+    if (!win) {
+      openRegulamentoViaAnchor(resolved);
+      if (isRegulamentoExternal(u)) {
+        showFeedback(
+          "Se o link não abriu, verifique pop-ups bloqueados ou a URL informada.",
+          "warn"
+        );
+      } else {
+        showFeedback(
+          "Se o PDF não abriu, confirme que o arquivo existe em static/ ou carregue-o pelo computador.",
+          "warn"
+        );
+      }
+    }
+  }
+
   function resolveAssetUrl(path) {
     var p = String(path || "").trim();
     if (!p) return "";
+    if (p.indexOf("data:") === 0 || p.indexOf("blob:") === 0) return p;
     if (p.indexOf("http://") === 0 || p.indexOf("https://") === 0 || p.indexOf("//") === 0)
       return p;
-    return encodeURI(p);
+    var rel = p.replace(/^\/+/g, "").replace(/\\/g, "/");
+    if (rel.indexOf("static/") !== 0) rel = "static/" + rel;
+    return encodeURI(rel);
   }
 
-  /** Valor mostrado no campo (sem o prefixo static/ quando for ficheiro local) */
-  function regulamentoDisplayFromStored(stored) {
-    var s = String(stored || "").trim();
-    if (!s) return "";
-    if (s.indexOf("http://") === 0 || s.indexOf("https://") === 0 || s.indexOf("//") === 0) {
-      return s;
-    }
-    if (s.indexOf("static/") === 0) {
-      return s.slice(7);
-    }
-    return s;
-  }
-
-  /** Monta meta.regulamentoUrl a partir do texto do utilizador */
+  /** Monta meta.regulamentoUrl a partir de URL externa ou caminho legado em static/. */
   function regulamentoUrlFromInput(raw) {
     var s = String(raw || "").trim();
     if (!s) return "";
+    if (s.indexOf("data:") === 0) return s;
     if (s.indexOf("http://") === 0 || s.indexOf("https://") === 0 || s.indexOf("//") === 0) {
       return s;
     }
@@ -707,6 +1156,81 @@
       return path;
     }
     return "static/" + path;
+  }
+
+  function regulamentoLabelFromMeta(meta) {
+    meta = meta || {};
+    var u = String(meta.regulamentoUrl || "").trim();
+    if (!u) return "Nenhum arquivo selecionado";
+    if (isRegulamentoEmbedded(u)) return meta.regulamentoNome || "PDF carregado";
+    if (isRegulamentoExternal(u)) return u;
+    if (u.indexOf("static/") === 0) return u;
+    return "static/" + u;
+  }
+
+  function clearRegulamentoMeta() {
+    if (!state.evento || !state.evento.meta) return;
+    delete state.evento.meta.regulamentoUrl;
+    delete state.evento.meta.regulamentoNome;
+  }
+
+  function refreshRegulamentoConfigUI() {
+    var nameEl = $("#cfg-regulamento-filename");
+    var urlInp = $("#cfg-regulamento-url");
+    var clearBtn = $("#cfg-regulamento-clear");
+    if (!state.evento || !state.evento.meta) return;
+    var meta = state.evento.meta;
+    var hasReg = !!(meta.regulamentoUrl && String(meta.regulamentoUrl).trim());
+    if (nameEl) {
+      nameEl.textContent = regulamentoLabelFromMeta(meta);
+      nameEl.classList.toggle("config-regulamento-filename--empty", !hasReg);
+    }
+    if (urlInp) {
+      var u = String(meta.regulamentoUrl || "").trim();
+      urlInp.value = isRegulamentoExternal(u) ? u : "";
+    }
+    if (clearBtn) clearBtn.disabled = !hasReg;
+  }
+
+  function afterRegulamentoChange() {
+    scheduleSave();
+    validate();
+    refreshDerivedPanels();
+    setHeader();
+    updateRegulamentoButton();
+    refreshRegulamentoConfigUI();
+  }
+
+  function onFileRegulamento(file) {
+    if (!file || !state.evento) return;
+    var isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name || "");
+    if (!isPdf) {
+      showFeedback("Selecione um arquivo PDF (.pdf).", "error");
+      return;
+    }
+    if (file.size > REGULAMENTO_MAX_BYTES) {
+      showFeedback(
+        "O PDF excede o limite de " +
+          Math.round(REGULAMENTO_MAX_BYTES / (1024 * 1024)) +
+          " MB. Escolha um arquivo menor ou use uma URL externa.",
+        "error"
+      );
+      return;
+    }
+    var r = new FileReader();
+    r.onload = function () {
+      if (!state.evento.meta) state.evento.meta = {};
+      state.evento.meta.regulamentoUrl = r.result;
+      state.evento.meta.regulamentoNome = file.name || "regulamento.pdf";
+      var urlInp = $("#cfg-regulamento-url");
+      if (urlInp) urlInp.value = "";
+      afterRegulamentoChange();
+      showFeedback("Regulamento «" + (file.name || "PDF") + "» carregado.", "info");
+    };
+    r.onerror = function () {
+      showFeedback("Falha ao ler o PDF. Tente novamente.", "error");
+    };
+    r.readAsDataURL(file);
   }
 
   function updateRegulamentoButton() {
@@ -722,15 +1246,16 @@
     btn.disabled = !ok;
     btn.title = ok
       ? "Abrir regulamento (PDF) numa nova aba"
-      : "Configure o link ou caminho do PDF em Configuração → Geral";
+      : "Configure o regulamento em Configuração → Geral";
   }
 
   /** Ordem das colunas: ordem em categorias[]; provas sem lista caem no fim (legado). */
-  function orderedCategoryKeys() {
+  function orderedCategoryKeys(provaList) {
     var ev = state.evento;
     if (!ev) return [];
+    var source = provaList || sortedProvas();
     var inUse = {};
-    sortedProvas().forEach(function (p) {
+    source.forEach(function (p) {
       inUse[categoriaKey(p)] = true;
     });
     if (ev.categorias && ev.categorias.length) {
@@ -743,7 +1268,7 @@
         .forEach(function (c) {
           if (inUse[c.id]) keys.push(c.id);
         });
-      sortedProvas().forEach(function (p) {
+      source.forEach(function (p) {
         var k = categoriaKey(p);
         if (inUse[k] && keys.indexOf(k) === -1) keys.push(k);
       });
@@ -751,7 +1276,7 @@
     }
     var seen = {};
     var order = [];
-    sortedProvas().forEach(function (p) {
+    source.forEach(function (p) {
       var k = categoriaKeyLegacy(p);
       if (!seen[k]) {
         seen[k] = true;
@@ -761,13 +1286,14 @@
     return order;
   }
 
-  function groupProvasByCategoria(filterTipo) {
-    var order = orderedCategoryKeys();
+  function groupProvasByCategoria(filterTipo, provaList) {
+    var source = provaList || sortedProvas();
+    var order = orderedCategoryKeys(source);
     var groups = {};
     order.forEach(function (k) {
       groups[k] = [];
     });
-    sortedProvas().forEach(function (p) {
+    source.forEach(function (p) {
       if (filterTipo && p.tipo !== filterTipo) return;
       var k = categoriaKey(p);
       if (!groups[k]) {
@@ -777,6 +1303,108 @@
       groups[k].push(p);
     });
     return { order: order, groups: groups };
+  }
+
+  /** Agrupa provas pelo título base (sem faixa etária) dentro de uma modalidade. */
+  function groupProvasByTituloBase(filterTipo, provaList) {
+    var source = provaList || sortedProvas();
+    var catOrder = orderedCategoryKeys(source);
+    var groups = {};
+    var order = [];
+    source.forEach(function (p) {
+      if (filterTipo && p.tipo !== filterTipo) return;
+      var key = tituloProvaBase(p) || (p.titulo != null ? String(p.titulo).trim() : "") || p.id;
+      if (!groups[key]) {
+        groups[key] = {};
+        order.push(key);
+      }
+      groups[key][categoriaKey(p)] = p;
+    });
+    return { order: order, groups: groups, catOrder: catOrder };
+  }
+
+  function appendPodiumColTitle(col, catKey) {
+    var parts = labelCategoriaParts(catKey);
+    var colTitleWrap = document.createElement("div");
+    colTitleWrap.className = "podium-col-title-wrap";
+    var colTitle = document.createElement("h3");
+    colTitle.className = "podium-col-title";
+    var nomeSpan = document.createElement("span");
+    nomeSpan.className = "podium-col-nome";
+    nomeSpan.textContent = parts.nome;
+    colTitle.appendChild(nomeSpan);
+    if (parts.idade) {
+      var idadeSpan = document.createElement("span");
+      idadeSpan.className = "podium-col-idade";
+      idadeSpan.textContent = "(" + parts.idade + ")";
+      colTitle.appendChild(idadeSpan);
+    }
+    colTitleWrap.appendChild(colTitle);
+    col.appendChild(colTitleWrap);
+  }
+
+  function appendPodiumColProgress(col, list) {
+    var completeCount = list.filter(function (p) {
+      return provaPodiumCompleto(p.id);
+    }).length;
+    var titleWrap = col.querySelector(".podium-col-title-wrap");
+    titleWrap.appendChild(
+      createPodiumFillBadge(completeCount, list.length, {
+        unit: "provas",
+        completeTitle: "Todas as provas desta coluna estão completas",
+        partialTitle: "Provas com ouro, prata e bronze preenchidos",
+        pendingTitle: "Nenhuma prova completa nesta coluna",
+      })
+    );
+  }
+
+  /** Badge compacto de preenchimento (○ / 2/3 / ✓ Ok). */
+  function createPodiumFillBadge(completeCount, total, opts) {
+    opts = opts || {};
+    var badge = document.createElement("span");
+    var allComplete = total > 0 && completeCount === total;
+    var partial = completeCount > 0 && !allComplete;
+    badge.className =
+      "prova-status-badge podium-fill-badge" +
+      (allComplete ? " complete" : partial ? " partial" : " pending");
+    if (allComplete) {
+      badge.textContent = "✓ Ok";
+      badge.setAttribute("title", opts.completeTitle || "Preenchimento completo");
+    } else if (partial) {
+      badge.textContent = completeCount + "/" + total;
+      badge.setAttribute(
+        "title",
+        opts.partialTitle || completeCount + " de " + total + " completos"
+      );
+    } else {
+      badge.textContent = "○";
+      badge.setAttribute("title", opts.pendingTitle || "Nada preenchido");
+    }
+    return badge;
+  }
+
+  function appendPodiumColTools(col, list, catActionAttr) {
+    var provaIdsInCol = list.map(function (p) {
+      return p.id;
+    });
+    var idsAttr = provaIdsInCol.join(",");
+    var colTools = document.createElement("div");
+    colTools.className = "podium-col-tools";
+    var btnCollapseAll = document.createElement("button");
+    btnCollapseAll.type = "button";
+    btnCollapseAll.className = "podium-col-btn";
+    btnCollapseAll.setAttribute(catActionAttr, "collapse");
+    btnCollapseAll.setAttribute("data-prova-ids", idsAttr);
+    btnCollapseAll.textContent = "Recolher todas";
+    var btnExpandAll = document.createElement("button");
+    btnExpandAll.type = "button";
+    btnExpandAll.className = "podium-col-btn";
+    btnExpandAll.setAttribute(catActionAttr, "expand");
+    btnExpandAll.setAttribute("data-prova-ids", idsAttr);
+    btnExpandAll.textContent = "Expandir todas";
+    colTools.appendChild(btnCollapseAll);
+    colTools.appendChild(btnExpandAll);
+    col.appendChild(colTools);
   }
 
   /** Grid de colunas por categoria (Junior, Adolescente, …) dentro de uma modalidade. */
@@ -803,33 +1431,9 @@
       col.className = "podium-col";
       col.setAttribute("aria-label", labelCategoria(catKey));
 
-      var colTitle = document.createElement("h3");
-      colTitle.className = "podium-col-title";
-      colTitle.textContent = labelCategoria(catKey);
-      col.appendChild(colTitle);
-
-      var provaIdsInCol = list.map(function (p) {
-        return p.id;
-      });
-      var idsAttr = provaIdsInCol.join(",");
-
-      var colTools = document.createElement("div");
-      colTools.className = "podium-col-tools";
-      var btnCollapseAll = document.createElement("button");
-      btnCollapseAll.type = "button";
-      btnCollapseAll.className = "podium-col-btn";
-      btnCollapseAll.setAttribute(catActionAttr, "collapse");
-      btnCollapseAll.setAttribute("data-prova-ids", idsAttr);
-      btnCollapseAll.textContent = "Recolher todas";
-      var btnExpandAll = document.createElement("button");
-      btnExpandAll.type = "button";
-      btnExpandAll.className = "podium-col-btn";
-      btnExpandAll.setAttribute(catActionAttr, "expand");
-      btnExpandAll.setAttribute("data-prova-ids", idsAttr);
-      btnExpandAll.textContent = "Expandir todas";
-      colTools.appendChild(btnCollapseAll);
-      colTools.appendChild(btnExpandAll);
-      col.appendChild(colTools);
+      appendPodiumColTitle(col, catKey);
+      appendPodiumColProgress(col, list);
+      appendPodiumColTools(col, list, catActionAttr);
 
       var stack = document.createElement("div");
       stack.className = "podium-col-stack";
@@ -842,13 +1446,134 @@
     return wrap;
   }
 
+  /** Grid por tipo de prova (Esgrima bíblica, Debate, …) com mini-colunas por faixa etária. */
+  function buildPodiumProvaGrid(grouped, opts) {
+    opts = opts || {};
+    var buildCard = opts.buildCard || buildProvaCardPodio;
+    var provaTipo = opts.provaTipo || "oral";
+    var catOrder = grouped.catOrder || orderedCategoryKeys();
+
+    if (!grouped.order.length) return null;
+
+    var wrap = document.createElement("div");
+    wrap.className = "podium-by-prova";
+
+    grouped.order.forEach(function (tituloBase) {
+      var byCat = grouped.groups[tituloBase] || {};
+      var list = catOrder
+        .map(function (k) {
+          return byCat[k];
+        })
+        .filter(Boolean);
+      if (!list.length) return;
+
+      var groupKey = provaGroupKey(provaTipo, tituloBase);
+      var groupCollapsed = isPodiumProvaGroupCollapsed(groupKey);
+      var completeCount = list.filter(function (p) {
+        return provaPodiumCompleto(p.id);
+      }).length;
+      var allComplete = completeCount === list.length && list.length > 0;
+      var partialComplete = completeCount > 0 && !allComplete;
+
+      var section = document.createElement("section");
+      section.className = "podium-prova-section";
+      if (groupCollapsed) section.classList.add("is-collapsed");
+      if (allComplete) section.classList.add("podium-prova-section--complete");
+      else if (partialComplete) section.classList.add("podium-prova-section--partial");
+      section.setAttribute("aria-label", tituloBase);
+      section.setAttribute("data-prova-group", groupKey);
+
+      var head = document.createElement("button");
+      head.type = "button";
+      head.className = "podium-prova-head";
+      head.setAttribute("data-prova-group-toggle", groupKey);
+      head.setAttribute("aria-expanded", groupCollapsed ? "false" : "true");
+      head.setAttribute(
+        "aria-label",
+        (groupCollapsed ? "Expandir " : "Recolher ") +
+          tituloBase +
+          (allComplete ? " — completo" : partialComplete ? " — parcial" : "")
+      );
+
+      var titleWrap = document.createElement("span");
+      titleWrap.className = "podium-prova-title-wrap";
+      var provaTitle = document.createElement("span");
+      provaTitle.className = "podium-prova-title";
+      provaTitle.textContent = tituloBase;
+      titleWrap.appendChild(provaTitle);
+
+      var fillBadge = createPodiumFillBadge(completeCount, list.length, {
+        unit: "faixas",
+        completeTitle: "Todas as faixas etárias desta prova estão completas",
+        partialTitle: "Faixas com ouro, prata e bronze preenchidos",
+        pendingTitle: "Nenhuma faixa completa nesta prova",
+      });
+      fillBadge.classList.add("podium-prova-fill-badge");
+
+      var chev = document.createElement("span");
+      chev.className = "podium-prova-chevron";
+      chev.setAttribute("aria-hidden", "true");
+      chev.textContent = "▼";
+
+      head.appendChild(titleWrap);
+      head.appendChild(fillBadge);
+      head.appendChild(chev);
+
+      var body = document.createElement("div");
+      body.className = "podium-prova-body";
+
+      var grid = document.createElement("div");
+      grid.className = "podium-by-categoria podium-by-categoria--prova-row";
+      grid.style.setProperty("--podium-cols", String(Math.max(1, catOrder.length)));
+
+      catOrder.forEach(function (catKey) {
+        var p = byCat[catKey];
+        if (!p) return;
+
+        var col = document.createElement("section");
+        col.className = "podium-col podium-col--mini";
+        col.setAttribute("aria-label", labelCategoria(catKey) + " — " + tituloBase);
+
+        appendPodiumColTitle(col, catKey);
+        appendPodiumColProgress(col, [p]);
+
+        var stack = document.createElement("div");
+        stack.className = "podium-col-stack";
+        stack.appendChild(
+          buildCard(p, {
+            hideTitle: true,
+          })
+        );
+        col.appendChild(stack);
+        grid.appendChild(col);
+      });
+
+      body.appendChild(grid);
+      section.appendChild(head);
+      section.appendChild(body);
+      wrap.appendChild(section);
+    });
+
+    return wrap.childElementCount ? wrap : null;
+  }
+
   /** Pódio e relatórios: seções «Prova oral» e «Prova escrita», cada uma com colunas por categoria. */
   function buildPodiumWithTipoSections(opts) {
+    opts = opts || {};
+    var layout = opts.layout || "categoria";
+    var provaList = opts.provaList || null;
     var container = document.createElement("div");
     container.className = "podium-by-tipo";
     PROVA_TIPO_ORDER.forEach(function (tipo) {
-      var grouped = groupProvasByCategoria(tipo);
-      var grid = buildPodiumCategoriaGrid(grouped, opts);
+      var grid;
+      if (layout === "prova") {
+        grid = buildPodiumProvaGrid(
+          groupProvasByTituloBase(tipo, provaList),
+          Object.assign({}, opts, { provaTipo: tipo })
+        );
+      } else {
+        grid = buildPodiumCategoriaGrid(groupProvasByCategoria(tipo, provaList), opts);
+      }
       if (!grid) return;
 
       var section = document.createElement("section");
@@ -856,10 +1581,36 @@
       section.setAttribute("data-prova-tipo", tipo);
       section.setAttribute("aria-label", labelProvaTipo(tipo));
 
+      var titleRow = document.createElement("div");
+      titleRow.className = "podium-tipo-head";
       var title = document.createElement("h2");
       title.className = "podium-tipo-title";
       title.textContent = labelProvaTipo(tipo);
-      section.appendChild(title);
+      titleRow.appendChild(title);
+
+      if (layout === "prova") {
+        var tipoTools = document.createElement("div");
+        tipoTools.className = "podium-tipo-tools";
+        var groupKeys = provaGroupKeysForTipo(tipo);
+        var keysAttr = groupKeys.join(",");
+        var btnCollapseProvas = document.createElement("button");
+        btnCollapseProvas.type = "button";
+        btnCollapseProvas.className = "podium-col-btn";
+        btnCollapseProvas.setAttribute("data-prova-group-action", "collapse");
+        btnCollapseProvas.setAttribute("data-group-keys", keysAttr);
+        btnCollapseProvas.textContent = "Recolher provas";
+        var btnExpandProvas = document.createElement("button");
+        btnExpandProvas.type = "button";
+        btnExpandProvas.className = "podium-col-btn";
+        btnExpandProvas.setAttribute("data-prova-group-action", "expand");
+        btnExpandProvas.setAttribute("data-group-keys", keysAttr);
+        btnExpandProvas.textContent = "Expandir provas";
+        tipoTools.appendChild(btnCollapseProvas);
+        tipoTools.appendChild(btnExpandProvas);
+        titleRow.appendChild(tipoTools);
+      }
+
+      section.appendChild(titleRow);
       section.appendChild(grid);
       container.appendChild(section);
     });
@@ -878,10 +1629,19 @@
     }
     el.hidden = false;
     el.textContent =
-      "O evento de exemplo não foi carregado automaticamente (isso acontece ao abrir como file://). Clique em «Novo evento» para começar do zero, ou em «Carregar evento» para escolher um arquivo .evento.json.";
+      "O evento de exemplo não foi carregado automaticamente (isso acontece ao abrir como file://). Clique em «Carregar exemplo» para abrir o Conclave ER 2026/2, ou em «Carregar evento» para escolher um arquivo .evento.json.";
   }
 
-  var TAB_ORDER = ["dashboard", "config", "participacao", "podio", "classificacao", "relatorios"];
+  var TAB_ORDER = [
+    "dashboard",
+    "config",
+    "participacao",
+    "podio",
+    "escrita",
+    "esgrima",
+    "classificacao",
+    "relatorios",
+  ];
 
   /** Definição de cada aba: label visível, label curto (mobile) e ícone SVG.
    *  Ícones em outline (24x24) — usam `currentColor` para herdar a tinta da
@@ -906,6 +1666,16 @@
       label: "Pódio por prova",
       short: "Pódio",
       icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="5"/><path d="M8.5 12.5 7 21l5-3 5 3-1.5-8.5"/></svg>',
+    },
+    escrita: {
+      label: "Prova escrita",
+      short: "Escrita",
+      icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/><rect x="15" y="14" width="3" height="6" rx="0.5" fill="currentColor" stroke="none" opacity="0.35"/></svg>',
+    },
+    esgrima: {
+      label: "Esgrima",
+      short: "Esgrima",
+      icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20 20 4"/><path d="M8 20h4"/><path d="M14 4h6v6"/></svg>',
     },
     classificacao: {
       label: "Classificação",
@@ -1026,16 +1796,51 @@
     el.appendChild(div);
   }
 
+  /** Pódio com texto livre que não casa com nenhuma igreja cadastrada: a
+   *  medalha aparece nos relatórios, mas não soma pontos. */
+  function avisosPodiumIgrejaForaDaLista(evento, dados) {
+    var avisos = [];
+    var podium = (dados && dados.podium) || {};
+    var medalNome = { ou: "Ouro", pt: "Prata", br: "Bronze" };
+    ((evento && evento.provas) || []).forEach(function (p) {
+      var places = podium[p.id] || {};
+      ["ou", "pt", "br"].forEach(function (mk) {
+        var ent = places[mk];
+        if (!ent || ent.igrejaId) return;
+        var livre = String(ent.nomeLivre || "").trim();
+        if (!livre) return;
+        avisos.push(
+          "«" +
+            (p.titulo || p.id) +
+            "» (" +
+            medalNome[mk] +
+            "): «" +
+            livre +
+            "» não está na lista de igrejas e não pontua."
+        );
+      });
+    });
+    return avisos;
+  }
+
   function renderWarnings() {
     var el = $("#warnings");
     if (!el) return;
     el.innerHTML = "";
     if (!state.evento || !state.dados) return;
-    var av = E.avisosPodiumDuplicado(state.dados.podium || {});
+    var av = avisosPodiumIgrejaForaDaLista(state.evento, state.dados).concat(
+      E.avisosPodiumDuplicado(state.dados.podium || {})
+    );
+    if (EM && typeof EM.avisosPodiumEscritaMinimo === "function") {
+      av = av.concat(EM.avisosPodiumEscritaMinimo(state.evento, state.dados));
+    }
     if (!av.length) return;
     var div = document.createElement("div");
     div.className = "banner-warn";
-    div.textContent = av.join(" ");
+    var shown = av.slice(0, 3);
+    var extra = av.length - shown.length;
+    div.textContent =
+      shown.join(" ") + (extra > 0 ? " (+" + extra + " aviso" + (extra > 1 ? "s" : "") + ")" : "");
     el.appendChild(div);
   }
 
@@ -1118,7 +1923,7 @@
     root.className = "confirm-overlay";
     root.setAttribute("role", "presentation");
     root.innerHTML =
-      '<div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">' +
+      '<div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">' +
       '<h2 id="confirm-title">Confirmar ação</h2>' +
       '<p id="confirm-message"></p>' +
       '<div class="confirm-actions">' +
@@ -1176,6 +1981,8 @@
     var cancel = $("#confirm-cancel");
     if (ok) ok.textContent = opts.confirmLabel || (opts.destructive ? "Remover" : "Confirmar");
     if (cancel) cancel.textContent = opts.cancelLabel || "Cancelar";
+    var titleEl = $("#confirm-title");
+    if (titleEl) titleEl.textContent = opts.title || "Confirmar ação";
     $("#confirm-message").textContent = message;
     root.classList.add("open");
     setBackgroundInert(true);
@@ -1264,7 +2071,7 @@
       var sub = document.createElement("span");
       sub.className = "eventos-modal-sub";
       var parts = [];
-      if (info.data) parts.push(info.data);
+      if (info.data) parts.push(formatDataExibicao(info.data));
       parts.push("slug: " + info.slug);
       parts.push((info.tamanhoBytes / 1024).toFixed(1) + " KB");
       sub.textContent = parts.join(" · ");
@@ -1535,8 +2342,8 @@
   /** Calcula KPIs derivados do estado atual para o Dashboard e topbar:
    *  - igrejas: total cadastrado;
    *  - provas: total cadastrado;
-   *  - podiosPct: % de provas com ao menos 1 medalha atribuída;
-   *  - top1: { igreja, total } ou null se não computável. */
+   *  - podiosPreenchidos: provas com ao menos 1 medalha;
+   *  - podiosPct: mesma fração em % (só para cor do chip). */
   function computeKpis() {
     var ev = state.evento;
     var dados = state.dados || {};
@@ -1556,18 +2363,11 @@
       if (algum) preenchidas++;
     });
     var podiosPct = provas ? Math.round((preenchidas / provas) * 100) : 0;
-    var top1 = null;
-    var out = compute();
-    if (out) {
-      var ord = E.classificacaoOrdenada(out.detalhes, out.ranks, out.tiebreakByIgreja);
-      if (ord && ord.length) top1 = { igreja: ord[0].igreja, total: ord[0].total };
-    }
     return {
       igrejas: igrejas,
       provas: provas,
       podiosPreenchidos: preenchidas,
       podiosPct: podiosPct,
-      top1: top1,
     };
   }
 
@@ -1606,7 +2406,7 @@
           id: "btn-dash-novo-evento",
           variant: "primary",
           title: "Novo evento",
-          desc: "Começa do zero com a configuração padrão MR e nenhum dado.",
+          desc: "Começa do zero, sem igrejas nem resultados. Edite os pesos na Configuração.",
         })
       );
       ctaGrid.appendChild(
@@ -1622,7 +2422,7 @@
           id: "btn-dash-carregar-exemplo",
           variant: "default",
           title: "Carregar exemplo",
-          desc: "Conclave MR 2026/1 — útil para conhecer a ferramenta.",
+          desc: "Conclave ER 2026/2 — evento padrão deste app.",
         })
       );
       wrap.appendChild(ctaGrid);
@@ -1634,14 +2434,18 @@
       var docs = document.createElement("section");
       docs.className = "dashboard-card";
       docs.innerHTML =
-        '<h3 class="dashboard-card-title">Comece pela documentação</h3>' +
-        '<p class="dashboard-card-text">Manual de uso, FAQ, glossário, atalhos de teclado e ' +
-        "como o regulamento mapeia para os campos do JSON.</p>" +
-        '<a class="pill-btn pill-btn--primary" href="docs/index.html">Abrir documentação</a>';
+        '<h3 class="dashboard-card-title">Tutorial de 5 minutos</h3>' +
+        '<p class="dashboard-card-text">Guia na tela: o app destaca cada área e você pratica no fluxo real. ' +
+        "Há também uma página ilustrada com capturas.</p>" +
+        '<div class="dashboard-actions-row">' +
+        '<button type="button" class="pill-btn pill-btn--primary" id="btn-dash-tutorial">Começar o tutorial na tela</button>' +
+        '<a class="pill-btn" href="docs/usuario/tutorial-5min.html">Página ilustrada</a>' +
+        '<a class="pill-btn" href="docs/index.html">Toda a documentação</a>' +
+        "</div>";
       wrap.appendChild(docs);
     } else {
       // -------------- Resumo (com evento) --------------
-      var kpis = computeKpis() || { igrejas: 0, provas: 0, podiosPct: 0, top1: null };
+      var kpis = computeKpis() || { igrejas: 0, provas: 0, podiosPct: 0, podiosPreenchidos: 0 };
       var meta = ev.meta || {};
 
       var summary = document.createElement("section");
@@ -1653,10 +2457,29 @@
         "</h2>" +
         (meta.data || meta.local
           ? '<p class="dashboard-summary-sub">' +
-            [meta.data, meta.local].filter(Boolean).map(escapeHtml).join(" · ") +
+            [formatDataExibicao(meta.data), meta.local]
+              .filter(Boolean)
+              .map(escapeHtml)
+              .join(" · ") +
             "</p>"
           : "");
       wrap.appendChild(summary);
+
+      if (meta.slug === "conclave-er-2026-2") {
+        var day = document.createElement("section");
+        day.className = "dashboard-card dashboard-day-card";
+        day.setAttribute("aria-label", "Checklist do dia");
+        day.innerHTML =
+          '<h3 class="dashboard-card-title">Hoje no ER 2026/2</h3>' +
+          '<ol class="dashboard-day-list">' +
+          "<li><strong>Chegada.</strong> Marque inscrição na Participação; pontualidade só quem chegou no horário. Quem não vier fica desmarcado.</li>" +
+          "<li><strong>Embaixadores.</strong> Preencha total / camisa / bíblia para soltar os 50+50 de uniforme e bíblia.</li>" +
+          "<li><strong>Extra.</strong> CER das 6 igrejas já está +100. Pastor presente: some +50 no Extra. Templo, se houver penalidade: −100 em todas.</li>" +
+          "<li><strong>Prova escrita.</strong> Evangelhos e Organização: medalha só com ≥12/20. Montagem: mais de 10 erros desclassifica. A aba Escrita não altera o ranking sozinha.</li>" +
+          "<li><strong>Backup.</strong> Várias vezes: Mais → Exportar projeto (pen-drive).</li>" +
+          "</ol>";
+        wrap.appendChild(day);
+      }
 
       var kpiGrid = document.createElement("div");
       kpiGrid.className = "dashboard-kpi-grid";
@@ -1665,15 +2488,10 @@
       kpiGrid.appendChild(
         buildKpiCard(
           "Pódios",
-          kpis.podiosPct + "%",
-          kpis.podiosPreenchidos + " de " + kpis.provas + " preenchidos"
+          kpis.podiosPreenchidos + " / " + kpis.provas,
+          "provas com pelo menos uma medalha"
         )
       );
-      if (kpis.top1) {
-        kpiGrid.appendChild(
-          buildKpiCard("Líder atual", escapeHtml(kpis.top1.igreja), fmt(kpis.top1.total) + " pts")
-        );
-      }
       wrap.appendChild(kpiGrid);
 
       var actions = document.createElement("section");
@@ -1685,6 +2503,7 @@
         '<button type="button" class="pill-btn" id="btn-dash-ir-podio">Pódio por prova</button>' +
         '<button type="button" class="pill-btn" id="btn-dash-ir-classificacao">Ver classificação</button>' +
         '<button type="button" class="pill-btn" id="btn-dash-ir-relatorios">Gerar relatório oficial</button>' +
+        '<button type="button" class="pill-btn" id="btn-dash-tutorial">Tutorial na tela</button>' +
         "</div>";
       wrap.appendChild(actions);
 
@@ -1746,7 +2565,9 @@
         escapeHtml(info.nome) +
         "</strong>" +
         '<span class="dashboard-saved-sub">' +
-        escapeHtml([info.data, "slug: " + info.slug].filter(Boolean).join(" · ")) +
+        escapeHtml(
+          [formatDataExibicao(info.data), "slug: " + info.slug].filter(Boolean).join(" · ")
+        ) +
         "</span>";
       li.appendChild(meta);
 
@@ -1807,7 +2628,8 @@
         tryLoadDefaultEventoWeb().then(
           function (ev) {
             if (setEvento(ev, null)) {
-              showFeedback("Exemplo Conclave 2026/1 carregado.", "info");
+              var nome = (ev.meta && ev.meta.nome) || "evento de exemplo";
+              showFeedback(nome + " carregado.", "info");
             }
           },
           function () {
@@ -1839,13 +2661,16 @@
     if (btnRel) {
       btnRel.addEventListener("click", function () {
         goToTab("relatorios");
-        // Após render(), dispara o "Gerar relatório oficial" se existir.
+        // Após render(), dispara o perfil Completo (auditoria), não o Resumo.
         setTimeout(function () {
-          var bg = document.getElementById("btn-relatorio-oficial-gerar");
+          var bg = document.getElementById("btn-relatorio-gerar-completo");
           if (bg) bg.click();
         }, 0);
       });
     }
+
+    var btnTour = host.querySelector("#btn-dash-tutorial");
+    if (btnTour) btnTour.addEventListener("click", startTour);
   }
 
   function renderConfig() {
@@ -1891,9 +2716,9 @@
       escapeHtml(meta.nome || "") +
       '" /></label>' +
       '<label class="config-field"><span>Data</span>' +
-      '<input type="text" data-cfg="meta.data" value="' +
-      escapeHtml(meta.data || "") +
-      '" placeholder="AAAA-MM-DD ou texto" /></label>' +
+      '<input type="text" data-cfg="meta.data" inputmode="numeric" placeholder="DD/MM/AAAA" value="' +
+      escapeHtml(formatDataExibicao(meta.data)) +
+      '" /></label>' +
       '<label class="config-field config-field--full"><span>Local</span>' +
       '<input type="text" data-cfg="meta.local" value="' +
       escapeHtml(meta.local || "") +
@@ -1909,42 +2734,68 @@
       '" /></label>' +
       "</div>";
 
-    var storedReg = meta.regulamentoUrl || "";
-    var regTrim = String(storedReg).trim();
-    var isExternal =
-      regTrim.indexOf("http://") === 0 ||
-      regTrim.indexOf("https://") === 0 ||
-      regTrim.indexOf("//") === 0;
-    var regLab = document.createElement("label");
-    regLab.className = "config-field config-field--full";
+    var regBlock = document.createElement("div");
+    regBlock.className = "config-field config-field--full config-regulamento-block";
     var spReg = document.createElement("span");
     spReg.textContent = "Regulamento (PDF)";
-    regLab.appendChild(spReg);
-    var regRow = document.createElement("div");
-    regRow.className =
-      "config-regulamento-row" + (isExternal ? " config-regulamento-row--external" : "");
-    if (!isExternal) {
-      var pref = document.createElement("span");
-      pref.className = "config-regulamento-prefix";
-      pref.textContent = "static/";
-      pref.setAttribute("title", "Ficheiros na pasta static/ na raiz do projeto");
-      regRow.appendChild(pref);
-    }
-    var regInp = document.createElement("input");
-    regInp.type = "text";
-    regInp.id = "cfg-regulamento-input";
-    regInp.setAttribute("spellcheck", "false");
-    regInp.placeholder = isExternal ? "https://…" : "ex.: regulamento.pdf";
-    regInp.value = isExternal ? regTrim : regulamentoDisplayFromStored(storedReg);
-    regRow.appendChild(regInp);
-    regLab.appendChild(regRow);
-    gridGeral.appendChild(regLab);
+    regBlock.appendChild(spReg);
+
+    var picker = document.createElement("div");
+    picker.className = "config-regulamento-picker";
+
+    var nameEl = document.createElement("span");
+    nameEl.id = "cfg-regulamento-filename";
+    nameEl.className = "config-regulamento-filename";
+    var hasReg = !!(meta.regulamentoUrl && String(meta.regulamentoUrl).trim());
+    if (!hasReg) nameEl.classList.add("config-regulamento-filename--empty");
+    nameEl.textContent = regulamentoLabelFromMeta(meta);
+    picker.appendChild(nameEl);
+
+    var actions = document.createElement("div");
+    actions.className = "config-regulamento-actions";
+
+    var loadLab = document.createElement("label");
+    loadLab.className = "config-add-btn config-regulamento-load";
+    loadLab.textContent = "Carregar arquivo";
+    var fileInp = document.createElement("input");
+    fileInp.type = "file";
+    fileInp.id = "cfg-regulamento-file";
+    fileInp.accept = ".pdf,application/pdf";
+    loadLab.appendChild(fileInp);
+    actions.appendChild(loadLab);
+
+    var clearBtn = document.createElement("button");
+    clearBtn.type = "button";
+    clearBtn.id = "cfg-regulamento-clear";
+    clearBtn.className = "config-danger-btn";
+    clearBtn.textContent = "Remover";
+    clearBtn.disabled = !hasReg;
+    actions.appendChild(clearBtn);
+
+    picker.appendChild(actions);
+    regBlock.appendChild(picker);
+
+    var urlLab = document.createElement("label");
+    urlLab.className = "config-field config-regulamento-url-field";
+    var urlSp = document.createElement("span");
+    urlSp.textContent = "URL externa (opcional)";
+    urlLab.appendChild(urlSp);
+    var urlInp = document.createElement("input");
+    urlInp.type = "text";
+    urlInp.id = "cfg-regulamento-url";
+    urlInp.setAttribute("spellcheck", "false");
+    urlInp.placeholder = "https://…";
+    var regTrim = String(meta.regulamentoUrl || "").trim();
+    urlInp.value = isRegulamentoExternal(regTrim) ? regTrim : "";
+    urlLab.appendChild(urlInp);
+    regBlock.appendChild(urlLab);
+
+    gridGeral.appendChild(regBlock);
 
     gridGeral.insertAdjacentHTML(
       "beforeend",
       '<p class="config-hint config-field--full" style="margin-top: -0.25rem">' +
-        "Regulamento: coloque o PDF em <code>static/</code> e escreva só o nome do ficheiro (ou cole uma URL completa). " +
-        "O botão «Regulamento» abre o documento.</p>"
+        "Selecione um PDF do computador ou informe um link. O botão «Regulamento» abre o documento.</p>"
     );
 
     return [gridGeral];
@@ -2042,15 +2893,12 @@
   function buildConfigPesosSection(ev) {
     var pesHint = document.createElement("p");
     pesHint.className = "config-hint";
-    pesHint.textContent = isErUiTheme()
-      ? "Modelo ER: presença do pastor, pontualidade, uniforme e bíblia (+100 pts cada quando aplicável; uniforme/bíblia exigem totais iguais na tabela de participação). Os valores aparecem no cabeçalho da aba Participação."
-      : "Usados no cálculo da participação; os valores aparecem no cabeçalho da aba Participação.";
+    pesHint.textContent =
+      "Usados no cálculo da participação; os valores aparecem no cabeçalho da aba Participação.";
     var pev = ev.pesos || {};
     var pesGrid = document.createElement("div");
     pesGrid.className = "config-grid config-grid--pesos";
-    var lblInscr = isErUiTheme()
-      ? "Presença do pastor (pts se marcado)"
-      : "Inscrição (pts se marcado)";
+    var lblInscr = "Inscrição (pts se marcado)";
     var lblUni = isErUiTheme() ? "Uniforme (camisa = total emb.)" : "Uniforme (camisa = MR tot.)";
     var lblBib = isErUiTheme()
       ? "Bíblia (emb. com bíblia = total emb.)"
@@ -2077,11 +2925,16 @@
       '<label class="config-field"><span>Por visitante</span><input type="number" step="1" data-cfg="pesos.visitante" value="' +
       escapeHtml(String(pev.visitante != null ? pev.visitante : 0)) +
       '" /></label>' +
-      '<label class="config-field"><span>Animação (pts se marcado)</span><input type="number" step="1" data-cfg="pesos.animacao" value="' +
+      '<label class="config-field"><span>' +
+      escapeHtml(isErUiTheme() ? "Grito de guerra (pts se marcado)" : "Animação (pts se marcado)") +
+      '</span><input type="number" step="1" data-cfg="pesos.animacao" value="' +
       escapeHtml(String(pev.animacao != null ? pev.animacao : 0)) +
       '" /></label>' +
       '<label class="config-field"><span>Mau comportamento (geralmente negativo)</span><input type="number" step="1" data-cfg="pesos.mau_comportamento" value="' +
       escapeHtml(String(pev.mau_comportamento != null ? pev.mau_comportamento : 0)) +
+      '" /></label>' +
+      '<label class="config-field"><span>Conservação do templo (todas as igrejas; 0 desativa)</span><input type="number" step="1" data-cfg="pesos.conservacao_templo" value="' +
+      escapeHtml(String(pev.conservacao_templo != null ? pev.conservacao_templo : 0)) +
       '" /></label>';
     return [pesHint, pesGrid];
   }
@@ -2169,7 +3022,7 @@
     var tprov = document.createElement("table");
     tprov.className = "data config-table config-table--sortable";
     tprov.innerHTML =
-      '<thead><tr><th class="config-col-drag" scope="col" aria-hidden="true">&nbsp;</th><th scope="col">Título</th><th scope="col">Tipo</th><th scope="col">Categoria</th><th scope="col"><span class="visually-hidden">Ações</span></th></tr></thead>';
+      '<thead><tr><th class="config-col-drag" scope="col" aria-hidden="true">&nbsp;</th><th scope="col">Título</th><th scope="col">Tipo</th><th scope="col">Questões</th><th scope="col">Categoria</th><th scope="col"><span class="visually-hidden">Ações</span></th></tr></thead>';
     var bprov = document.createElement("tbody");
     bprov.id = "config-prova-tbody";
     sortedProvas().forEach(function (p) {
@@ -2199,6 +3052,19 @@
         '<option value="oral">Oral</option><option value="escrita">Escrita</option>';
       selTipo.value = p.tipo === "escrita" ? "escrita" : "oral";
       tdTipo.appendChild(selTipo);
+      var tdQuest = document.createElement("td");
+      var inpQuest = document.createElement("input");
+      inpQuest.type = "number";
+      inpQuest.min = "1";
+      inpQuest.step = "1";
+      inpQuest.className = "config-prova-questoes";
+      inpQuest.setAttribute("data-prova-id", p.id);
+      inpQuest.title = "Total de questões (prova escrita)";
+      if (p.escritaTotalQuestoes != null && p.escritaTotalQuestoes !== "") {
+        inpQuest.value = String(p.escritaTotalQuestoes);
+      }
+      inpQuest.disabled = p.tipo !== "escrita";
+      tdQuest.appendChild(inpQuest);
       var td2 = document.createElement("td");
       td2.appendChild(sel);
       var tdRem = document.createElement("td");
@@ -2211,6 +3077,7 @@
       tr.appendChild(tdG);
       tr.appendChild(td1);
       tr.appendChild(tdTipo);
+      tr.appendChild(tdQuest);
       tr.appendChild(td2);
       tr.appendChild(tdRem);
       bprov.appendChild(tr);
@@ -2296,6 +3163,8 @@
       refreshDerivedPanels();
       renderPodio();
       wirePodio();
+      renderEscrita();
+      wireEscrita();
       setHeader();
       reactivatePanel();
     }
@@ -2308,6 +3177,7 @@
         if (path.indexOf("medalhas.") === 0 || path.indexOf("pesos.") === 0) {
           setCfgPath(state.evento, path, Number(v));
         } else {
+          if (path === "meta.data") v = parseDataInput(v);
           setCfgPath(state.evento, path, v);
         }
         scheduleSave();
@@ -2328,24 +3198,43 @@
       });
     });
 
-    var cfgRegInp = $("#cfg-regulamento-input");
-    if (cfgRegInp) {
-      function syncRegulamento() {
+    var cfgRegFile = $("#cfg-regulamento-file");
+    if (cfgRegFile) {
+      cfgRegFile.addEventListener("change", function () {
+        var f = cfgRegFile.files[0];
+        if (f) onFileRegulamento(f);
+        cfgRegFile.value = "";
+      });
+    }
+
+    var cfgRegClear = $("#cfg-regulamento-clear");
+    if (cfgRegClear) {
+      cfgRegClear.addEventListener("click", function () {
+        if (!state.evento || !state.evento.meta) return;
+        clearRegulamentoMeta();
+        afterRegulamentoChange();
+      });
+    }
+
+    var cfgRegUrl = $("#cfg-regulamento-url");
+    if (cfgRegUrl) {
+      function syncRegulamentoUrl() {
         if (!state.evento.meta) state.evento.meta = {};
-        var v = cfgRegInp.value.trim();
-        state.evento.meta.regulamentoUrl = regulamentoUrlFromInput(v);
-        var row = cfgRegInp.closest(".config-regulamento-row");
-        var pref = row && row.querySelector(".config-regulamento-prefix");
-        var ext = v.length > 0 && (/^https?:\/\//i.test(v) || v.indexOf("//") === 0);
-        if (row) row.classList.toggle("config-regulamento-row--external", ext);
-        if (pref) pref.style.display = ext ? "none" : "";
-        scheduleSave();
-        validate();
-        refreshDerivedPanels();
-        setHeader();
+        var v = cfgRegUrl.value.trim();
+        if (!v) {
+          var cur = String(state.evento.meta.regulamentoUrl || "").trim();
+          if (isRegulamentoExternal(cur)) {
+            delete state.evento.meta.regulamentoUrl;
+            delete state.evento.meta.regulamentoNome;
+          }
+        } else {
+          state.evento.meta.regulamentoUrl = regulamentoUrlFromInput(v);
+          delete state.evento.meta.regulamentoNome;
+        }
+        afterRegulamentoChange();
       }
-      cfgRegInp.addEventListener("change", syncRegulamento);
-      cfgRegInp.addEventListener("input", syncRegulamento);
+      cfgRegUrl.addEventListener("change", syncRegulamentoUrl);
+      cfgRegUrl.addEventListener("input", syncRegulamentoUrl);
     }
 
     host.querySelectorAll(".cfg-cat-nome").forEach(function (inp) {
@@ -2523,11 +3412,29 @@
         });
         if (p) {
           p.tipo = sel.value === "escrita" ? "escrita" : "oral";
+          if (p.tipo !== "escrita") delete p.escritaTotalQuestoes;
         }
         afterConfigChange();
         renderConfig();
         wireConfig();
       });
+    });
+
+    host.querySelectorAll(".config-prova-questoes").forEach(function (inp) {
+      function applyQuestoes() {
+        var id = inp.getAttribute("data-prova-id");
+        var p = state.evento.provas.find(function (x) {
+          return x.id === id;
+        });
+        if (!p || p.tipo !== "escrita") return;
+        var v = Number(inp.value);
+        if (Number.isFinite(v) && v >= 1) p.escritaTotalQuestoes = Math.round(v);
+        else delete p.escritaTotalQuestoes;
+        scheduleSave();
+        if (state.tab === "escrita") scheduleEscritaChartsRefresh();
+      }
+      inp.addEventListener("change", applyQuestoes);
+      inp.addEventListener("input", applyQuestoes);
     });
 
     var addCat = host.querySelector("[data-config-add-cat]");
@@ -2795,12 +3702,14 @@
     bTodos.className = "part-bool-all";
     bTodos.setAttribute("data-part-bool-field", field);
     bTodos.setAttribute("data-part-bool-val", "1");
+    bTodos.setAttribute("aria-label", "Marcar todas — " + shortTitle);
     bTodos.textContent = "Todos";
     var bNenhum = document.createElement("button");
     bNenhum.type = "button";
     bNenhum.className = "part-bool-all";
     bNenhum.setAttribute("data-part-bool-field", field);
     bNenhum.setAttribute("data-part-bool-val", "0");
+    bNenhum.setAttribute("aria-label", "Desmarcar todas — " + shortTitle);
     bNenhum.textContent = "Nenhum";
     tools.appendChild(bTodos);
     tools.appendChild(bNenhum);
@@ -2810,10 +3719,11 @@
     return th;
   }
 
-  function thParticipacaoNum(title, pesoLine) {
+  function thParticipacaoNum(title, pesoLine, hint) {
     var th = document.createElement("th");
     th.scope = "col";
     th.className = "part-th";
+    if (hint) th.title = hint;
     var l1 = document.createElement("div");
     l1.className = "part-th-line";
     l1.textContent = title;
@@ -2845,61 +3755,102 @@
     thIgreja.className = "part-th part-th--igreja";
     thIgreja.textContent = "Igreja";
     trh.appendChild(thIgreja);
-    trh.appendChild(thParticipacaoBool(isErUiTheme() ? "Pastor" : "Inscr.", "inscricao", pz));
+    trh.appendChild(thParticipacaoBool("Inscr.", "inscricao", pz));
     trh.appendChild(thParticipacaoBool("Pont.", "pontualidade", pz));
+    var er = isErUiTheme();
     trh.appendChild(
       thParticipacaoNum(
-        isErUiTheme() ? "Emb. tot." : "MR tot.",
-        isErUiTheme() ? "contagem emb. (sem peso fixo)" : "contagem MR (sem peso fixo)"
+        er ? "Presentes" : "MR tot.",
+        er ? "embaixadores (sem peso fixo)" : "contagem MR (sem peso fixo)",
+        er
+          ? "Número de embaixadores da igreja. Uniforme e Bíblia só pontuam se a contagem for igual a este total."
+          : "Número de MR da igreja. Uniforme e Bíblia só pontuam se a contagem for igual a este total."
       )
     );
     trh.appendChild(
       thParticipacaoNum(
-        isErUiTheme() ? "Emb. camisa" : "MR camisa",
+        er ? "Camisa" : "MR camisa",
         participacaoPesoTxt(pz, "uniforme") +
-          (isErUiTheme() ? " se emb. camisa = emb. tot." : " se MR camisa = MR tot.")
+          (er ? " se camisa = presentes" : " se MR camisa = MR tot."),
+        "Pontua só se todos os presentes estiverem de camisa (contagem igual ao total)."
       )
     );
     trh.appendChild(
       thParticipacaoNum(
-        isErUiTheme() ? "Emb. bíblia" : "MR bíblia",
+        er ? "Bíblia" : "MR bíblia",
         participacaoPesoTxt(pz, "biblia") +
-          (isErUiTheme() ? " se emb. bíblia = emb. tot." : " se MR bíblia = MR tot.")
+          (er ? " se bíblia = presentes" : " se MR bíblia = MR tot."),
+        "Pontua só se todos os presentes estiverem com Bíblia física (contagem igual ao total)."
       )
     );
-    trh.appendChild(
-      thParticipacaoNum("Visit.", participacaoPesoTxt(pz, "visitante") + " / visitante")
-    );
-    trh.appendChild(thParticipacaoBool("Animação", "animacao", pz));
+    var showVisit = Number(pz.visitante) !== 0;
+    if (showVisit) {
+      trh.appendChild(
+        thParticipacaoNum("Visit.", participacaoPesoTxt(pz, "visitante") + " / visitante")
+      );
+    }
+    trh.appendChild(thParticipacaoBool(er ? "Grito" : "Animação", "animacao", pz));
     trh.appendChild(thParticipacaoBool("Mau comp.", "mau_comportamento", pz));
-    trh.appendChild(thParticipacaoNum("Extra", "livre (sem peso)"));
+    var extraTh = thParticipacaoNum(
+      "Extra",
+      er ? "CER + pastor + templo" : "livre (sem peso)",
+      er
+        ? "Some: CER no pré-conclave +100, pastor presente +50. Se houver penalidade de conservação do templo, subtraia 100 de todas as igrejas."
+        : "Pontos avulsos somados ao total."
+    );
+    trh.appendChild(extraTh);
     thead.appendChild(trh);
     table.appendChild(thead);
     var tbody = document.createElement("tbody");
     state.evento.igrejas.forEach(function (g) {
       var row = state.dados.participacao[g.id] || {};
+      var extraVal = row.pontuacao_extra != null ? row.pontuacao_extra : row.embaixadas;
       var tr = document.createElement("tr");
       tr.innerHTML =
         "<td>" +
         escapeHtml(g.nome) +
         "</td>" +
-        tdBool(g.id, "inscricao", row.inscricao) +
-        tdBool(g.id, "pontualidade", row.pontualidade) +
-        tdNum(g.id, "mr_total", row.mr_total) +
-        tdNum(g.id, "mr_camisa", row.mr_camisa) +
-        tdNum(g.id, "mr_biblia", row.mr_biblia) +
-        tdNum(g.id, "visitantes", row.visitantes) +
-        tdBool(g.id, "animacao", row.animacao) +
-        tdBool(g.id, "mau_comportamento", row.mau_comportamento) +
-        tdNum(g.id, "pontuacao_extra", row.pontuacao_extra);
+        tdBool(g.id, "inscricao", row.inscricao, "Inscrição — " + g.nome) +
+        tdBool(g.id, "pontualidade", row.pontualidade, "Pontualidade — " + g.nome) +
+        tdNum(g.id, "mr_total", row.mr_total, (er ? "Presentes" : "MR tot.") + " — " + g.nome) +
+        tdNum(g.id, "mr_camisa", row.mr_camisa, (er ? "Camisa" : "MR camisa") + " — " + g.nome) +
+        tdNum(g.id, "mr_biblia", row.mr_biblia, (er ? "Bíblia" : "MR bíblia") + " — " + g.nome) +
+        (showVisit ? tdNum(g.id, "visitantes", row.visitantes, "Visitantes — " + g.nome) : "") +
+        tdBool(
+          g.id,
+          "animacao",
+          row.animacao,
+          (er ? "Grito de guerra" : "Animação") + " — " + g.nome
+        ) +
+        tdBool(g.id, "mau_comportamento", row.mau_comportamento, "Mau comportamento — " + g.nome) +
+        tdNum(g.id, "pontuacao_extra", extraVal, "Pontuação extra — " + g.nome);
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
     wrap.appendChild(table);
+    var pesoConserv = Number(pz.conservacao_templo);
+    if (Number.isFinite(pesoConserv) && pesoConserv !== 0) {
+      var conserv = document.createElement("label");
+      conserv.className = "participacao-coletiva";
+      var chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.id = "part-conservacao-templo";
+      chk.checked = !!state.dados.conservacaoTemploDescumprida;
+      conserv.appendChild(chk);
+      conserv.appendChild(
+        document.createTextNode(
+          " Conservação do templo descumprida (" +
+            (pesoConserv > 0 ? "+" : "−") +
+            Math.abs(pesoConserv) +
+            " em todas as igrejas)"
+        )
+      );
+      host.appendChild(conserv);
+    }
     host.appendChild(wrap);
   }
 
-  function tdBool(gid, field, val) {
+  function tdBool(gid, field, val, label) {
     var c = typeof val === "boolean" ? val : !!val;
     return (
       '<td><input type="checkbox" data-gid="' +
@@ -2908,11 +3859,12 @@
       escapeHtml(field) +
       '" ' +
       (c ? "checked" : "") +
+      (label ? ' aria-label="' + escapeHtml(label) + '"' : "") +
       " /></td>"
     );
   }
 
-  function tdNum(gid, field, val) {
+  function tdNum(gid, field, val, label) {
     var n = val != null ? val : 0;
     return (
       '<td><input type="number" step="1" data-gid="' +
@@ -2921,7 +3873,9 @@
       escapeHtml(field) +
       '" value="' +
       escapeHtml(String(n)) +
-      '" /></td>'
+      '"' +
+      (label ? ' aria-label="' + escapeHtml(label) + '"' : "") +
+      " /></td>"
     );
   }
 
@@ -2952,57 +3906,91 @@
     var places = state.dados.podium[p.id] || {};
     var completo = provaPodiumCompleto(p.id);
     var collapsed = !!opts.collapsed;
+    var provaTitulo = tituloProvaCard(p);
 
     var card = document.createElement("div");
     card.className = "prova-card prova-card--compact";
     if (completo) card.classList.add("podium-complete");
     if (collapsed) card.classList.add("is-collapsed");
+    if (opts.hideTitle) card.classList.add("prova-card--no-title");
 
-    var head = document.createElement("button");
-    head.type = "button";
-    head.className = "prova-card-head";
-    head.setAttribute(opts.toggleAttr, p.id);
-    head.setAttribute("aria-expanded", collapsed ? "false" : "true");
-    head.setAttribute(
-      "aria-label",
-      (collapsed ? "Expandir " : "Recolher ") +
-        nomeProvaExibicao(p) +
-        (completo ? " — pódio completo" : "")
-    );
+    if (!opts.hideTitle) {
+      var head = document.createElement("button");
+      head.type = "button";
+      head.className = "prova-card-head";
+      head.setAttribute(opts.toggleAttr, p.id);
+      head.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      head.setAttribute(
+        "aria-label",
+        (collapsed ? "Expandir " : "Recolher ") +
+          provaTitulo +
+          (completo ? " — pódio completo" : "")
+      );
 
-    var titleWrap = document.createElement("span");
-    titleWrap.className = "prova-card-title-wrap";
-    var h = document.createElement("span");
-    h.className = "prova-card-title";
-    h.textContent = nomeProvaExibicao(p);
-    titleWrap.appendChild(h);
+      var titleWrap = document.createElement("span");
+      titleWrap.className = "prova-card-title-wrap";
+      var h = document.createElement("span");
+      h.className = "prova-card-title";
+      h.textContent = provaTitulo;
+      titleWrap.appendChild(h);
 
-    var statusBadge = document.createElement("span");
-    statusBadge.className = "prova-status-badge" + (completo ? " complete" : " pending");
-    statusBadge.textContent = completo ? "✓ Ok" : "○";
-    statusBadge.setAttribute(
-      "title",
-      completo ? "Ouro, prata e bronze com igreja" : "Falta definir alguma medalha"
-    );
+      var statusBadge = document.createElement("span");
+      statusBadge.className = "prova-status-badge" + (completo ? " complete" : " pending");
+      statusBadge.textContent = completo ? "✓ Ok" : "○";
+      statusBadge.setAttribute(
+        "title",
+        completo ? "Ouro, prata e bronze com igreja" : "Falta definir alguma medalha"
+      );
 
-    var chev = document.createElement("span");
-    chev.className = "prova-card-chevron";
-    chev.setAttribute("aria-hidden", "true");
-    chev.textContent = "▼";
+      var chev = document.createElement("span");
+      chev.className = "prova-card-chevron";
+      chev.setAttribute("aria-hidden", "true");
+      chev.textContent = "▼";
 
-    head.appendChild(titleWrap);
-    head.appendChild(statusBadge);
-    head.appendChild(chev);
+      head.appendChild(titleWrap);
+      head.appendChild(statusBadge);
+      head.appendChild(chev);
+      card.appendChild(head);
+    }
 
     var body = document.createElement("div");
     body.className = "prova-card-body";
 
+    if (opts.showFieldHeaders) {
+      body.appendChild(buildMedalRowHeader());
+    }
+
     ["ou", "pt", "br"].forEach(function (mk) {
       var ent = places[mk] || { igrejaId: null, competidor: "" };
-      body.appendChild(opts.renderMedalRow(p, mk, ent));
+      body.appendChild(opts.renderMedalRow(p, mk, ent, provaTitulo));
     });
 
-    card.appendChild(head);
+    if (p.tipo === "escrita") {
+      var hint = document.createElement("p");
+      hint.className = "prova-escrita-podio-hint";
+      var usaMinimo =
+        EM && typeof EM.usaMinimoAcertosEscrita === "function"
+          ? EM.usaMinimoAcertosEscrita(p)
+          : Number(p.escritaTotalQuestoes) >= 1;
+      if (usaMinimo) {
+        var totQ = Number(p.escritaTotalQuestoes);
+        var minQ =
+          EM && typeof EM.minimoAcertosEscrita === "function" ? EM.minimoAcertosEscrita(totQ) : 12;
+        hint.textContent =
+          "Medalha só com ≥" +
+          minQ +
+          "/" +
+          totQ +
+          " acertos (60%). Lance a nota na aba Prova escrita.";
+      } else if (isProvaMontagemBiblica(p)) {
+        hint.textContent =
+          "Mais de 10 erros desclassifica (sem medalha). Classifica quem tem menos erros, depois menor tempo.";
+      } else {
+        hint.textContent = "Lance a nota na aba Prova escrita. Isso não altera o ranking sozinho.";
+      }
+      body.appendChild(hint);
+    }
+
     card.appendChild(body);
     return card;
   }
@@ -3011,17 +3999,41 @@
     return mk === "ou" ? "Ouro" : mk === "pt" ? "Prata" : "Bronze";
   }
 
+  function medalRankTitle(mk) {
+    return mk === "ou" ? "1.º lugar" : mk === "pt" ? "2.º lugar" : "3.º lugar";
+  }
+
+  function buildMedalRowHeader() {
+    var row = document.createElement("div");
+    row.className = "medal-row medal-row-header";
+    row.setAttribute("aria-hidden", "true");
+    var spacer = document.createElement("span");
+    spacer.className = "medal-row-header-spacer";
+    var ig = document.createElement("span");
+    ig.className = "medal-row-header-cell";
+    ig.textContent = "Igreja";
+    var comp = document.createElement("span");
+    comp.className = "medal-row-header-cell";
+    comp.textContent = "Competidor";
+    row.appendChild(spacer);
+    row.appendChild(ig);
+    row.appendChild(comp);
+    return row;
+  }
+
   /** Linha de medalha editável (aba "Pódio por prova"). */
-  function buildMedalRowEditor(p, mk, ent) {
+  function buildMedalRowEditor(p, mk, ent, provaTitulo) {
+    provaTitulo = provaTitulo || tituloProvaCard(p);
     var displayNome = "";
     if (ent.igrejaId) displayNome = igrejaNome(ent.igrejaId) || "";
     else if (ent.nomeLivre != null && String(ent.nomeLivre).trim() !== "")
       displayNome = String(ent.nomeLivre);
     var row = document.createElement("div");
     row.className = "medal-row " + mk;
-    var label = document.createElement("label");
+    var label = document.createElement("span");
     label.className = "medal";
     label.textContent = medalLabel(mk);
+    label.setAttribute("title", medalRankTitle(mk));
     var inpIg = document.createElement("input");
     inpIg.type = "text";
     inpIg.className = "sel-igreja";
@@ -3029,7 +4041,8 @@
     inpIg.setAttribute("autocomplete", "off");
     inpIg.setAttribute("data-prova", p.id);
     inpIg.setAttribute("data-medal", mk);
-    inpIg.placeholder = "Igreja…";
+    inpIg.setAttribute("aria-label", medalLabel(mk) + " — Igreja — " + provaTitulo);
+    inpIg.placeholder = "…";
     inpIg.value = displayNome;
     var hint = document.createElement("span");
     hint.className = "sel-igreja-hint";
@@ -3042,10 +4055,11 @@
     cellIg.appendChild(hint);
     var inp = document.createElement("input");
     inp.type = "text";
-    inp.placeholder = "Competidor";
+    inp.placeholder = "…";
     inp.className = "inp-comp";
     inp.setAttribute("data-prova", p.id);
     inp.setAttribute("data-medal", mk);
+    inp.setAttribute("aria-label", medalLabel(mk) + " — Competidor — " + provaTitulo);
     inp.value = ent.competidor || "";
     row.appendChild(label);
     row.appendChild(cellIg);
@@ -3057,9 +4071,10 @@
   function buildMedalRowReport(_p, mk, ent) {
     var row = document.createElement("div");
     row.className = "medal-row " + mk;
-    var label = document.createElement("label");
+    var label = document.createElement("span");
     label.className = "medal";
     label.textContent = medalLabel(mk);
+    label.setAttribute("title", medalRankTitle(mk));
     var cellI = document.createElement("div");
     cellI.className = "relatorio-read";
     cellI.textContent = ent.igrejaId
@@ -3076,33 +4091,54 @@
     return row;
   }
 
-  function buildProvaCardPodio(p) {
+  function buildProvaCardPodio(p, cardOpts) {
+    cardOpts = cardOpts || {};
+    var hideTitle = !!cardOpts.hideTitle;
     return buildProvaCardBase(p, {
       toggleAttr: "data-prova-toggle",
-      collapsed: isProvaCollapsed(p.id),
+      collapsed: hideTitle ? false : isProvaCollapsed(p.id),
       renderMedalRow: buildMedalRowEditor,
+      showFieldHeaders: true,
+      hideTitle: hideTitle,
     });
   }
 
   /** Pódio em leitura para a aba Relatórios (mesmo layout que «Pódio por prova») */
-  function buildProvaCardPodioReport(p) {
+  function buildProvaCardPodioReport(p, cardOpts) {
+    cardOpts = cardOpts || {};
+    var hideTitle = !!cardOpts.hideTitle;
     return buildProvaCardBase(p, {
       toggleAttr: "data-relatorio-prova-toggle",
-      collapsed: isRelatorioProvaCollapsed(p.id),
+      collapsed: hideTitle ? false : isRelatorioProvaCollapsed(p.id),
       renderMedalRow: buildMedalRowReport,
+      hideTitle: hideTitle,
     });
   }
 
   function createRelatorioPodioWrap() {
-    return buildPodiumWithTipoSections({
-      buildCard: buildProvaCardPodioReport,
-      catActionAttr: "data-relatorio-cat-action",
-    });
+    var container = document.createElement("div");
+    container.className = "relatorio-podio-panel";
+    container.appendChild(buildPodioLayoutToolbar());
+    container.appendChild(
+      buildPodiumWithTipoSections({
+        buildCard: buildProvaCardPodioReport,
+        catActionAttr: "data-relatorio-cat-action",
+        layout: getPodioLayout(),
+      })
+    );
+    return container;
   }
 
   function renderPodio() {
     var host = $("#panel-podio");
     if (!host) return;
+    var searchFocus = null;
+    var searchSel = null;
+    var active = document.activeElement;
+    if (active && active.id === "podio-filter-q") {
+      searchFocus = true;
+      searchSel = active.selectionStart;
+    }
     host.innerHTML = "";
     if (!state.evento || !state.dados) {
       host.textContent = "Carregue um evento para registrar o pódio.";
@@ -3117,12 +4153,51 @@
     });
     host.appendChild(datalist);
 
+    var filters = getPodioFilters();
+    var allProvas = sortedProvas();
+    var filteredProvas = getFilteredProvasForPodio();
     host.appendChild(
-      buildPodiumWithTipoSections({
-        buildCard: buildProvaCardPodio,
-        catActionAttr: "data-cat-action",
+      buildPodioEditorToolbar({
+        filters: filters,
+        shown: filteredProvas.length,
+        total: allProvas.length,
       })
     );
+
+    if (filteredProvas.length === 0 && PF && PF.isActivePodioFilters(filters)) {
+      var empty = document.createElement("div");
+      empty.className = "podio-filter-empty";
+      empty.setAttribute("role", "status");
+      var msg = document.createElement("p");
+      msg.textContent = "Nenhuma prova corresponde aos filtros.";
+      empty.appendChild(msg);
+      var btnClear = document.createElement("button");
+      btnClear.type = "button";
+      btnClear.className = "podio-filter-clear-btn";
+      btnClear.id = "podio-filter-clear";
+      btnClear.textContent = "Limpar filtros";
+      empty.appendChild(btnClear);
+      host.appendChild(empty);
+    } else {
+      host.appendChild(
+        buildPodiumWithTipoSections({
+          buildCard: buildProvaCardPodio,
+          catActionAttr: "data-cat-action",
+          layout: getPodioLayout(),
+          provaList: filteredProvas,
+        })
+      );
+    }
+
+    if (searchFocus) {
+      var searchEl = $("#podio-filter-q");
+      if (searchEl) {
+        searchEl.focus();
+        if (searchSel != null && typeof searchEl.setSelectionRange === "function") {
+          searchEl.setSelectionRange(searchSel, searchSel);
+        }
+      }
+    }
   }
 
   function renderClassificacao() {
@@ -3134,7 +4209,9 @@
       host.textContent = "Sem dados.";
       return;
     }
-    if (isErUiTheme()) {
+    if (isErUiTheme() && state.evento) {
+      var medEr = state.evento.medalhas || {};
+      var pzEr = state.evento.pesos || {};
       var info = document.createElement("aside");
       info.className = "classificacao-er-premiacao";
       info.setAttribute("aria-label", "Pontuação e premiação ER");
@@ -3145,7 +4222,13 @@
       var p1 = document.createElement("p");
       p1.className = "classificacao-er-block";
       p1.innerHTML =
-        "<strong>Medalhas.</strong> Embaixadores que conquistarem o primeiro lugar receberão a medalha de ouro <strong>(500 pontos)</strong>; o segundo, a medalha de prata <strong>(300 pontos)</strong> e o terceiro, a medalha de bronze <strong>(150 pontos)</strong>.";
+        "<strong>Medalhas.</strong> Ouro <strong>(" +
+        escapeHtml(String(medEr.ou != null ? medEr.ou : 0)) +
+        " pts)</strong>, prata <strong>(" +
+        escapeHtml(String(medEr.pt != null ? medEr.pt : 0)) +
+        " pts)</strong>, bronze <strong>(" +
+        escapeHtml(String(medEr.br != null ? medEr.br : 0)) +
+        " pts)</strong>.";
       info.appendChild(p1);
       var p2 = document.createElement("p");
       p2.className = "classificacao-er-block";
@@ -3155,7 +4238,19 @@
       var p3 = document.createElement("p");
       p3.className = "classificacao-er-block";
       p3.innerHTML =
-        "<strong>Extra (participação).</strong> Presença do pastor (+100 pts), pontualidade (+100 pts), uniforme (+100 pts), bíblia (+100 pts).";
+        "<strong>Participação.</strong> Inscrição (" +
+        escapeHtml(String(pzEr.inscricao != null ? pzEr.inscricao : 0)) +
+        " pts), pontualidade (" +
+        escapeHtml(String(pzEr.pontualidade != null ? pzEr.pontualidade : 0)) +
+        " pts), uniforme (" +
+        escapeHtml(String(pzEr.uniforme != null ? pzEr.uniforme : 0)) +
+        " pts), bíblia (" +
+        escapeHtml(String(pzEr.biblia != null ? pzEr.biblia : 0)) +
+        " pts), grito de guerra / animação (" +
+        escapeHtml(String(pzEr.animacao != null ? pzEr.animacao : 0)) +
+        " pts). CER e pastor entram em Pontuação extra. Mau comportamento: " +
+        escapeHtml(String(pzEr.mau_comportamento != null ? pzEr.mau_comportamento : 0)) +
+        " pts.";
       info.appendChild(p3);
       host.appendChild(info);
     }
@@ -3183,7 +4278,9 @@
     table.className = "data rank-table";
     var thead = document.createElement("thead");
     thead.innerHTML =
-      '<tr><th class="pos" scope="col">#</th><th scope="col">Igreja</th><th scope="col">Partic.</th><th scope="col">Punições</th><th scope="col">Gincana</th><th scope="col">Extra</th><th class="tot" scope="col">Total</th></tr>';
+      '<tr><th class="pos" scope="col">#</th><th scope="col">Igreja</th><th scope="col">Partic.</th><th scope="col">Punições</th><th scope="col">' +
+      (isErUiTheme() ? "Medalhas" : "Gincana") +
+      '</th><th scope="col">Extra</th><th class="tot" scope="col">Total</th></tr>';
     table.appendChild(thead);
     var tbody = document.createElement("tbody");
     ord.forEach(function (r) {
@@ -3216,8 +4313,9 @@
     host.appendChild(wrap);
     var foot = document.createElement("p");
     foot.className = "classificacao-desempate-hint";
-    foot.innerHTML =
-      "<strong>Desempate</strong> (mesmo total geral): 1.º mais medalhas de ouro no pódio; 2.º mais de prata; em seguida maior pontuação de gincana nas provas cujo título corresponde a <em>Conhecimentos Gerais da Bíblia</em>, depois <em>Debate de Versículos</em>, depois <em>Conhecimentos Gerais da Organização</em> (soma de todas as provas que coincidem com cada grupo).";
+    foot.innerHTML = isErUiTheme()
+      ? "<strong>Desempate</strong> (mesmo total geral): 1.º mais medalhas de ouro no pódio; 2.º mais de prata; em seguida maior pontuação nas provas de <em>Debate de Versículos</em> e depois <em>Conhecimentos Gerais da Organização</em> (o título precisa conter essas palavras). A prova escrita dos Evangelhos conta medalhas, mas não entra sozinha nesse critério."
+      : "<strong>Desempate</strong> (mesmo total geral): 1.º mais medalhas de ouro no pódio; 2.º mais de prata; em seguida maior pontuação de gincana nas provas cujo título corresponde a <em>Conhecimentos Gerais da Bíblia</em>, depois <em>Debate de Versículos</em>, depois <em>Conhecimentos Gerais da Organização</em> (soma de todas as provas que coincidem com cada grupo).";
     host.appendChild(foot);
   }
 
@@ -3333,33 +4431,69 @@
     showFeedback("Pódio exportado como CSV.", "info");
   }
 
-  /** Copia texto para a área de transferência. Tenta a Clipboard API primeiro
-   *  (assíncrona, padrão); cai para textarea+execCommand quando indisponível
-   *  (ex.: contexto file:// em navegadores antigos). Retorna Promise. */
-  function copyToClipboard(text) {
-    if (
-      typeof navigator !== "undefined" &&
-      navigator.clipboard &&
-      typeof navigator.clipboard.writeText === "function"
-    ) {
-      return navigator.clipboard.writeText(text);
+  var CLIPBOARD_TIMEOUT_MS = 1500;
+
+  /** Cópia síncrona via textarea + execCommand. Precisa do gesto do clique
+   *  (foco no documento). Usada como fallback quando a Clipboard API falta,
+   *  rejeita ou nunca resolve (iframe/permissão pendurada). */
+  function copyViaExecCommand(text) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = document.execCommand && document.execCommand("copy");
+      document.body.removeChild(ta);
+      return !!ok;
+    } catch (_e) {
+      return false;
     }
+  }
+
+  /** Copia texto para a área de transferência. Tenta execCommand ainda no
+   *  gesto do clique; em paralelo usa a Clipboard API com tempo-limite.
+   *  Retorna Promise. */
+  function copyToClipboard(text) {
     return new Promise(function (resolve, reject) {
-      try {
-        var ta = document.createElement("textarea");
-        ta.value = text;
-        ta.setAttribute("readonly", "");
-        ta.style.position = "fixed";
-        ta.style.top = "-9999px";
-        document.body.appendChild(ta);
-        ta.select();
-        var ok = document.execCommand && document.execCommand("copy");
-        document.body.removeChild(ta);
+      var settled = false;
+      function finish(ok, err) {
+        if (settled) return;
+        settled = true;
         if (ok) resolve();
-        else reject(new Error("execCommand copy retornou false"));
-      } catch (e) {
-        reject(e);
+        else reject(err || new Error("falha ao copiar"));
       }
+
+      var hasApi =
+        typeof navigator !== "undefined" &&
+        navigator.clipboard &&
+        typeof navigator.clipboard.writeText === "function";
+
+      if (hasApi) {
+        navigator.clipboard.writeText(text).then(
+          function () {
+            finish(true);
+          },
+          function (err) {
+            if (copyViaExecCommand(text)) finish(true);
+            else finish(false, err);
+          }
+        );
+      }
+
+      if (copyViaExecCommand(text)) {
+        finish(true);
+        return;
+      }
+      if (!hasApi) {
+        finish(false, new Error("execCommand copy retornou false"));
+        return;
+      }
+      setTimeout(function () {
+        finish(false, new Error("clipboard timeout"));
+      }, CLIPBOARD_TIMEOUT_MS);
     });
   }
 
@@ -3375,7 +4509,7 @@
     if (!out) return "";
     var ord = E.classificacaoOrdenada(out.detalhes, out.ranks, out.tiebreakByIgreja);
     var titulo = (meta.nome || "").trim() || "Evento sem nome";
-    var data = (meta.data || "").trim();
+    var data = formatDataExibicao((meta.data || "").trim());
     var local = (meta.local || "").trim();
     var lines = [];
     lines.push("# Pontuação Conclave — " + titulo);
@@ -3397,7 +4531,7 @@
       });
     }
     lines.push("");
-    lines.push("## Vencedoras por prova");
+    lines.push(isErUiTheme() ? "## Vencedores por prova" : "## Vencedoras por prova");
     lines.push("");
     var anyProva = false;
     PROVA_TIPO_ORDER.forEach(function (tipo) {
@@ -3465,6 +4599,110 @@
     );
   }
 
+  var RELATORIO_PERFIS = ["resumo", "completo"];
+
+  function relatorioHostId(perfil) {
+    return "relatorio-oficial-host-" + R.normalizePerfil(perfil);
+  }
+
+  function resetRelatorioOficialGerado() {
+    state.relatorioOficialGeradoPerfil = { resumo: false, completo: false };
+    state.relatorioPreviewCollapsed = { resumo: false, completo: false };
+  }
+
+  function isRelatorioPreviewCollapsed(perfil) {
+    var map = state.relatorioPreviewCollapsed;
+    if (!map) return false;
+    return !!map[R.normalizePerfil(perfil)];
+  }
+
+  function appendRelatorioPreviewCollapsible(block, perfil) {
+    var previewSection = document.createElement("section");
+    previewSection.className =
+      "config-section config-section--collapsible relatorio-doc-preview-section";
+    if (isRelatorioPreviewCollapsed(perfil)) {
+      previewSection.classList.add("is-collapsed");
+    }
+
+    var previewHead = document.createElement("button");
+    previewHead.type = "button";
+    previewHead.className = "config-section-head";
+    previewHead.setAttribute("data-relatorio-preview-toggle", perfil);
+    previewHead.setAttribute(
+      "aria-expanded",
+      isRelatorioPreviewCollapsed(perfil) ? "false" : "true"
+    );
+    previewHead.setAttribute("aria-controls", "relatorio-preview-body-" + perfil);
+    var previewTitle = document.createElement("span");
+    previewTitle.className = "config-section-head-title";
+    previewTitle.textContent = "Pré-visualização";
+    var previewChev = document.createElement("span");
+    previewChev.className = "config-section-chevron";
+    previewChev.setAttribute("aria-hidden", "true");
+    previewChev.textContent = "▼";
+    previewHead.appendChild(previewTitle);
+    previewHead.appendChild(previewChev);
+
+    var previewBody = document.createElement("div");
+    previewBody.className = "config-section-body";
+    previewBody.id = "relatorio-preview-body-" + perfil;
+
+    var oficialHost = document.createElement("div");
+    oficialHost.id = relatorioHostId(perfil);
+    oficialHost.className = "relatorio-oficial-host";
+    renderRelatorioOficial(oficialHost, { perfil: perfil });
+    previewBody.appendChild(oficialHost);
+
+    previewSection.appendChild(previewHead);
+    previewSection.appendChild(previewBody);
+    block.appendChild(previewSection);
+  }
+
+  function isRelatorioPerfilGerado(perfil) {
+    return !!state.relatorioOficialGeradoPerfil[R.normalizePerfil(perfil)];
+  }
+
+  function ensureRelatorioDom(perfil) {
+    perfil = R.normalizePerfil(perfil);
+    state.relatorioOficialGeradoPerfil[perfil] = true;
+    var host = document.getElementById(relatorioHostId(perfil));
+    if (!host) {
+      renderRelatorios();
+      wireRelatorios();
+      host = document.getElementById(relatorioHostId(perfil));
+    }
+    if (host) {
+      renderRelatorioOficial(host, { perfil: perfil });
+    }
+    return host;
+  }
+
+  function imprimirRelatorioOficial(perfil) {
+    if (typeof window === "undefined" || typeof window.print !== "function") return;
+    perfil = R.normalizePerfil(perfil);
+    ensureRelatorioDom(perfil);
+    var meta = state.evento && state.evento.meta ? state.evento.meta : {};
+    var prevTitle = document.title;
+    document.title = R.buildRelatorioDocumentTitle(meta.slug, perfil);
+    document.body.classList.add("relatorio-print-mode");
+    document.body.setAttribute("data-relatorio-print-perfil", perfil);
+    showFeedback(
+      "Abrindo a impressão do " +
+        R.relatorioPerfilLabel(perfil) +
+        ". No diálogo, selecione «Salvar como PDF» se quiser gerar um arquivo.",
+      "info"
+    );
+    function cleanupPrint() {
+      document.body.classList.remove("relatorio-print-mode");
+      document.body.removeAttribute("data-relatorio-print-perfil");
+      document.title = prevTitle;
+    }
+    window.addEventListener("afterprint", cleanupPrint, { once: true });
+    setTimeout(function () {
+      window.print();
+    }, 80);
+  }
+
   function renderRelatorios() {
     var host = $("#panel-relatorios");
     if (!host) return;
@@ -3477,20 +4715,65 @@
     var outer = document.createElement("div");
     outer.className = "relatorio-wrap";
 
-    // Ações do Relatório oficial — markup acordado com o web-design-specialist.
-    var acoes = document.createElement("div");
-    acoes.className = "relatorio-acoes";
-    var btnGerar = document.createElement("button");
-    btnGerar.type = "button";
-    btnGerar.id = "btn-relatorio-oficial-gerar";
-    btnGerar.className = "pill-btn pill-btn--primary";
-    btnGerar.textContent = "Gerar relatório oficial";
-    var btnPrint = document.createElement("button");
-    btnPrint.type = "button";
-    btnPrint.id = "btn-relatorio-oficial-print";
-    btnPrint.className = "pill-btn";
-    btnPrint.textContent = "Imprimir / Salvar PDF";
-    btnPrint.hidden = true;
+    // Documentos PDF — Resumo e Oficial completo (geração e impressão independentes).
+    var docsWrap = document.createElement("div");
+    docsWrap.className = "relatorio-docs";
+
+    RELATORIO_PERFIS.forEach(function (perfil) {
+      var block = document.createElement("section");
+      block.className = "relatorio-doc-block";
+      block.setAttribute("data-perfil", perfil);
+
+      var title = document.createElement("h2");
+      title.className = "relatorio-doc-block__title";
+      title.textContent =
+        perfil === "resumo" ? "Resumo (divulgação)" : "Oficial completo (auditoria)";
+      block.appendChild(title);
+
+      var desc = document.createElement("p");
+      desc.className = "relatorio-doc-block__desc hint";
+      desc.textContent =
+        perfil === "resumo"
+          ? "Capa, Top 3, pódio por prova e encerramento com assinaturas — ideal para divulgar."
+          : "Tudo do resumo mais classificação, participação, avisos e critérios — para arquivo e auditoria.";
+      block.appendChild(desc);
+
+      var blockAcoes = document.createElement("div");
+      blockAcoes.className = "relatorio-doc-block__acoes";
+
+      var btnGerar = document.createElement("button");
+      btnGerar.type = "button";
+      btnGerar.className = "pill-btn pill-btn--primary";
+      btnGerar.id = "btn-relatorio-gerar-" + perfil;
+      btnGerar.textContent = perfil === "resumo" ? "Gerar resumo" : "Gerar oficial completo";
+
+      var btnPrint = document.createElement("button");
+      btnPrint.type = "button";
+      btnPrint.id = "btn-relatorio-print-" + perfil;
+      btnPrint.className = "pill-btn";
+      btnPrint.textContent = "Imprimir / Salvar PDF";
+      btnPrint.hidden = !isRelatorioPerfilGerado(perfil);
+
+      blockAcoes.appendChild(btnGerar);
+      blockAcoes.appendChild(btnPrint);
+      block.appendChild(blockAcoes);
+
+      if (isRelatorioPerfilGerado(perfil)) {
+        appendRelatorioPreviewCollapsible(block, perfil);
+      }
+
+      docsWrap.appendChild(block);
+    });
+
+    outer.appendChild(docsWrap);
+
+    var consultaHead = document.createElement("h2");
+    consultaHead.className = "relatorio-consulta-title";
+    consultaHead.textContent = "Consulta rápida";
+    outer.appendChild(consultaHead);
+
+    var consultaAcoes = document.createElement("div");
+    consultaAcoes.className = "relatorio-consulta-acoes";
     var btnCsvPodio = document.createElement("button");
     btnCsvPodio.type = "button";
     btnCsvPodio.id = "btn-export-podio-csv";
@@ -3503,29 +4786,19 @@
     btnCopyMd.className = "pill-btn";
     btnCopyMd.textContent = "Copiar resumo";
     btnCopyMd.title =
-      "Copia um resumo em Markdown (top 3 + vencedoras por prova) para colar em mensagens.";
-    acoes.appendChild(btnGerar);
-    acoes.appendChild(btnPrint);
-    acoes.appendChild(btnCsvPodio);
-    acoes.appendChild(btnCopyMd);
-    outer.appendChild(acoes);
-
-    var oficialHost = document.createElement("div");
-    oficialHost.id = "relatorio-oficial-host";
-    outer.appendChild(oficialHost);
-
-    // Se já foi gerado nesta sessão, re-render mantém visível e atualizado.
-    if (state.relatorioOficialGerado) {
-      renderRelatorioOficial(oficialHost);
-      btnPrint.hidden = false;
-    }
+      "Copia um resumo em Markdown (top 3 + vencedores por prova) para colar em mensagens.";
+    consultaAcoes.appendChild(btnCsvPodio);
+    consultaAcoes.appendChild(btnCopyMd);
+    outer.appendChild(consultaAcoes);
 
     var wrap1 = document.createElement("div");
     wrap1.className = "table-wrap";
     var t1 = document.createElement("table");
     t1.className = "data";
     t1.innerHTML =
-      '<thead><tr><th scope="col">Igreja</th><th scope="col">Ouro</th><th scope="col">Prata</th><th scope="col">Bronze</th><th scope="col">Pts gincana</th></tr></thead>';
+      '<thead><tr><th scope="col">Igreja</th><th scope="col">Ouro</th><th scope="col">Prata</th><th scope="col">Bronze</th><th scope="col">' +
+      (isErUiTheme() ? "Pts medalhas" : "Pts gincana") +
+      "</th></tr></thead>";
     var b1 = document.createElement("tbody");
     state.evento.igrejas.forEach(function (g) {
       var m = out.medalhasPorIgreja[g.id] || { ou: 0, pt: 0, br: 0 };
@@ -3571,6 +4844,42 @@
         });
       });
 
+    host.querySelectorAll(".podio-layout-btn[data-podio-layout]").forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        handlePodioLayoutChange(btn.getAttribute("data-podio-layout"));
+      });
+    });
+
+    host.querySelectorAll("[data-prova-group-action]").forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        var action = btn.getAttribute("data-prova-group-action");
+        var raw = btn.getAttribute("data-group-keys") || "";
+        raw.split(",").forEach(function (key) {
+          key = key.trim();
+          if (!key) return;
+          if (action === "collapse") state.podiumProvaGroupCollapsed[key] = true;
+          else state.podiumProvaGroupCollapsed[key] = false;
+        });
+        renderRelatorios();
+        wireRelatorios();
+        reactivatePanel();
+      });
+    });
+
+    host.querySelectorAll(".podium-prova-head[data-prova-group-toggle]").forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        var key = btn.getAttribute("data-prova-group-toggle");
+        if (!key) return;
+        state.podiumProvaGroupCollapsed[key] = !isPodiumProvaGroupCollapsed(key);
+        renderRelatorios();
+        wireRelatorios();
+        reactivatePanel();
+      });
+    });
+
     host.querySelectorAll("[data-relatorio-cat-action]").forEach(function (btn) {
       btn.addEventListener("click", function (ev) {
         ev.preventDefault();
@@ -3600,35 +4909,52 @@
       });
     });
 
-    // Relatório oficial: gerar (renderiza dentro do host) e imprimir/salvar PDF.
-    var btnGerar = $("#btn-relatorio-oficial-gerar");
-    var btnPrint = $("#btn-relatorio-oficial-print");
-    var oficialHost = $("#relatorio-oficial-host");
-    if (btnGerar && oficialHost) {
-      btnGerar.addEventListener("click", function () {
-        renderRelatorioOficial(oficialHost);
-        state.relatorioOficialGerado = true;
-        if (btnPrint) {
-          btnPrint.hidden = false;
-          try {
-            btnPrint.focus();
-          } catch (_e) {
-            /* foco best-effort; alguns navegadores recusam focar botões recém-revelados */
+    RELATORIO_PERFIS.forEach(function (perfil) {
+      var btnGerar = $("#btn-relatorio-gerar-" + perfil);
+      var btnPrint = $("#btn-relatorio-print-" + perfil);
+      if (btnGerar) {
+        btnGerar.addEventListener("click", function () {
+          state.relatorioOficialGeradoPerfil[perfil] = true;
+          state.relatorioPreviewCollapsed[perfil] = false;
+          renderRelatorios();
+          wireRelatorios();
+          reactivatePanel();
+          var btnPrintAfter = $("#btn-relatorio-print-" + perfil);
+          if (btnPrintAfter) {
+            btnPrintAfter.hidden = false;
+            try {
+              btnPrintAfter.focus();
+            } catch (_e) {
+              /* foco best-effort */
+            }
           }
-        }
-        showFeedback(
-          "Relatório oficial gerado. Use «Imprimir / Salvar PDF» para arquivar.",
-          "info"
-        );
+          showFeedback(
+            R.relatorioPerfilLabel(perfil) + " gerado. Use «Imprimir / Salvar PDF» para arquivar.",
+            "info"
+          );
+        });
+      }
+      if (btnPrint) {
+        btnPrint.addEventListener("click", function () {
+          imprimirRelatorioOficial(perfil);
+        });
+      }
+    });
+
+    host
+      .querySelectorAll(".config-section-head[data-relatorio-preview-toggle]")
+      .forEach(function (btn) {
+        btn.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          var perfil = btn.getAttribute("data-relatorio-preview-toggle");
+          if (!perfil) return;
+          perfil = R.normalizePerfil(perfil);
+          state.relatorioPreviewCollapsed[perfil] = !isRelatorioPreviewCollapsed(perfil);
+          renderRelatorios();
+          wireRelatorios();
+          reactivatePanel();
+        });
       });
-    }
-    if (btnPrint) {
-      btnPrint.addEventListener("click", function () {
-        if (typeof window !== "undefined" && typeof window.print === "function") {
-          window.print();
-        }
-      });
-    }
 
     var btnCsvPodio = $("#btn-export-podio-csv");
     if (btnCsvPodio) {
@@ -3651,7 +4977,7 @@
    * (sem `innerHTML` com input do usuário) para evitar XSS via nomes de
    * igrejas/provas vindos de JSON importado.
    */
-  function renderRelatorioOficial(host) {
+  function renderRelatorioOficial(host, opts) {
     if (!host) return;
     host.innerHTML = "";
     var ev = state.evento;
@@ -3672,14 +4998,17 @@
       return;
     }
 
-    function el(tag, opts) {
+    var perfil = R.normalizePerfil(opts && opts.perfil);
+    var blocos = R.getRelatorioBlocos(perfil);
+
+    function el(tag, elOpts) {
       var node = document.createElement(tag);
-      if (opts) {
-        if (opts.className) node.className = opts.className;
-        if (opts.text != null) node.textContent = String(opts.text);
-        if (opts.attrs) {
-          Object.keys(opts.attrs).forEach(function (k) {
-            node.setAttribute(k, opts.attrs[k]);
+      if (elOpts) {
+        if (elOpts.className) node.className = elOpts.className;
+        if (elOpts.text != null) node.textContent = String(elOpts.text);
+        if (elOpts.attrs) {
+          Object.keys(elOpts.attrs).forEach(function (k) {
+            node.setAttribute(k, elOpts.attrs[k]);
           });
         }
       }
@@ -3739,17 +5068,61 @@
       tableWrap.appendChild(table);
       parent.appendChild(tableWrap);
     }
+    function appendBlocoPodio(parent) {
+      parent.appendChild(el("h3", { text: "Pódio por prova" }));
+      var algumaProva = false;
+      PROVA_TIPO_ORDER.forEach(function (tipo) {
+        var grouped = groupProvasByCategoria(tipo);
+        var listTipo = [];
+        grouped.order.forEach(function (catKey) {
+          var list = grouped.groups[catKey] || [];
+          list.forEach(function (p) {
+            listTipo.push({ catKey: catKey, p: p });
+          });
+        });
+        if (!listTipo.length) return;
+        algumaProva = true;
+        parent.appendChild(el("h4", { text: labelProvaTipo(tipo) }));
+        listTipo.forEach(function (item) {
+          var p = item.p;
+          var card = el("div", {
+            className: "relatorio-oficial__prova",
+            attrs: { "data-prova": p.id },
+          });
+          card.appendChild(
+            el("p", {
+              className: "relatorio-oficial__prova-titulo",
+              text: labelCategoria(item.catKey) + " — " + nomeProvaExibicao(p),
+            })
+          );
+          var ol = el("ol", { className: "relatorio-oficial__podio" });
+          var places = (dados.podium && dados.podium[p.id]) || {};
+          ["ou", "pt", "br"].forEach(function (mk) {
+            var ent = places[mk] || {};
+            var li = document.createElement("li");
+            li.setAttribute("data-medalha", mk);
+            var nome;
+            if (ent.igrejaId) nome = igrejaNome(ent.igrejaId) || "—";
+            else if (ent.nomeLivre && String(ent.nomeLivre).trim())
+              nome = String(ent.nomeLivre).trim();
+            else nome = "—";
+            var comp = ent.competidor ? String(ent.competidor).trim() : "";
+            var txt = medalLabel(mk) + " — " + nome;
+            if (comp) txt += " (" + comp + ")";
+            li.textContent = txt;
+            ol.appendChild(li);
+          });
+          card.appendChild(ol);
+          parent.appendChild(card);
+        });
+      });
+      if (!algumaProva) {
+        parent.appendChild(el("p", { text: "Nenhuma prova cadastrada." }));
+      }
+    }
 
     var meta = ev.meta || {};
     var schemaVersion = meta.schemaVersion || CURRENT_SCHEMA_VERSION;
-    var slug = meta.slug || "";
-    var horarioInicio = meta.horarioInicio || "";
-    var horarioFim = meta.horarioEncerramento || "";
-    var horarioTxt;
-    if (horarioInicio && horarioFim) horarioTxt = horarioInicio + " — " + horarioFim;
-    else if (horarioInicio) horarioTxt = horarioInicio;
-    else if (horarioFim) horarioTxt = horarioFim;
-    else horarioTxt = "—";
     var temaTexto = isErUiTheme() ? "ER" : "MR";
     var agora = new Date();
     var agoraTxt = fmtDataHora(agora);
@@ -3768,312 +5141,328 @@
       totalPt += Number(m.pt || 0);
       totalBr += Number(m.br || 0);
     });
-    var avisosPodio = E.avisosPodiumDuplicado(dados.podium || {});
+    var avisosPodio = avisosPodiumIgrejaForaDaLista(ev, dados).concat(
+      E.avisosPodiumDuplicado(dados.podium || {})
+    );
+    if (EM && typeof EM.avisosPodiumEscritaMinimo === "function") {
+      avisosPodio = avisosPodio.concat(EM.avisosPodiumEscritaMinimo(ev, dados));
+    }
     var orphans = findProjetoOrphanRefs({ evento: ev, dados: dados });
 
     var doc = el("section", {
       className: "relatorio-oficial",
-      attrs: { "aria-label": "Relatório oficial" },
+      attrs: {
+        "aria-label": "Relatório oficial",
+        "data-perfil": perfil,
+      },
     });
 
-    // 1) Capa
-    var blocoCapa = el("section", {
-      className: "relatorio-oficial__bloco relatorio-oficial__capa",
-      attrs: { "data-bloco": "capa" },
-    });
-    blocoCapa.appendChild(
-      el("p", { className: "relatorio-oficial__eyebrow", text: "Pontuação Conclave" })
-    );
-    blocoCapa.appendChild(
-      el("h2", { className: "relatorio-oficial__titulo", text: "Relatório oficial" })
-    );
-    blocoCapa.appendChild(
-      el("p", { className: "relatorio-oficial__evento", text: meta.nome || "—" })
-    );
-    var dlMeta = el("dl", { className: "relatorio-oficial__meta" });
-    defRow(dlMeta, "Slug", slug);
-    defRow(dlMeta, "Data", meta.data || "");
-    defRow(dlMeta, "Horário", horarioTxt);
-    defRow(dlMeta, "Tema", temaTexto);
-    defRow(dlMeta, "Schema", "v" + schemaVersion);
-    defRow(dlMeta, "Gerado em", agoraTxt);
-    blocoCapa.appendChild(dlMeta);
-    doc.appendChild(blocoCapa);
-
-    // 2) Sumário executivo
-    var blocoSumario = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "sumario" },
-    });
-    blocoSumario.appendChild(el("h3", { text: "Sumário executivo" }));
-    var sumarioUl = el("ul", { className: "relatorio-oficial__sumario" });
-    function podiumLi(label, det) {
-      var li = document.createElement("li");
-      var strong = document.createElement("strong");
-      strong.textContent = label + ":";
-      li.appendChild(strong);
-      if (det) {
-        li.appendChild(document.createTextNode(" " + det.igreja + " (" + fmt(det.total) + " pts)"));
-      } else {
-        li.appendChild(document.createTextNode(" —"));
-      }
-      return li;
-    }
-    function infoLi(label, valor) {
-      var li = document.createElement("li");
-      var strong = document.createElement("strong");
-      strong.textContent = label + ":";
-      li.appendChild(strong);
-      li.appendChild(document.createTextNode(" " + valor));
-      return li;
-    }
-    sumarioUl.appendChild(podiumLi("Vencedora", top1));
-    sumarioUl.appendChild(podiumLi("2º lugar", top2));
-    sumarioUl.appendChild(podiumLi("3º lugar", top3));
-    var nIgrejas = Array.isArray(ev.igrejas) ? ev.igrejas.length : 0;
-    var nProvas = Array.isArray(ev.provas) ? ev.provas.length : 0;
-    sumarioUl.appendChild(infoLi("Igrejas participantes", String(nIgrejas)));
-    sumarioUl.appendChild(infoLi("Provas", String(nProvas)));
-    sumarioUl.appendChild(
-      infoLi(
-        "Medalhas distribuídas",
-        "ouro " + totalOu + " · prata " + totalPt + " · bronze " + totalBr
-      )
-    );
-    blocoSumario.appendChild(sumarioUl);
-    doc.appendChild(blocoSumario);
-
-    // 3) Classificação geral
-    var blocoClass = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "classificacao" },
-    });
-    blocoClass.appendChild(el("h3", { text: "Classificação geral" }));
-    var classRows = ord.map(function (r) {
-      return [
-        String(r.posicao),
-        r.igreja,
-        fmt(r.participacao),
-        fmt(r.punicoes),
-        fmt(r.gincana),
-        fmt(r.pontuacao_extra),
-        fmt(r.total),
-      ];
-    });
-    var top3Classes = ord.map(function (r) {
-      var pos = Number(r.posicao);
-      if (pos === 1) return "relatorio-oficial__top3 relatorio-oficial__top3--1";
-      if (pos === 2) return "relatorio-oficial__top3 relatorio-oficial__top3--2";
-      if (pos === 3) return "relatorio-oficial__top3 relatorio-oficial__top3--3";
-      return "";
-    });
-    appendTabela(
-      blocoClass,
-      ["Posição", "Igreja", "Participação", "Punições", "Gincana", "Extra", "Total"],
-      classRows,
-      top3Classes
-    );
-    doc.appendChild(blocoClass);
-
-    // 4) Medalhas por igreja
-    var blocoMed = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "medalhas" },
-    });
-    blocoMed.appendChild(el("h3", { text: "Medalhas por igreja" }));
-    var medRows = (ev.igrejas || []).map(function (g) {
-      var m = out.medalhasPorIgreja[g.id] || { ou: 0, pt: 0, br: 0 };
-      var gg = out.gincanaPorIgreja[g.id] || 0;
-      return [g.nome || "—", String(m.ou), String(m.pt), String(m.br), fmt(gg)];
-    });
-    appendTabela(blocoMed, ["Igreja", "Ouro", "Prata", "Bronze", "Pts gincana"], medRows);
-    doc.appendChild(blocoMed);
-
-    // 5) Pódio por prova (agrupado por categoria — reaproveita groupProvasByCategoria)
-    var blocoPodio = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "podio" },
-    });
-    blocoPodio.appendChild(el("h3", { text: "Pódio por prova" }));
-    var algumaProva = false;
-    PROVA_TIPO_ORDER.forEach(function (tipo) {
-      var grouped = groupProvasByCategoria(tipo);
-      var listTipo = [];
-      grouped.order.forEach(function (catKey) {
-        var list = grouped.groups[catKey] || [];
-        list.forEach(function (p) {
-          listTipo.push({ catKey: catKey, p: p });
+    blocos.forEach(function (blocoId) {
+      if (blocoId === "capa") {
+        var blocoCapa = el("section", {
+          className: "relatorio-oficial__bloco relatorio-oficial__capa",
+          attrs: { "data-bloco": "capa" },
         });
-      });
-      if (!listTipo.length) return;
-      algumaProva = true;
-      blocoPodio.appendChild(el("h4", { text: labelProvaTipo(tipo) }));
-      listTipo.forEach(function (item) {
-        var p = item.p;
-        var card = el("div", {
-          className: "relatorio-oficial__prova",
-          attrs: { "data-prova": p.id },
-        });
-        card.appendChild(
-          el("p", {
-            className: "relatorio-oficial__prova-titulo",
-            text:
-              labelCategoria(item.catKey) +
-              " — " +
-              nomeProvaExibicao(p),
+        blocoCapa.appendChild(
+          el("p", { className: "relatorio-oficial__eyebrow", text: "Pontuação Conclave" })
+        );
+        blocoCapa.appendChild(
+          el("h2", {
+            className: "relatorio-oficial__titulo",
+            text: R.buildRelatorioCapaTitulo(perfil),
           })
         );
-        var ol = el("ol", { className: "relatorio-oficial__podio" });
-        var places = (dados.podium && dados.podium[p.id]) || {};
-        ["ou", "pt", "br"].forEach(function (mk) {
-          var ent = places[mk] || {};
-          var li = document.createElement("li");
-          li.setAttribute("data-medalha", mk);
-          var nome;
-          if (ent.igrejaId) nome = igrejaNome(ent.igrejaId) || "—";
-          else if (ent.nomeLivre && String(ent.nomeLivre).trim())
-            nome = String(ent.nomeLivre).trim();
-          else nome = "—";
-          var comp = ent.competidor ? String(ent.competidor).trim() : "";
-          var txt = medalLabel(mk) + " — " + nome;
-          if (comp) txt += " (" + comp + ")";
-          li.textContent = txt;
-          ol.appendChild(li);
+        blocoCapa.appendChild(
+          el("p", { className: "relatorio-oficial__evento", text: meta.nome || "—" })
+        );
+        var dlMeta = el("dl", { className: "relatorio-oficial__meta" });
+        R.buildCapaMetaRows(meta, perfil, agoraTxt, {
+          temaTexto: temaTexto,
+          schemaVersion: schemaVersion,
+        }).forEach(function (row) {
+          var dd = row.dt === "Data" ? formatDataExibicao(row.dd) : row.dd;
+          defRow(dlMeta, row.dt, dd);
         });
-        card.appendChild(ol);
-        blocoPodio.appendChild(card);
-      });
-    });
-    if (!algumaProva) {
-      blocoPodio.appendChild(el("p", { text: "Nenhuma prova cadastrada." }));
-    }
-    doc.appendChild(blocoPodio);
+        blocoCapa.appendChild(dlMeta);
+        doc.appendChild(blocoCapa);
+        return;
+      }
 
-    // 6) Detalhe de participação por igreja
-    var blocoPart = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "participacao" },
-    });
-    blocoPart.appendChild(el("h3", { text: "Detalhe de participação por igreja" }));
-    var labelsPart = [
-      "Igreja",
-      isErUiTheme() ? "Pastor" : "Inscr.",
-      "Pont.",
-      isErUiTheme() ? "Emb. tot." : "MR total",
-      isErUiTheme() ? "Emb. camisa" : "MR camisa",
-      isErUiTheme() ? "Emb. bíblia" : "MR bíblia",
-      "Visit.",
-      "Anim.",
-      "Mau comp.",
-      "Extra",
-    ];
-    var partRows = (ev.igrejas || []).map(function (g) {
-      var row = (dados.participacao && dados.participacao[g.id]) || {};
-      var extra = row.pontuacao_extra != null ? row.pontuacao_extra : row.embaixadas;
-      return [
-        g.nome || "—",
-        row.inscricao ? "Sim" : "Não",
-        row.pontualidade ? "Sim" : "Não",
-        fmt(row.mr_total || 0),
-        fmt(row.mr_camisa || 0),
-        fmt(row.mr_biblia || 0),
-        fmt(row.visitantes || 0),
-        row.animacao ? "Sim" : "Não",
-        row.mau_comportamento ? "Sim" : "Não",
-        fmt(extra || 0),
-      ];
-    });
-    appendTabela(blocoPart, labelsPart, partRows);
-    doc.appendChild(blocoPart);
+      if (blocoId === "sumario") {
+        var blocoSumario = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "sumario" },
+        });
+        blocoSumario.appendChild(el("h3", { text: "Sumário executivo" }));
+        var sumarioUl = el("ul", { className: "relatorio-oficial__sumario" });
+        function podiumLi(label, det) {
+          var li = document.createElement("li");
+          var strong = document.createElement("strong");
+          strong.textContent = label + ":";
+          li.appendChild(strong);
+          if (det) {
+            li.appendChild(
+              document.createTextNode(" " + det.igreja + " (" + fmt(det.total) + " pts)")
+            );
+          } else {
+            li.appendChild(document.createTextNode(" —"));
+          }
+          return li;
+        }
+        function infoLi(label, valor) {
+          var li = document.createElement("li");
+          var strong = document.createElement("strong");
+          strong.textContent = label + ":";
+          li.appendChild(strong);
+          li.appendChild(document.createTextNode(" " + valor));
+          return li;
+        }
+        sumarioUl.appendChild(podiumLi("Vencedora", top1));
+        sumarioUl.appendChild(podiumLi("2º lugar", top2));
+        sumarioUl.appendChild(podiumLi("3º lugar", top3));
+        var nIgrejas = Array.isArray(ev.igrejas) ? ev.igrejas.length : 0;
+        var nProvas = Array.isArray(ev.provas) ? ev.provas.length : 0;
+        sumarioUl.appendChild(infoLi("Igrejas participantes", String(nIgrejas)));
+        sumarioUl.appendChild(infoLi("Provas", String(nProvas)));
+        sumarioUl.appendChild(
+          infoLi(
+            "Medalhas distribuídas",
+            "ouro " + totalOu + " · prata " + totalPt + " · bronze " + totalBr
+          )
+        );
+        blocoSumario.appendChild(sumarioUl);
+        doc.appendChild(blocoSumario);
+        return;
+      }
 
-    // 7) Avisos
-    var blocoAvisos = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "avisos" },
+      if (blocoId === "classificacao") {
+        var blocoClass = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "classificacao" },
+        });
+        blocoClass.appendChild(el("h3", { text: "Classificação geral" }));
+        var classRows = ord.map(function (r) {
+          return [
+            String(r.posicao),
+            r.igreja,
+            fmt(r.participacao),
+            fmt(r.punicoes),
+            fmt(r.gincana),
+            fmt(r.pontuacao_extra),
+            fmt(r.total),
+          ];
+        });
+        var top3Classes = ord.map(function (r) {
+          var pos = Number(r.posicao);
+          if (pos === 1) return "relatorio-oficial__top3 relatorio-oficial__top3--1";
+          if (pos === 2) return "relatorio-oficial__top3 relatorio-oficial__top3--2";
+          if (pos === 3) return "relatorio-oficial__top3 relatorio-oficial__top3--3";
+          return "";
+        });
+        appendTabela(
+          blocoClass,
+          ["Posição", "Igreja", "Participação", "Punições", "Gincana", "Extra", "Total"],
+          classRows,
+          top3Classes
+        );
+        doc.appendChild(blocoClass);
+        return;
+      }
+
+      if (blocoId === "medalhas") {
+        var blocoMed = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "medalhas" },
+        });
+        blocoMed.appendChild(el("h3", { text: "Medalhas por igreja" }));
+        var medRows = (ev.igrejas || []).map(function (g) {
+          var m = out.medalhasPorIgreja[g.id] || { ou: 0, pt: 0, br: 0 };
+          var gg = out.gincanaPorIgreja[g.id] || 0;
+          return [g.nome || "—", String(m.ou), String(m.pt), String(m.br), fmt(gg)];
+        });
+        appendTabela(
+          blocoMed,
+          ["Igreja", "Ouro", "Prata", "Bronze", isErUiTheme() ? "Pts medalhas" : "Pts gincana"],
+          medRows
+        );
+        doc.appendChild(blocoMed);
+        return;
+      }
+
+      if (blocoId === "podio") {
+        var blocoPodio = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "podio" },
+        });
+        appendBlocoPodio(blocoPodio);
+        doc.appendChild(blocoPodio);
+        return;
+      }
+
+      if (blocoId === "participacao") {
+        var blocoPart = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "participacao" },
+        });
+        blocoPart.appendChild(el("h3", { text: "Detalhe de participação por igreja" }));
+        var labelsPart = [
+          "Igreja",
+          "Inscr.",
+          "Pont.",
+          isErUiTheme() ? "Presentes" : "MR total",
+          isErUiTheme() ? "Camisa" : "MR camisa",
+          isErUiTheme() ? "Bíblia" : "MR bíblia",
+          "Visit.",
+          isErUiTheme() ? "Grito" : "Anim.",
+          "Mau comp.",
+          isErUiTheme() ? "Extra (CER/pastor)" : "Extra",
+        ];
+        var partRows = (ev.igrejas || []).map(function (g) {
+          var row = (dados.participacao && dados.participacao[g.id]) || {};
+          var extra = row.pontuacao_extra != null ? row.pontuacao_extra : row.embaixadas;
+          return [
+            g.nome || "—",
+            row.inscricao ? "Sim" : "Não",
+            row.pontualidade ? "Sim" : "Não",
+            fmt(row.mr_total || 0),
+            fmt(row.mr_camisa || 0),
+            fmt(row.mr_biblia || 0),
+            fmt(row.visitantes || 0),
+            row.animacao ? "Sim" : "Não",
+            row.mau_comportamento ? "Sim" : "Não",
+            fmt(extra || 0),
+          ];
+        });
+        appendTabela(blocoPart, labelsPart, partRows);
+        doc.appendChild(blocoPart);
+        return;
+      }
+
+      if (blocoId === "avisos") {
+        var blocoAvisos = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "avisos" },
+        });
+        blocoAvisos.appendChild(el("h3", { text: "Avisos e inconsistências" }));
+        var todosAvisos = avisosPodio.concat(orphans);
+        if (!todosAvisos.length) {
+          blocoAvisos.appendChild(el("p", { text: "Nenhum aviso." }));
+        } else {
+          var ulAv = document.createElement("ul");
+          todosAvisos.forEach(function (msg) {
+            var li = document.createElement("li");
+            li.textContent = msg;
+            ulAv.appendChild(li);
+          });
+          blocoAvisos.appendChild(ulAv);
+        }
+        doc.appendChild(blocoAvisos);
+        return;
+      }
+
+      if (blocoId === "criterios") {
+        var blocoCrit = el("section", {
+          className: "relatorio-oficial__bloco",
+          attrs: { "data-bloco": "criterios" },
+        });
+        blocoCrit.appendChild(el("h3", { text: "Critérios usados" }));
+        blocoCrit.appendChild(el("h4", { text: "Pesos" }));
+        var dlPesos = el("dl", { className: "relatorio-oficial__defs" });
+        var pz = ev.pesos || {};
+        defRow(dlPesos, "Inscrição (pts se marcado)", fmt(pz.inscricao || 0));
+        defRow(dlPesos, "Pontualidade (pts se marcado)", fmt(pz.pontualidade || 0));
+        defRow(
+          dlPesos,
+          isErUiTheme()
+            ? "Uniforme (pts se camisa = presentes)"
+            : "Uniforme (pts se MR camisa = MR tot.)",
+          fmt(pz.uniforme || 0)
+        );
+        defRow(
+          dlPesos,
+          isErUiTheme()
+            ? "Bíblia (pts se bíblia = presentes)"
+            : "Bíblia (pts se MR bíblia = MR tot.)",
+          fmt(pz.biblia || 0)
+        );
+        defRow(dlPesos, "Visitante (pts por visitante)", fmt(pz.visitante || 0));
+        defRow(
+          dlPesos,
+          isErUiTheme() ? "Grito de guerra (pts se marcado)" : "Animação (pts se marcado)",
+          fmt(pz.animacao || 0)
+        );
+        defRow(dlPesos, "Mau comportamento (pts se marcado)", fmt(pz.mau_comportamento || 0));
+        blocoCrit.appendChild(dlPesos);
+
+        blocoCrit.appendChild(el("h4", { text: "Valores de medalha" }));
+        var dlMed = el("dl", { className: "relatorio-oficial__defs" });
+        var medConf = ev.medalhas || {};
+        defRow(dlMed, "Ouro", fmt(medConf.ou || 0));
+        defRow(dlMed, "Prata", fmt(medConf.pt || 0));
+        defRow(dlMed, "Bronze", fmt(medConf.br || 0));
+        blocoCrit.appendChild(dlMed);
+
+        blocoCrit.appendChild(el("h4", { text: "Ordem de desempate" }));
+        var olDes = document.createElement("ol");
+        var ordemDesempate = isErUiTheme()
+          ? [
+              "Medalhas de ouro (desc).",
+              "Medalhas de prata (desc).",
+              "Pontos em Debate de Versículos.",
+              "Pontos em Conhecimentos Gerais da Organização.",
+              "Nome da igreja (ordenação pt-BR).",
+            ]
+          : [
+              "Medalhas de ouro (desc).",
+              "Medalhas de prata (desc).",
+              "Pontos em Conhecimentos Gerais da Bíblia.",
+              "Pontos em Debate de Versículos.",
+              "Pontos em Conhecimentos Gerais da Organização.",
+              "Nome da igreja (ordenação pt-BR).",
+            ];
+        ordemDesempate.forEach(function (txt) {
+          var li = document.createElement("li");
+          li.textContent = txt;
+          olDes.appendChild(li);
+        });
+        blocoCrit.appendChild(olDes);
+        doc.appendChild(blocoCrit);
+        return;
+      }
+
+      if (blocoId === "encerramento") {
+        var blocoEnc = el("section", {
+          className: "relatorio-oficial__bloco relatorio-oficial__encerramento",
+          attrs: { "data-bloco": "encerramento" },
+        });
+        blocoEnc.appendChild(el("h3", { text: "Encerramento" }));
+        blocoEnc.appendChild(el("p", { className: "relatorio-oficial__ata", text: R.TEXTO_ATA }));
+        var assGrid = el("div", { className: "relatorio-oficial__assinaturas" });
+        ["Comissão de Apuração", "Coordenação", "Data"].forEach(function (rotulo) {
+          var cell = el("div", { className: "relatorio-oficial__assinatura" });
+          cell.appendChild(el("span", { className: "relatorio-oficial__assinatura-linha" }));
+          cell.appendChild(
+            el("span", { className: "relatorio-oficial__assinatura-rotulo", text: rotulo })
+          );
+          assGrid.appendChild(cell);
+        });
+        blocoEnc.appendChild(assGrid);
+        var rodapeEnc = el("footer", { className: "relatorio-oficial__rodape" });
+        rodapeEnc.appendChild(
+          el("p", {
+            text: R.buildRodapeTexto(meta, agoraTxt, perfil, schemaVersion),
+          })
+        );
+        blocoEnc.appendChild(rodapeEnc);
+        doc.appendChild(blocoEnc);
+        return;
+      }
+
+      if (blocoId === "rodape") {
+        /* Rodapé já incluso no bloco de encerramento (evita página órfã no PDF). */
+        return;
+      }
     });
-    blocoAvisos.appendChild(el("h3", { text: "Avisos e inconsistências" }));
-    var todosAvisos = avisosPodio.concat(orphans);
-    if (!todosAvisos.length) {
-      blocoAvisos.appendChild(el("p", { text: "Nenhum aviso." }));
-    } else {
-      var ulAv = document.createElement("ul");
-      todosAvisos.forEach(function (msg) {
-        var li = document.createElement("li");
-        li.textContent = msg;
-        ulAv.appendChild(li);
-      });
-      blocoAvisos.appendChild(ulAv);
-    }
-    doc.appendChild(blocoAvisos);
-
-    // 8) Apêndice — critérios
-    var blocoCrit = el("section", {
-      className: "relatorio-oficial__bloco",
-      attrs: { "data-bloco": "criterios" },
-    });
-    blocoCrit.appendChild(el("h3", { text: "Critérios usados" }));
-    blocoCrit.appendChild(el("h4", { text: "Pesos" }));
-    var dlPesos = el("dl", { className: "relatorio-oficial__defs" });
-    var pz = ev.pesos || {};
-    defRow(
-      dlPesos,
-      isErUiTheme() ? "Pastor (pts se marcado)" : "Inscrição (pts se marcado)",
-      fmt(pz.inscricao || 0)
-    );
-    defRow(dlPesos, "Pontualidade (pts se marcado)", fmt(pz.pontualidade || 0));
-    defRow(
-      dlPesos,
-      isErUiTheme()
-        ? "Uniforme (pts se emb. camisa = emb. tot.)"
-        : "Uniforme (pts se MR camisa = MR tot.)",
-      fmt(pz.uniforme || 0)
-    );
-    defRow(
-      dlPesos,
-      isErUiTheme()
-        ? "Bíblia (pts se emb. bíblia = emb. tot.)"
-        : "Bíblia (pts se MR bíblia = MR tot.)",
-      fmt(pz.biblia || 0)
-    );
-    defRow(dlPesos, "Visitante (pts por visitante)", fmt(pz.visitante || 0));
-    defRow(dlPesos, "Animação (pts se marcado)", fmt(pz.animacao || 0));
-    defRow(dlPesos, "Mau comportamento (pts se marcado)", fmt(pz.mau_comportamento || 0));
-    blocoCrit.appendChild(dlPesos);
-
-    blocoCrit.appendChild(el("h4", { text: "Valores de medalha" }));
-    var dlMed = el("dl", { className: "relatorio-oficial__defs" });
-    var medConf = ev.medalhas || {};
-    defRow(dlMed, "Ouro", fmt(medConf.ou || 0));
-    defRow(dlMed, "Prata", fmt(medConf.pt || 0));
-    defRow(dlMed, "Bronze", fmt(medConf.br || 0));
-    blocoCrit.appendChild(dlMed);
-
-    blocoCrit.appendChild(el("h4", { text: "Ordem de desempate" }));
-    var olDes = document.createElement("ol");
-    [
-      "Medalhas de ouro (desc).",
-      "Medalhas de prata (desc).",
-      "Pontos em Conhecimentos Gerais da Bíblia.",
-      "Pontos em Debate de Versículos.",
-      "Pontos em Conhecimentos Gerais da Organização.",
-      "Nome da igreja (ordenação pt-BR).",
-    ].forEach(function (txt) {
-      var li = document.createElement("li");
-      li.textContent = txt;
-      olDes.appendChild(li);
-    });
-    blocoCrit.appendChild(olDes);
-    doc.appendChild(blocoCrit);
-
-    // 9) Rodapé
-    var rodape = el("footer", { className: "relatorio-oficial__rodape" });
-    rodape.appendChild(
-      el("p", {
-        text:
-          "Gerado em " + agoraTxt + " · slug: " + (slug || "—") + " · schema: v" + schemaVersion,
-      })
-    );
-    doc.appendChild(rodape);
 
     host.appendChild(doc);
   }
@@ -4093,6 +5482,15 @@
       }
       inp.addEventListener("change", sync);
       if (inp.type === "number") inp.addEventListener("input", sync);
+    });
+    root.querySelectorAll("#part-conservacao-templo").forEach(function (chk) {
+      chk.addEventListener("change", function () {
+        if (!state.dados) return;
+        if (chk.checked) state.dados.conservacaoTemploDescumprida = true;
+        else delete state.dados.conservacaoTemploDescumprida;
+        scheduleSave();
+        refreshDerivedPanels();
+      });
     });
     root.querySelectorAll("#panel-participacao button.part-bool-all").forEach(function (btn) {
       btn.addEventListener("click", function (ev) {
@@ -4115,6 +5513,57 @@
 
   function wirePodio(root) {
     root = root || document;
+    root
+      .querySelectorAll("#panel-podio .podio-layout-btn[data-podio-layout]")
+      .forEach(function (btn) {
+        btn.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          handlePodioLayoutChange(btn.getAttribute("data-podio-layout"));
+        });
+      });
+    root.querySelectorAll("#panel-podio #podio-filter-status").forEach(function (el) {
+      el.addEventListener("change", function () {
+        handlePodioFilterChange({ status: el.value });
+      });
+    });
+    root.querySelectorAll("#panel-podio #podio-filter-categoria").forEach(function (el) {
+      el.addEventListener("change", function () {
+        handlePodioFilterChange({ categoriaId: el.value });
+      });
+    });
+    root.querySelectorAll("#panel-podio #podio-filter-igreja").forEach(function (el) {
+      el.addEventListener("change", function () {
+        handlePodioFilterChange({ igrejaId: el.value });
+      });
+    });
+    root.querySelectorAll("#panel-podio #podio-filter-q").forEach(function (el) {
+      el.addEventListener("input", function () {
+        if (podioSearchDebounce) clearTimeout(podioSearchDebounce);
+        var value = el.value;
+        podioSearchDebounce = setTimeout(function () {
+          podioSearchDebounce = null;
+          handlePodioFilterChange({ q: value });
+        }, 200);
+      });
+      el.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") ev.preventDefault();
+      });
+    });
+    root.querySelectorAll("#panel-podio input[data-podio-filter-toggle]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        var key = el.getAttribute("data-podio-filter-toggle");
+        if (!key) return;
+        var patch = {};
+        patch[key] = el.checked;
+        handlePodioFilterChange(patch);
+      });
+    });
+    root.querySelectorAll("#panel-podio #podio-filter-clear").forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        clearPodioFilters();
+      });
+    });
     root.querySelectorAll("#panel-podio .podium-col-btn[data-cat-action]").forEach(function (btn) {
       btn.addEventListener("click", function (ev) {
         ev.preventDefault();
@@ -4124,13 +5573,44 @@
           id = id.trim();
           if (!id) return;
           if (action === "collapse") state.podiumCollapsed[id] = true;
-          else delete state.podiumCollapsed[id];
+          else state.podiumCollapsed[id] = false;
         });
         renderPodio();
         wirePodio();
         reactivatePanel();
       });
     });
+    root
+      .querySelectorAll("#panel-podio .podium-col-btn[data-prova-group-action]")
+      .forEach(function (btn) {
+        btn.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          var action = btn.getAttribute("data-prova-group-action");
+          var raw = btn.getAttribute("data-group-keys") || "";
+          raw.split(",").forEach(function (key) {
+            key = key.trim();
+            if (!key) return;
+            if (action === "collapse") state.podiumProvaGroupCollapsed[key] = true;
+            else state.podiumProvaGroupCollapsed[key] = false;
+          });
+          renderPodio();
+          wirePodio();
+          reactivatePanel();
+        });
+      });
+    root
+      .querySelectorAll("#panel-podio .podium-prova-head[data-prova-group-toggle]")
+      .forEach(function (btn) {
+        btn.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          var key = btn.getAttribute("data-prova-group-toggle");
+          if (!key) return;
+          state.podiumProvaGroupCollapsed[key] = !isPodiumProvaGroupCollapsed(key);
+          renderPodio();
+          wirePodio();
+          reactivatePanel();
+        });
+      });
     root
       .querySelectorAll("#panel-podio .prova-card-head[data-prova-toggle]")
       .forEach(function (btn) {
@@ -4184,6 +5664,1023 @@
     refreshDerivedPanels();
   }
 
+  function renderEscrita() {
+    var host = $("#panel-escrita");
+    if (!host) return;
+    host.innerHTML = "";
+    if (!state.evento || !state.dados) {
+      host.textContent = "Carregue um evento para registrar métricas da prova escrita.";
+      return;
+    }
+    ensureMetricasEscrita();
+    var escritaList = provasEscrita(state.evento);
+    if (!escritaList.length) {
+      host.innerHTML =
+        '<p class="escrita-empty-hint">Nenhuma prova com tipo «Escrita» na configuração. Adicione ou altere o tipo de uma prova em Configuração.</p>';
+      return;
+    }
+    var prova = getEscritaProvaAtual();
+    if (prova) state.escritaProvaId = prova.id;
+    var participantes =
+      (state.dados.metricasEscrita && prova && state.dados.metricasEscrita[prova.id]) || [];
+    var resumo = EM ? EM.resumoProva(participantes) : { count: 0, media: 0, max: 0 };
+
+    var head = document.createElement("div");
+    head.className = "escrita-panel-head";
+
+    var labSel = document.createElement("label");
+    labSel.innerHTML = "<span>Prova</span>";
+    var sel = document.createElement("select");
+    sel.id = "escrita-prova-select";
+    sel.className = "escrita-prova-select";
+    var grouped = groupProvasByCategoria("escrita");
+    grouped.order.forEach(function (catKey) {
+      var og = document.createElement("optgroup");
+      og.label = labelCategoria(catKey);
+      (grouped.groups[catKey] || []).forEach(function (p) {
+        var opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.titulo || p.id;
+        if (prova && p.id === prova.id) opt.selected = true;
+        og.appendChild(opt);
+      });
+      sel.appendChild(og);
+    });
+    labSel.appendChild(sel);
+
+    var btnAdd = document.createElement("button");
+    btnAdd.type = "button";
+    btnAdd.className = "pill-btn pill-btn--primary";
+    btnAdd.id = "btn-escrita-add";
+    btnAdd.textContent = "Adicionar participante";
+
+    var btnCsv = document.createElement("button");
+    btnCsv.type = "button";
+    btnCsv.className = "pill-btn";
+    btnCsv.id = "btn-export-escrita-csv";
+    btnCsv.textContent = "Exportar CSV";
+
+    var chips = document.createElement("div");
+    chips.className = "escrita-summary-chips";
+    chips.innerHTML =
+      '<span class="escrita-chip"><span>Participantes</span> <strong>' +
+      escapeHtml(String(resumo.count)) +
+      "</strong></span>" +
+      '<span class="escrita-chip"><span>Média</span> <strong>' +
+      escapeHtml(resumo.count ? resumo.media.toFixed(1) : "—") +
+      "</strong></span>" +
+      '<span class="escrita-chip"><span>Maior nota</span> <strong>' +
+      escapeHtml(resumo.count ? String(resumo.max) : "—") +
+      "</strong></span>";
+
+    head.appendChild(labSel);
+    head.appendChild(btnAdd);
+    head.appendChild(btnCsv);
+    head.appendChild(chips);
+    host.appendChild(head);
+
+    if (prova && prova.escritaTotalQuestoes) {
+      var hint = document.createElement("p");
+      hint.className = "escrita-empty-hint";
+      hint.textContent =
+        "Total de questões configurado: " +
+        prova.escritaTotalQuestoes +
+        ". As métricas não alteram a classificação geral — use o pódio para medalhas.";
+      host.appendChild(hint);
+    } else {
+      var hint2 = document.createElement("p");
+      hint2.className = "escrita-empty-hint";
+      hint2.textContent =
+        "Defina o total de questões em Configuração para ver percentuais e histograma. Estas métricas são analíticas e não alteram a classificação.";
+      host.appendChild(hint2);
+    }
+
+    var wrap = document.createElement("div");
+    wrap.className = "table-wrap escrita-table-wrap";
+    var table = document.createElement("table");
+    table.className = "data escrita-table";
+    table.innerHTML =
+      '<thead><tr><th scope="col">#</th><th scope="col">Nome</th><th scope="col">Igreja</th><th scope="col">Acertos</th><th scope="col" class="escrita-col-acoes"><span class="visually-hidden">Ações</span></th></tr></thead>';
+    var tbody = document.createElement("tbody");
+    tbody.id = "escrita-part-tbody";
+    var nomeMap = buildIgrejaNomeMap(state.evento);
+    participantes.forEach(function (p, idx) {
+      var tr = document.createElement("tr");
+      tr.setAttribute("data-escrita-id", p.id);
+      var igrejaTxt = nomeMap[p.igrejaId] || "";
+      tr.innerHTML =
+        "<td>" +
+        escapeHtml(String(idx + 1)) +
+        "</td>" +
+        '<td><input type="text" data-escrita-id="' +
+        escapeHtml(p.id) +
+        '" data-f="nome" value="' +
+        escapeHtml(p.nome || "") +
+        '" aria-label="Nome do participante" /></td>' +
+        '<td><input type="text" list="podio-igreja-list" data-escrita-id="' +
+        escapeHtml(p.id) +
+        '" data-f="igreja" value="' +
+        escapeHtml(igrejaTxt) +
+        '" aria-label="Igreja" /></td>' +
+        '<td><input type="number" min="0" step="1" data-escrita-id="' +
+        escapeHtml(p.id) +
+        '" data-f="acertos" value="' +
+        escapeHtml(String(p.acertos != null ? p.acertos : 0)) +
+        '" aria-label="Acertos" /></td>' +
+        '<td class="escrita-col-acoes"><button type="button" class="config-danger-btn" data-escrita-del="' +
+        escapeHtml(p.id) +
+        '">Remover</button></td>';
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    host.appendChild(wrap);
+
+    var chartsHost = document.createElement("div");
+    chartsHost.id = "escrita-charts-host";
+    host.appendChild(chartsHost);
+
+    refreshEscritaCharts();
+  }
+
+  function findEscritaParticipante(provaId, partId) {
+    var list = (state.dados.metricasEscrita && state.dados.metricasEscrita[provaId]) || [];
+    return list.find(function (p) {
+      return p.id === partId;
+    });
+  }
+
+  function onEscritaFieldChange(inp) {
+    var prova = getEscritaProvaAtual();
+    if (!prova || !state.dados) return;
+    var partId = inp.getAttribute("data-escrita-id");
+    var field = inp.getAttribute("data-f");
+    if (!partId || !field) return;
+    var entry = findEscritaParticipante(prova.id, partId);
+    if (!entry) return;
+    if (field === "nome") {
+      entry.nome = inp.value;
+    } else if (field === "igreja") {
+      var nome = inp.value.trim();
+      var gid = resolveIgrejaIdFromNome(nome);
+      if (gid) {
+        entry.igrejaId = gid;
+        var canonical = igrejaNome(gid);
+        if (canonical && canonical !== inp.value) inp.value = canonical;
+      }
+    } else if (field === "acertos") {
+      entry.acertos = EM ? EM.normalizeAcertos(inp.value) : Math.max(0, Number(inp.value) || 0);
+      if (EM && String(entry.acertos) !== inp.value) inp.value = String(entry.acertos);
+    }
+    scheduleSave();
+    scheduleEscritaChartsRefresh();
+    updateEscritaSummaryChips();
+  }
+
+  function updateEscritaSummaryChips() {
+    var prova = getEscritaProvaAtual();
+    if (!prova || !EM) return;
+    var list = (state.dados.metricasEscrita && state.dados.metricasEscrita[prova.id]) || [];
+    var resumo = EM.resumoProva(list);
+    var chips = document.querySelector(".escrita-summary-chips");
+    if (!chips) return;
+    chips.innerHTML =
+      '<span class="escrita-chip"><span>Participantes</span> <strong>' +
+      escapeHtml(String(resumo.count)) +
+      "</strong></span>" +
+      '<span class="escrita-chip"><span>Média</span> <strong>' +
+      escapeHtml(resumo.count ? resumo.media.toFixed(1) : "—") +
+      "</strong></span>" +
+      '<span class="escrita-chip"><span>Maior nota</span> <strong>' +
+      escapeHtml(resumo.count ? String(resumo.max) : "—") +
+      "</strong></span>";
+  }
+
+  function wireEscrita() {
+    var host = $("#panel-escrita");
+    if (!host) return;
+
+    var sel = host.querySelector("#escrita-prova-select");
+    if (sel) {
+      sel.addEventListener("change", function () {
+        state.escritaProvaId = sel.value;
+        renderEscrita();
+        wireEscrita();
+        reactivatePanel();
+      });
+    }
+
+    var btnAdd = host.querySelector("#btn-escrita-add");
+    if (btnAdd) {
+      btnAdd.addEventListener("click", function () {
+        var prova = getEscritaProvaAtual();
+        if (!prova || !state.dados) return;
+        ensureMetricasEscrita();
+        var firstIgreja =
+          state.evento.igrejas && state.evento.igrejas[0] ? state.evento.igrejas[0].id : "";
+        state.dados.metricasEscrita[prova.id].push({
+          id: newEscritaParticipanteId(),
+          nome: "",
+          igrejaId: firstIgreja,
+          acertos: 0,
+        });
+        scheduleSave();
+        renderEscrita();
+        wireEscrita();
+        reactivatePanel();
+      });
+    }
+
+    var btnCsv = host.querySelector("#btn-export-escrita-csv");
+    if (btnCsv) btnCsv.addEventListener("click", exportEscritaCsv);
+
+    host.querySelectorAll("[data-escrita-del]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var partId = btn.getAttribute("data-escrita-del");
+        var prova = getEscritaProvaAtual();
+        if (!prova || !partId || !state.dados.metricasEscrita) return;
+        state.dados.metricasEscrita[prova.id] = (
+          state.dados.metricasEscrita[prova.id] || []
+        ).filter(function (p) {
+          return p.id !== partId;
+        });
+        scheduleSave();
+        renderEscrita();
+        wireEscrita();
+        reactivatePanel();
+      });
+    });
+
+    host.querySelectorAll("input[data-escrita-id]").forEach(function (inp) {
+      inp.addEventListener("change", function () {
+        onEscritaFieldChange(inp);
+      });
+      if (inp.getAttribute("data-f") === "acertos") {
+        inp.addEventListener("input", function () {
+          onEscritaFieldChange(inp);
+        });
+      }
+    });
+  }
+
+  /** Exporta métricas da prova escrita (todas ou só a selecionada). */
+  function exportEscritaCsv(allProvas) {
+    if (!state.evento || !state.dados) {
+      showFeedback("Não há dados para exportar.", "warn");
+      return;
+    }
+    ensureMetricasEscrita();
+    var metricas = state.dados.metricasEscrita || {};
+    var headers = [
+      "Prova",
+      "Categoria",
+      "Nome",
+      "Igreja",
+      "Acertos",
+      "TotalQuestoes",
+      "Percentual",
+    ];
+    var lines = [headers.map(csvField).join(";")];
+    var alguma = false;
+    var provasAlvo = provasEscrita(state.evento);
+    if (!allProvas) {
+      var atual = getEscritaProvaAtual();
+      provasAlvo = atual ? [atual] : [];
+    }
+    provasAlvo.forEach(function (p) {
+      var catLabel = labelCategoria(p.categoriaId || p.categoria);
+      var totalQ = p.escritaTotalQuestoes;
+      (metricas[p.id] || []).forEach(function (part) {
+        var pct =
+          EM && totalQ && totalQ > 0 ? EM.percentual(part.acertos, totalQ).toFixed(1) + "%" : "";
+        lines.push(
+          [
+            p.titulo || p.id,
+            catLabel,
+            part.nome || "",
+            igrejaNome(part.igrejaId) || part.igrejaId || "",
+            part.acertos != null ? part.acertos : 0,
+            totalQ != null ? totalQ : "",
+            pct,
+          ]
+            .map(csvField)
+            .join(";")
+        );
+        alguma = true;
+      });
+    });
+    if (!alguma) {
+      showFeedback("Não há participantes para exportar.", "warn");
+      return;
+    }
+    var content = "\ufeff" + lines.join("\r\n");
+    var blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    var slug = (state.evento.meta && state.evento.meta.slug) || "evento";
+    a.download = slug + "-prova-escrita.csv";
+    a.click();
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 0);
+    showFeedback("Métricas da prova escrita exportadas como CSV.", "info");
+  }
+
+  function esgrimaCatalogo() {
+    return BE || { livros: [] };
+  }
+
+  function esgrimaReferenciaAtualTexto() {
+    if (!SE) return "—";
+    var sessao = getEsgrimaSessao();
+    if (!sessao || !sessao.atual) return "—";
+    return SE.formatarReferencia(sessao.atual, esgrimaCatalogo()) || "—";
+  }
+
+  function updateEsgrimaTimerDom() {
+    var left = esgrimaTimerRemaining();
+    var txt = formatEsgrimaTempo(left);
+    var esgotado = left <= 0;
+    var running = !!(state.esgrimaTimer && state.esgrimaTimer.running);
+    var labelBtn = running
+      ? "Pausar cronômetro"
+      : esgotado
+        ? "Reiniciar cronômetro"
+        : "Iniciar cronômetro";
+    function apply(el, btn) {
+      if (el) {
+        el.textContent = txt;
+        el.classList.toggle("is-expired", esgotado && !running);
+      }
+      if (btn) btn.textContent = labelBtn;
+    }
+    apply(
+      document.getElementById("esgrima-timer-display"),
+      document.getElementById("btn-esgrima-timer")
+    );
+    apply(
+      document.getElementById("esgrima-stage-timer"),
+      document.getElementById("esgrima-stage-timer-btn")
+    );
+  }
+
+  function updateEsgrimaStageDom() {
+    var stage = document.getElementById("esgrima-stage");
+    if (!stage) return;
+    var open = !!state.esgrimaStageOpen;
+    stage.hidden = !open;
+    stage.setAttribute("aria-hidden", open ? "false" : "true");
+    document.body.classList.toggle("esgrima-stage-mode", open);
+    var prova = getEsgrimaProvaAtual();
+    var kicker = document.getElementById("esgrima-stage-kicker");
+    if (kicker) kicker.textContent = prova ? prova.titulo || "Esgrima bíblica" : "Esgrima bíblica";
+    var refEl = document.getElementById("esgrima-stage-ref");
+    if (refEl) refEl.textContent = esgrimaReferenciaAtualTexto();
+    var sessao = getEsgrimaSessao();
+    var nextBtn = document.getElementById("esgrima-stage-next");
+    if (nextBtn) nextBtn.textContent = sessao && sessao.atual ? "Sortear próxima" : "Sortear";
+    updateEsgrimaTimerDom();
+  }
+
+  function setEsgrimaStageOpen(open) {
+    state.esgrimaStageOpen = !!open;
+    updateEsgrimaStageDom();
+    if (open) {
+      var closeBtn = document.getElementById("esgrima-stage-close");
+      if (closeBtn) closeBtn.focus();
+    }
+  }
+
+  function sortearEsgrima(anular) {
+    if (!SE || !state.evento || !state.dados) return;
+    var sessao = getEsgrimaSessao();
+    if (!sessao) {
+      showFeedback("Não há prova de Esgrima neste evento.", "warn");
+      return;
+    }
+    var out = anular
+      ? SE.anularAtual(sessao, esgrimaCatalogo())
+      : SE.proximo(sessao, esgrimaCatalogo());
+    setEsgrimaSessao(out.sessao);
+    resetEsgrimaTimer();
+    scheduleSave();
+    if (out.esgotado) {
+      showFeedback("Todas as referências deste corpus já foram sorteadas nesta sessão.", "warn");
+    }
+    renderEsgrima();
+    wireEsgrima();
+    updateEsgrimaStageDom();
+    reactivatePanel();
+  }
+
+  function renderEsgrima() {
+    var host = $("#panel-esgrima");
+    if (!host) return;
+    host.innerHTML = "";
+    if (!state.evento || !state.dados) {
+      host.textContent = "Carregue um evento para sortear referências da Esgrima.";
+      return;
+    }
+    if (!SE) {
+      host.textContent = "Módulo de sorteio indisponível.";
+      return;
+    }
+    ensureSorteioEsgrima();
+    var lista = provasEsgrima(state.evento);
+    if (!lista.length) {
+      host.innerHTML =
+        '<p class="escrita-empty-hint">Nenhuma prova de Esgrima (Debate Bíblico) neste evento. A Esgrima avançada não usa este sorteio — o líder dita uma palavra, não uma referência.</p>';
+      return;
+    }
+    var prova = getEsgrimaProvaAtual();
+    if (prova) state.esgrimaProvaId = prova.id;
+    var sessao = getEsgrimaSessao();
+    if (sessao && (!state.esgrimaTimer || !state.esgrimaTimer.running)) {
+      var limit = esgrimaTempoLimiteMs();
+      var rem = state.esgrimaTimer ? state.esgrimaTimer.remainingMs : 0;
+      if (!sessao.atual && rem !== limit) resetEsgrimaTimer();
+      else if (!rem) resetEsgrimaTimer();
+    }
+    var cnt = SE.contagem(sessao, esgrimaCatalogo());
+    var refTxt = esgrimaReferenciaAtualTexto();
+
+    var head = document.createElement("div");
+    head.className = "escrita-panel-head esgrima-panel-head";
+
+    var labSel = document.createElement("label");
+    labSel.innerHTML = "<span>Prova</span>";
+    var sel = document.createElement("select");
+    sel.id = "esgrima-prova-select";
+    sel.className = "escrita-prova-select";
+    var grouped = groupProvasByCategoria(null, lista);
+    grouped.order.forEach(function (catKey) {
+      var og = document.createElement("optgroup");
+      og.label = labelCategoria(catKey);
+      (grouped.groups[catKey] || []).forEach(function (p) {
+        var opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.titulo || p.id;
+        if (prova && p.id === prova.id) opt.selected = true;
+        og.appendChild(opt);
+      });
+      sel.appendChild(og);
+    });
+    labSel.appendChild(sel);
+
+    var labCorpus = document.createElement("label");
+    labCorpus.innerHTML = "<span>Corpus</span>";
+    var selCorpus = document.createElement("select");
+    selCorpus.id = "esgrima-corpus-select";
+    selCorpus.className = "escrita-prova-select";
+    SE.labelsCorpus().forEach(function (optData) {
+      var opt = document.createElement("option");
+      opt.value = optData.id;
+      opt.textContent = optData.label;
+      if (sessao && sessao.corpus === optData.id) opt.selected = true;
+      selCorpus.appendChild(opt);
+    });
+    labCorpus.appendChild(selCorpus);
+
+    var labTempo = document.createElement("label");
+    labTempo.innerHTML = "<span>Tempo (s)</span>";
+    var inpTempo = document.createElement("input");
+    inpTempo.type = "number";
+    inpTempo.id = "esgrima-tempo-input";
+    inpTempo.className = "esgrima-tempo-input";
+    inpTempo.min = String(SE.TEMPO_MIN);
+    inpTempo.max = String(SE.TEMPO_MAX);
+    inpTempo.step = "1";
+    inpTempo.value = String(sessao ? sessao.tempoSegundos : 20);
+    inpTempo.setAttribute("aria-label", "Tempo máximo em segundos");
+    labTempo.appendChild(inpTempo);
+
+    var chips = document.createElement("div");
+    chips.className = "escrita-summary-chips";
+    chips.innerHTML =
+      '<span class="escrita-chip"><span>Sorteados</span> <strong>' +
+      escapeHtml(String(cnt.usados)) +
+      "</strong></span>" +
+      '<span class="escrita-chip"><span>Restantes</span> <strong>' +
+      escapeHtml(String(cnt.restantes)) +
+      "</strong></span>";
+
+    head.appendChild(labSel);
+    head.appendChild(labCorpus);
+    head.appendChild(labTempo);
+    head.appendChild(chips);
+    host.appendChild(head);
+
+    var hint = document.createElement("p");
+    hint.className = "escrita-empty-hint";
+    hint.textContent =
+      "Sorteio para o líder ditar a referência e dar o comando CARREGAR. Não altera a classificação — o pódio continua sendo lançado na aba Pódio. Livros de um capítulo aparecem só com livro e versículo.";
+    host.appendChild(hint);
+
+    var card = document.createElement("div");
+    card.className = "esgrima-card";
+    card.innerHTML =
+      '<p class="esgrima-card-kicker">Referência para ditar</p>' +
+      '<p class="esgrima-card-ref" id="esgrima-ref-display">' +
+      escapeHtml(refTxt) +
+      "</p>" +
+      '<p class="esgrima-card-timer" id="esgrima-timer-display">' +
+      escapeHtml(formatEsgrimaTempo(esgrimaTimerRemaining())) +
+      "</p>";
+    host.appendChild(card);
+
+    var actions = document.createElement("div");
+    actions.className = "esgrima-actions";
+    function addBtn(id, label, primary) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = primary ? "pill-btn pill-btn--primary" : "pill-btn";
+      b.id = id;
+      b.textContent = label;
+      actions.appendChild(b);
+      return b;
+    }
+    addBtn("btn-esgrima-sortear", sessao && sessao.atual ? "Sortear próxima" : "Sortear", true);
+    addBtn("btn-esgrima-anular", "Anular e sortear outra", false);
+    addBtn("btn-esgrima-timer", "Iniciar cronômetro", false);
+    addBtn("btn-esgrima-stage", "Tela cheia da referência", false);
+    addBtn("btn-esgrima-reset", "Reiniciar sessão", false);
+    host.appendChild(actions);
+
+    var histWrap = document.createElement("div");
+    histWrap.className = "esgrima-historico";
+    var histTitle = document.createElement("h3");
+    histTitle.className = "esgrima-historico-title";
+    histTitle.textContent = "Histórico desta categoria";
+    histWrap.appendChild(histTitle);
+    var hist = (sessao && sessao.historico) || [];
+    if (!hist.length) {
+      var emptyH = document.createElement("p");
+      emptyH.className = "escrita-empty-hint";
+      emptyH.textContent = "Nenhuma referência sorteada ainda nesta sessão.";
+      histWrap.appendChild(emptyH);
+    } else {
+      var ol = document.createElement("ol");
+      ol.className = "esgrima-historico-list";
+      hist.forEach(function (chave, idx) {
+        var li = document.createElement("li");
+        if (sessao && chave === sessao.atual) li.className = "is-atual";
+        li.textContent = SE.formatarReferencia(chave, esgrimaCatalogo()) || chave;
+        if (sessao && chave === sessao.atual) {
+          li.textContent += " (atual)";
+        }
+        li.setAttribute("data-idx", String(idx + 1));
+        ol.appendChild(li);
+      });
+      histWrap.appendChild(ol);
+    }
+    host.appendChild(histWrap);
+    updateEsgrimaTimerDom();
+    updateEsgrimaStageDom();
+  }
+
+  function wireEsgrima() {
+    var host = $("#panel-esgrima");
+    if (!host) return;
+
+    var sel = host.querySelector("#esgrima-prova-select");
+    if (sel) {
+      sel.addEventListener("change", function () {
+        state.esgrimaProvaId = sel.value;
+        resetEsgrimaTimer();
+        renderEsgrima();
+        wireEsgrima();
+        updateEsgrimaStageDom();
+        reactivatePanel();
+      });
+    }
+
+    var selCorpus = host.querySelector("#esgrima-corpus-select");
+    if (selCorpus) {
+      selCorpus.addEventListener("change", function () {
+        var sessao = getEsgrimaSessao();
+        if (!sessao || !SE) return;
+        var novo = selCorpus.value;
+        if (novo === sessao.corpus) return;
+        function applyCorpus() {
+          var cur = getEsgrimaSessao();
+          if (!cur) return;
+          var next = SE.sessaoVazia({
+            corpus: novo,
+            tempoSegundos: cur.tempoSegundos,
+          });
+          setEsgrimaSessao(next);
+          resetEsgrimaTimer();
+          scheduleSave();
+          renderEsgrima();
+          wireEsgrima();
+          updateEsgrimaStageDom();
+          reactivatePanel();
+        }
+        if (sessao.historico && sessao.historico.length) {
+          requestConfirmation(
+            "Trocar o corpus reinicia o histórico desta categoria (as referências já sorteadas voltam a poder sair). Continuar?",
+            applyCorpus,
+            function () {
+              renderEsgrima();
+              wireEsgrima();
+              reactivatePanel();
+            },
+            { title: "Trocar corpus", confirmLabel: "Trocar e reiniciar", destructive: true }
+          );
+          return;
+        }
+        applyCorpus();
+      });
+    }
+
+    var inpTempo = host.querySelector("#esgrima-tempo-input");
+    if (inpTempo) {
+      inpTempo.addEventListener("change", function () {
+        var sessao = getEsgrimaSessao();
+        if (!sessao || !SE) return;
+        sessao.tempoSegundos = SE.normalizeTempo(inpTempo.value, sessao.tempoSegundos);
+        inpTempo.value = String(sessao.tempoSegundos);
+        if (!state.esgrimaTimer || !state.esgrimaTimer.running) resetEsgrimaTimer();
+        scheduleSave();
+        updateEsgrimaTimerDom();
+      });
+    }
+
+    var btnSortear = host.querySelector("#btn-esgrima-sortear");
+    if (btnSortear)
+      btnSortear.addEventListener("click", function () {
+        sortearEsgrima(false);
+      });
+    var btnAnular = host.querySelector("#btn-esgrima-anular");
+    if (btnAnular)
+      btnAnular.addEventListener("click", function () {
+        sortearEsgrima(true);
+      });
+    var btnTimer = host.querySelector("#btn-esgrima-timer");
+    if (btnTimer) btnTimer.addEventListener("click", toggleEsgrimaTimer);
+    var btnStage = host.querySelector("#btn-esgrima-stage");
+    if (btnStage) {
+      btnStage.addEventListener("click", function () {
+        setEsgrimaStageOpen(true);
+      });
+    }
+    var btnReset = host.querySelector("#btn-esgrima-reset");
+    if (btnReset) {
+      btnReset.addEventListener("click", function () {
+        var sessao = getEsgrimaSessao();
+        if (!sessao) return;
+        requestConfirmation(
+          "Reiniciar apaga o histórico e as referências já sorteadas desta categoria. Não altera o pódio.",
+          function () {
+            var cur = getEsgrimaSessao();
+            if (!cur || !SE) return;
+            setEsgrimaSessao(
+              SE.sessaoVazia({ corpus: cur.corpus, tempoSegundos: cur.tempoSegundos })
+            );
+            resetEsgrimaTimer();
+            scheduleSave();
+            renderEsgrima();
+            wireEsgrima();
+            updateEsgrimaStageDom();
+            reactivatePanel();
+          },
+          null,
+          { title: "Reiniciar sessão", confirmLabel: "Reiniciar", destructive: true }
+        );
+      });
+    }
+  }
+
+  /* TOUR_STEPS_START */
+  /** Passos do tutorial guiado (só dados; o DOM é resolvido em runtime). */
+  var TOUR_STEPS = [
+    {
+      id: "inicio",
+      tab: "dashboard",
+      targets: [".dashboard-summary", ".dashboard-hero", "#panel-dashboard"],
+      title: "Tutorial na tela",
+      body: "Vamos percorrer o fluxo do dia no app de verdade. A área clara é onde você age; o restante fica escurecido. Pode clicar e preencher o que estiver destacado.",
+    },
+    {
+      id: "abas",
+      tab: "dashboard",
+      targets: ["#sidebar-nav", "#bottom-nav"],
+      title: "As oito abas",
+      body: "No dia do evento você usa principalmente Participação e Pódio. A aba Esgrima sorteia referências para o líder ditar (não pontua). Classificação e Relatórios leem o que você lançou. Configuração já vem pronta no evento oficial.",
+    },
+    {
+      id: "mais",
+      tab: "dashboard",
+      targets: ["#btn-mais", ".topbar-actions"],
+      title: "Menu Mais — backup",
+      body: "Aqui você carrega e exporta arquivos. O backup que funciona em outro computador é Exportar projeto (não só evento). O selo «Salvo localmente» guarda só neste navegador.",
+    },
+    {
+      id: "participacao",
+      tab: "participacao",
+      targets: ["#panel-participacao .participacao-table", "#panel-participacao"],
+      title: "Lance a participação",
+      body: "Uma linha por igreja. Marque inscrição, pontualidade, uniforme e extra. Uniforme e Bíblia só pontuam se a contagem for igual aos presentes. Pode preencher agora — o total atualiza na hora.",
+    },
+    {
+      id: "podio",
+      tab: "podio",
+      targets: ["#panel-podio"],
+      title: "Lance o pódio",
+      body: "Ouro, prata e bronze em cada prova. Isso é o que soma medalha no ranking. A aba Prova escrita documenta acertos, mas não substitui o pódio.",
+    },
+    {
+      id: "classificacao",
+      tab: "classificacao",
+      targets: ["#panel-classificacao"],
+      title: "Veja o ranking",
+      body: "A classificação soma participação, punições, medalhas e extra, e desempatam sozinhas. Use Exportar CSV se precisar de planilha.",
+    },
+    {
+      id: "relatorios",
+      tab: "relatorios",
+      targets: ["#panel-relatorios .relatorio-docs", "#panel-relatorios"],
+      title: "Relatório e palco",
+      body: "Gere o Resumo (divulgação) ou o Oficial completo (arquivo) e salve como PDF na impressão do navegador. O botão Modo apresentação, na barra de cima, é o projetor. Antes de encerrar: Mais → Exportar projeto.",
+    },
+  ];
+  /* TOUR_STEPS_END */
+
+  var tourLayoutRaf = null;
+  var tourListenersBound = false;
+
+  function tourPad() {
+    return window.matchMedia && window.matchMedia("(max-width: 720px)").matches ? 6 : 10;
+  }
+
+  function isTourTargetVisible(el) {
+    if (!el || !el.getBoundingClientRect) return false;
+    var r = el.getBoundingClientRect();
+    return r.width > 4 && r.height > 4;
+  }
+
+  function pickTourTarget(step) {
+    var list = (step && step.targets) || [];
+    var i;
+    var el;
+    for (i = 0; i < list.length; i++) {
+      el = document.querySelector(list[i]);
+      if (isTourTargetVisible(el)) return el;
+    }
+    if (step && step.tab) {
+      el = document.getElementById("panel-" + step.tab);
+      if (isTourTargetVisible(el)) return el;
+    }
+    return document.getElementById("conteudo-principal") || document.body;
+  }
+
+  function updateTourCard(step) {
+    var title = document.getElementById("tour-title");
+    var body = document.getElementById("tour-body");
+    var progress = document.getElementById("tour-progress");
+    var next = document.getElementById("tour-next");
+    var prev = document.getElementById("tour-prev");
+    var idx = state.tourStep;
+    var total = TOUR_STEPS.length;
+    if (title) title.textContent = step.title;
+    if (body) body.textContent = step.body;
+    if (progress) progress.textContent = "Passo " + (idx + 1) + " de " + total;
+    if (next) next.textContent = idx >= total - 1 ? "Concluir" : "Próximo";
+    if (prev) prev.disabled = idx <= 0;
+  }
+
+  function layoutTourStep() {
+    if (!state.tourActive) return;
+    var step = TOUR_STEPS[state.tourStep];
+    if (!step) return;
+    var target = pickTourTarget(step);
+    var rect = target.getBoundingClientRect();
+    var pad = tourPad();
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var top = Math.max(0, rect.top - pad);
+    var left = Math.max(0, rect.left - pad);
+    var right = Math.min(vw, rect.right + pad);
+    var bottom = Math.min(vh, rect.bottom + pad);
+    if (right - left < 48) {
+      left = Math.max(0, rect.left);
+      right = Math.min(vw, left + Math.max(rect.width, 48));
+    }
+    if (bottom - top < 48) {
+      top = Math.max(0, rect.top);
+      bottom = Math.min(vh, top + Math.max(rect.height, 48));
+    }
+
+    function setPart(id, t, l, w, h) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.style.top = Math.max(0, t) + "px";
+      el.style.left = Math.max(0, l) + "px";
+      el.style.width = Math.max(0, w) + "px";
+      el.style.height = Math.max(0, h) + "px";
+    }
+
+    setPart("tour-veil-t", 0, 0, vw, top);
+    setPart("tour-veil-l", top, 0, left, bottom - top);
+    setPart("tour-veil-r", top, right, vw - right, bottom - top);
+    setPart("tour-veil-b", bottom, 0, vw, vh - bottom);
+
+    var ring = document.getElementById("tour-ring");
+    if (ring) {
+      ring.style.top = top + "px";
+      ring.style.left = left + "px";
+      ring.style.width = right - left + "px";
+      ring.style.height = bottom - top + "px";
+    }
+
+    var card = document.getElementById("tour-card");
+    if (!card) return;
+    var compact = window.matchMedia && window.matchMedia("(max-width: 720px)").matches;
+    card.classList.toggle("tour-card--dock", compact);
+    if (compact) {
+      card.style.top = "";
+      card.style.left = "";
+      return;
+    }
+    var cardW = Math.min(360, vw - 24);
+    card.style.width = cardW + "px";
+    var cardH = card.offsetHeight || 180;
+    var spaceBelow = vh - bottom;
+    var spaceAbove = top;
+    var cardTop;
+    if (spaceBelow >= cardH + 16 || spaceBelow >= spaceAbove) {
+      cardTop = Math.min(vh - cardH - 12, bottom + 12);
+    } else {
+      cardTop = Math.max(12, top - cardH - 12);
+    }
+    var cardLeft = Math.min(Math.max(12, left), vw - cardW - 12);
+    card.style.top = cardTop + "px";
+    card.style.left = cardLeft + "px";
+  }
+
+  function scheduleTourLayout() {
+    if (!state.tourActive) return;
+    if (tourLayoutRaf) return;
+    tourLayoutRaf = requestAnimationFrame(function () {
+      tourLayoutRaf = null;
+      layoutTourStep();
+    });
+  }
+
+  function bindTourLayoutListeners(on) {
+    if (on === tourListenersBound) return;
+    tourListenersBound = on;
+    if (on) {
+      window.addEventListener("resize", scheduleTourLayout);
+      window.addEventListener("scroll", scheduleTourLayout, true);
+    } else {
+      window.removeEventListener("resize", scheduleTourLayout);
+      window.removeEventListener("scroll", scheduleTourLayout, true);
+    }
+  }
+
+  function showTourStep(index) {
+    if (index < 0 || index >= TOUR_STEPS.length) return;
+    state.tourStep = index;
+    var step = TOUR_STEPS[index];
+    if (step.tab && step.tab !== state.tab) {
+      state.tab = step.tab;
+      render();
+    }
+    var root = document.getElementById("tour-root");
+    if (root) {
+      root.hidden = false;
+      root.setAttribute("aria-hidden", "false");
+    }
+    document.body.classList.add("tour-active");
+    updateTourCard(step);
+    var target = pickTourTarget(step);
+    if (target && target.scrollIntoView) {
+      try {
+        target.scrollIntoView({ block: "nearest", inline: "nearest" });
+      } catch (_e) {
+        /* Safari antigo */
+      }
+    }
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        layoutTourStep();
+        var next = document.getElementById("tour-next");
+        if (next) next.focus();
+      });
+    });
+  }
+
+  function stopTour() {
+    if (!state.tourActive) return;
+    state.tourActive = false;
+    bindTourLayoutListeners(false);
+    document.body.classList.remove("tour-active");
+    var root = document.getElementById("tour-root");
+    if (root) {
+      root.hidden = true;
+      root.setAttribute("aria-hidden", "true");
+    }
+    var last = state.tourLastFocus;
+    state.tourLastFocus = null;
+    if (last && last.focus) {
+      try {
+        last.focus();
+      } catch (_e) {
+        /* best-effort */
+      }
+    }
+  }
+
+  function startTour() {
+    if (document.body.classList.contains("presentation-mode")) {
+      setPresentationMode(false);
+    }
+    if (state.esgrimaStageOpen) setEsgrimaStageOpen(false);
+    var menu = document.getElementById("more-menu");
+    var mais = document.getElementById("btn-mais");
+    if (menu) menu.hidden = true;
+    if (mais) mais.setAttribute("aria-expanded", "false");
+
+    function begin() {
+      state.tourActive = true;
+      state.tourStep = 0;
+      state.tourLastFocus = document.activeElement;
+      bindTourLayoutListeners(true);
+      showTourStep(0);
+    }
+
+    if (!state.evento) {
+      tryLoadDefaultEventoWeb().then(
+        function (ev) {
+          if (setEvento(ev, null)) {
+            showFeedback("Exemplo carregado para o tutorial.", "info");
+          }
+          begin();
+        },
+        function () {
+          begin();
+        }
+      );
+      return;
+    }
+    begin();
+  }
+
+  function nextTourStep() {
+    if (!state.tourActive) return;
+    if (state.tourStep >= TOUR_STEPS.length - 1) {
+      stopTour();
+      goToTab("dashboard");
+      showFeedback("Tutorial concluído. No dia: Participação → Pódio → Exportar projeto.", "info");
+      return;
+    }
+    showTourStep(state.tourStep + 1);
+  }
+
+  function prevTourStep() {
+    if (!state.tourActive || state.tourStep <= 0) return;
+    showTourStep(state.tourStep - 1);
+  }
+
+  function onTourKeydown(ev) {
+    if (!state.tourActive) return;
+    if (ev.key === "Escape") {
+      ev.preventDefault();
+      stopTour();
+      return;
+    }
+    var inField =
+      ev.target &&
+      (ev.target.tagName === "INPUT" ||
+        ev.target.tagName === "TEXTAREA" ||
+        ev.target.tagName === "SELECT" ||
+        ev.target.isContentEditable);
+    if (inField) return;
+    if (ev.key === "ArrowRight") {
+      ev.preventDefault();
+      nextTourStep();
+    } else if (ev.key === "ArrowLeft") {
+      ev.preventDefault();
+      prevTourStep();
+    }
+  }
+
+  function initTour() {
+    var root = document.getElementById("tour-root");
+    if (!root) return;
+    var next = document.getElementById("tour-next");
+    var prev = document.getElementById("tour-prev");
+    var skip = document.getElementById("tour-skip");
+    if (next) next.addEventListener("click", nextTourStep);
+    if (prev) prev.addEventListener("click", prevTourStep);
+    if (skip) skip.addEventListener("click", stopTour);
+    var footer = document.getElementById("btn-footer-tutorial");
+    if (footer) footer.addEventListener("click", startTour);
+    document.addEventListener("keydown", onTourKeydown);
+  }
+
   function renderPanels() {
     renderDashboard();
     wireDashboard();
@@ -4193,6 +6690,10 @@
     wireParticipacao();
     renderPodio();
     wirePodio();
+    renderEscrita();
+    wireEscrita();
+    renderEsgrima();
+    wireEsgrima();
     renderClassificacao();
     renderRelatorios();
     wireRelatorios();
@@ -4210,29 +6711,31 @@
       renderPanels();
       if (document.body.classList.contains("presentation-mode")) {
         var presHost = document.getElementById("presentation-host");
-        if (presHost && !presHost.hidden) renderScoreboard(presHost);
+        if (presHost && !presHost.hidden) {
+          if (state.presentationCeremony.phase !== "complete") {
+            updateScoreboardHeader(presHost);
+          }
+        }
       }
     });
+    if (state.tourActive) scheduleTourLayout();
   }
 
   function isErUiTheme() {
     return document.documentElement.getAttribute("data-ui-theme") === "er";
   }
 
-  /** Regulamento ER: medalhas no pódio 500 / 300 / 150; extras de participação +100 cada (pastor, pontualidade, uniforme, bíblia). */
-  function applyErClassificationPreset(ev) {
-    if (!ev) return;
-    if (!ev.medalhas) ev.medalhas = {};
-    ev.medalhas.ou = 500;
-    ev.medalhas.pt = 300;
-    ev.medalhas.br = 150;
-    if (!ev.pesos) ev.pesos = {};
-    ev.pesos.inscricao = 100;
-    ev.pesos.pontualidade = 100;
-    ev.pesos.uniforme = 100;
-    ev.pesos.biblia = 100;
-    ev.pesos.visitante = 0;
-    ev.pesos.animacao = 0;
+  /** Paleta ER/MR a partir do nome ou slug do evento (só visual). */
+  function themeFromEvento(ev) {
+    var slug = String((ev && ev.meta && ev.meta.slug) || "").toLowerCase();
+    var nome = String((ev && ev.meta && ev.meta.nome) || "").toLowerCase();
+    if (/\ber\b/.test(nome) || slug.indexOf("-er-") !== -1 || slug.indexOf("er-") === 0) {
+      return "er";
+    }
+    if (/\bmr\b/.test(nome) || slug.indexOf("-mr-") !== -1 || slug.indexOf("mr-") === 0) {
+      return "mr";
+    }
+    return null;
   }
 
   function isObject(v) {
@@ -4421,25 +6924,139 @@
     return avisos;
   }
 
+  function humanizeEventoValidationError(msg) {
+    if (msg.indexOf("meta.nome") >= 0) return "falta o nome do evento";
+    if (msg.indexOf("meta.slug") >= 0)
+      return "identificador inválido (use só letras minúsculas, números e hífen)";
+    if (msg.indexOf("igrejas deve ter ao menos") >= 0) return "cadastre ao menos uma igreja";
+    if (msg.indexOf("provas deve ter ao menos") >= 0) return "cadastre ao menos uma prova";
+    if (/igrejas\[\d+\]\.nome/.test(msg)) return "há igreja sem nome";
+    if (/provas\[\d+\]\.titulo/.test(msg)) return "há prova sem título";
+    if (msg.indexOf("IDs de igrejas duplicados") >= 0)
+      return "há igrejas com o mesmo identificador";
+    if (msg.indexOf("IDs de provas duplicados") >= 0) return "há provas com o mesmo identificador";
+    if (msg.indexOf("Falta chave:") >= 0) {
+      return "estrutura incompleta (" + msg.replace("Falta chave: ", "falta «") + "»)";
+    }
+    return msg.charAt(0).toLowerCase() + msg.slice(1);
+  }
+
+  function formatEventoValidationFeedback(errs) {
+    var hints = errs.slice(0, 2).map(humanizeEventoValidationError);
+    var detail = hints.join("; ");
+    if (errs.length > 2) detail += " (e mais " + (errs.length - 2) + ")";
+    return (
+      "Não foi possível abrir o evento: " +
+      detail +
+      ". Corrija o arquivo ou clique em «Novo evento» para começar do zero."
+    );
+  }
+
+  /** CER na reunião pré-conclave do ER 2026/2: +100 em Extra, uma vez por projeto. */
+  var CER_PRE_CONCLAVE_SLUG = "conclave-er-2026-2";
+  var CER_PRE_CONCLAVE_PONTOS = 100;
+  var CER_PRE_CONCLAVE_IGREJA_IDS = ["orla", "paul", "alecrim", "vila-batista", "gloria", "ibes"];
+
+  function applyCerPreConclaveExtraOnce(evento, dados) {
+    if (!evento || !evento.meta || !dados || !dados.participacao) return [];
+    if (evento.meta.slug !== CER_PRE_CONCLAVE_SLUG) return [];
+    if (dados.cerPreConclaveAplicado) return [];
+    var applied = [];
+    CER_PRE_CONCLAVE_IGREJA_IDS.forEach(function (id) {
+      var row = dados.participacao[id];
+      if (!row) return;
+      var cur = Number(row.pontuacao_extra);
+      if (!isFinite(cur)) cur = 0;
+      row.pontuacao_extra = cur + CER_PRE_CONCLAVE_PONTOS;
+      applied.push(id);
+    });
+    dados.cerPreConclaveAplicado = true;
+    return applied;
+  }
+
+  /** Eventos em que inscrição e pontualidade começam desmarcadas para o
+   *  check-in (o template genérico marca as duas, o que daria 300 pontos a
+   *  igrejas ausentes). */
+  var CHECKIN_DESMARCADO_SLUGS = [CER_PRE_CONCLAVE_SLUG, "conclave-mr-2026-2"];
+
+  /** Desmarca inscrição e pontualidade uma vez por projeto salvo. */
+  function applyErCheckinDefaultsOnce(evento, dados) {
+    if (!evento || !evento.meta || !dados || !dados.participacao) return false;
+    if (CHECKIN_DESMARCADO_SLUGS.indexOf(evento.meta.slug) === -1) return false;
+    if (dados.erCheckinReset) return false;
+    Object.keys(dados.participacao).forEach(function (id) {
+      var row = dados.participacao[id];
+      if (!row) return;
+      row.inscricao = false;
+      row.pontualidade = false;
+    });
+    dados.erCheckinReset = true;
+    return true;
+  }
+
+  function notifyErDiaReady(cerIds, checkinReset) {
+    if (checkinReset && cerIds && cerIds.length) {
+      showFeedback(
+        "Pronto para o check-in: inscrição e pontualidade desmarcadas. CER +" +
+          CER_PRE_CONCLAVE_PONTOS +
+          " no Extra das 6 igrejas da reunião pré-conclave.",
+        "info"
+      );
+      return;
+    }
+    if (checkinReset) {
+      showFeedback(
+        "Inscrição e pontualidade desmarcadas para o check-in. Marque cada igreja na chegada.",
+        "info"
+      );
+      return;
+    }
+    notifyCerPreConclaveIfApplied(cerIds);
+  }
+
+  function notifyCerPreConclaveIfApplied(ids) {
+    if (!ids || !ids.length || !state.evento) return;
+    var nomes = ids.map(function (id) {
+      var g = (state.evento.igrejas || []).find(function (x) {
+        return x.id === id;
+      });
+      return g && g.nome ? g.nome : id;
+    });
+    showFeedback(
+      "CER pré-conclave: +" + CER_PRE_CONCLAVE_PONTOS + " no Extra para " + nomes.join(", ") + ".",
+      "info"
+    );
+  }
+
+  function eventoValidationErrors(ev) {
+    return validateEventoSchemaLike(ev).concat(E.validateEventoMinimal(ev));
+  }
+
   function setEvento(ev, mergeDados) {
-    var errs = validateEventoSchemaLike(ev).concat(E.validateEventoMinimal(ev));
+    var errs = eventoValidationErrors(ev);
     if (errs.length) {
-      showFeedback("Evento inválido: " + errs.slice(0, 3).join(" · "), "error");
+      showFeedback(formatEventoValidationFeedback(errs), "error");
       return false;
     }
     // Garante que qualquer save pendente do evento atual seja gravado antes
     // de trocar o slug — evita corrida com o debounce de scheduleSave.
     flushScheduledSave();
+    revokeRegulamentoBlobUrl();
     state.persistFailed = false;
     state.evento = ev;
     normalizeEvento(state.evento);
-    if (isErUiTheme()) applyErClassificationPreset(state.evento);
+    var temaEvento = themeFromEvento(state.evento);
+    if (temaEvento) applyUiTheme(temaEvento, { silent: true });
     state.autoLoadFailed = false;
     state.podiumCollapsed = {};
+    state.podiumProvaGroupCollapsed = {};
     state.configSectionCollapsed = {};
     state.relatorioSectionCollapsed = {};
     state.relatorioPodiumCollapsed = {};
-    state.relatorioOficialGerado = false;
+    state.escritaProvaId = null;
+    state.esgrimaProvaId = null;
+    state.esgrimaStageOpen = false;
+    resetRelatorioOficialGerado();
     var ids = state.evento.igrejas.map(function (g) {
       return g.id;
     });
@@ -4451,10 +7068,16 @@
       syncDadosWithEvento();
     } else {
       state.dados = E.emptyDadosTemplate(ids, pids);
+      ensureMetricasEscrita();
+      ensureSorteioEsgrima();
     }
+    resetEsgrimaTimer();
+    var cerIds = applyCerPreConclaveExtraOnce(state.evento, state.dados);
+    var checkinReset = applyErCheckinDefaultsOnce(state.evento, state.dados);
     validate();
     scheduleSave();
     render();
+    notifyErDiaReady(cerIds, checkinReset);
     return true;
   }
 
@@ -4465,7 +7088,7 @@
         var ev = JSON.parse(r.result);
         var schemaErrs = validateEventoSchemaLike(ev);
         if (schemaErrs.length) {
-          showFeedback("Evento inválido: " + schemaErrs.slice(0, 3).join(" · "), "error");
+          showFeedback(formatEventoValidationFeedback(schemaErrs), "error");
           return;
         }
         var slug = ev.meta && ev.meta.slug;
@@ -4619,11 +7242,30 @@
           return p.id;
         });
         state.dados = E.emptyDadosTemplate(ids, pids);
+        var cerIds = applyCerPreConclaveExtraOnce(state.evento, state.dados);
+        var checkinReset = applyErCheckinDefaultsOnce(state.evento, state.dados);
         state.podiumCollapsed = {};
-        state.relatorioOficialGerado = false;
+        state.podiumProvaGroupCollapsed = {};
+        resetRelatorioOficialGerado();
         scheduleSave();
         render();
-        showFeedback("Dados do evento foram limpos.", "info");
+        if (cerIds.length) {
+          showFeedback(
+            "Dados limpos. CER pré-conclave relançado (+" +
+              CER_PRE_CONCLAVE_PONTOS +
+              " no Extra de " +
+              cerIds.length +
+              " igrejas). Inscrição e pontualidade desmarcadas para o check-in.",
+            "info"
+          );
+        } else if (checkinReset) {
+          showFeedback(
+            "Dados limpos. Inscrição e pontualidade desmarcadas para o check-in.",
+            "info"
+          );
+        } else {
+          showFeedback("Dados do evento foram limpos.", "info");
+        }
       },
       null,
       { destructive: true, confirmLabel: "Limpar" }
@@ -4631,31 +7273,262 @@
   }
 
   var UI_THEME_KEY = "conclave-ui-theme";
+  var PODIO_LAYOUT_KEY = "conclave.podioLayout";
+  var PODIO_FILTERS_KEY = "conclave.podioFilters";
+  var podioSearchDebounce = null;
 
-  function getStoredUiTheme() {
+  function getPodioFilters() {
+    if (!PF) return { status: "all", categoriaId: "", q: "" };
     try {
-      var t = localStorage.getItem(UI_THEME_KEY);
-      return t === "er" ? "er" : "mr";
+      var raw = localStorage.getItem(PODIO_FILTERS_KEY);
+      if (!raw) return PF.defaultPodioFilters();
+      return PF.normalizePodioFilters(JSON.parse(raw));
     } catch (_e) {
-      return "mr";
+      return PF.defaultPodioFilters();
     }
+  }
+
+  function setPodioFilters(filters) {
+    if (!PF) return;
+    try {
+      localStorage.setItem(PODIO_FILTERS_KEY, JSON.stringify(PF.normalizePodioFilters(filters)));
+    } catch (_e) {
+      /* localStorage indisponível */
+    }
+  }
+
+  function buildPodioFilterCtx() {
+    return {
+      podium: (state.dados && state.dados.podium) || {},
+      categoriaKey: categoriaKey,
+      categoriaLabel: function (p) {
+        return labelCategoria(categoriaKey(p));
+      },
+      igrejaNome: igrejaNome,
+      tiebreakProvaBucket: E.tiebreakProvaBucket,
+    };
+  }
+
+  function getFilteredProvasForPodio() {
+    if (!PF || !state.evento) return sortedProvas();
+    return PF.filterProvas(sortedProvas(), getPodioFilters(), buildPodioFilterCtx());
+  }
+
+  function handlePodioFilterChange(partial) {
+    if (!PF) return;
+    var next = PF.normalizePodioFilters(Object.assign({}, getPodioFilters(), partial));
+    setPodioFilters(next);
+    renderPodio();
+    wirePodio();
+    reactivatePanel();
+  }
+
+  function clearPodioFilters() {
+    if (!PF) return;
+    setPodioFilters(PF.defaultPodioFilters());
+    renderPodio();
+    wirePodio();
+    reactivatePanel();
+  }
+
+  function getPodioLayout() {
+    try {
+      var v = localStorage.getItem(PODIO_LAYOUT_KEY);
+      return v === "prova" ? "prova" : "categoria";
+    } catch (_e) {
+      return "categoria";
+    }
+  }
+
+  function setPodioLayout(layout) {
+    var v = layout === "prova" ? "prova" : "categoria";
+    try {
+      localStorage.setItem(PODIO_LAYOUT_KEY, v);
+    } catch (_e) {
+      /* localStorage indisponível */
+    }
+  }
+
+  function handlePodioLayoutChange(mode) {
+    if (!mode || mode === getPodioLayout()) return;
+    setPodioLayout(mode);
+    renderPodio();
+    wirePodio();
+    renderRelatorios();
+    wireRelatorios();
+    reactivatePanel();
+  }
+
+  function buildPodioLayoutToolbar() {
+    var layout = getPodioLayout();
+    var bar = document.createElement("div");
+    bar.className = "podio-layout-toolbar";
+    bar.setAttribute("role", "group");
+    bar.setAttribute("aria-label", "Visualização do pódio");
+
+    var label = document.createElement("span");
+    label.className = "podio-layout-label";
+    label.textContent = "Ver por:";
+    bar.appendChild(label);
+
+    [
+      { id: "categoria", text: "Faixa etária" },
+      { id: "prova", text: "Tipo de prova" },
+    ].forEach(function (def) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "podio-layout-btn" + (layout === def.id ? " active" : "");
+      btn.setAttribute("data-podio-layout", def.id);
+      btn.setAttribute("aria-pressed", layout === def.id ? "true" : "false");
+      btn.textContent = def.text;
+      bar.appendChild(btn);
+    });
+
+    return bar;
+  }
+
+  function buildPodioFiltersToolbar(stats) {
+    stats = stats || { filters: PF.defaultPodioFilters(), shown: 0, total: 0 };
+    var filters = stats.filters;
+    var bar = document.createElement("div");
+    bar.className = "podio-filters-toolbar";
+    bar.setAttribute("role", "search");
+    bar.setAttribute("aria-label", "Filtrar provas do pódio");
+
+    var label = document.createElement("span");
+    label.className = "podio-layout-label";
+    label.textContent = "Filtrar:";
+    bar.appendChild(label);
+
+    var statusSel = document.createElement("select");
+    statusSel.id = "podio-filter-status";
+    statusSel.className = "podio-filter-select";
+    statusSel.setAttribute("aria-label", "Status de preenchimento");
+    [
+      { id: "all", text: "Todas" },
+      { id: "pending", text: "Pendente" },
+      { id: "partial", text: "Parcial" },
+      { id: "complete", text: "Completa" },
+    ].forEach(function (def) {
+      var opt = document.createElement("option");
+      opt.value = def.id;
+      opt.textContent = def.text;
+      if (filters.status === def.id) opt.selected = true;
+      statusSel.appendChild(opt);
+    });
+    bar.appendChild(statusSel);
+
+    var catSel = document.createElement("select");
+    catSel.id = "podio-filter-categoria";
+    catSel.className = "podio-filter-select";
+    catSel.setAttribute("aria-label", "Faixa etária");
+    var catAll = document.createElement("option");
+    catAll.value = "";
+    catAll.textContent = "Todas as faixas";
+    if (!filters.categoriaId) catAll.selected = true;
+    catSel.appendChild(catAll);
+    orderedCategoryKeys().forEach(function (catKey) {
+      var opt = document.createElement("option");
+      opt.value = catKey;
+      opt.textContent = labelCategoria(catKey);
+      if (filters.categoriaId === catKey) opt.selected = true;
+      catSel.appendChild(opt);
+    });
+    bar.appendChild(catSel);
+
+    var search = document.createElement("input");
+    search.type = "search";
+    search.id = "podio-filter-q";
+    search.className = "podio-filter-search";
+    search.setAttribute("aria-label", "Buscar prova, igreja ou competidor");
+    search.placeholder = "Buscar…";
+    search.value = filters.q || "";
+    search.autocomplete = "off";
+    bar.appendChild(search);
+
+    var igrejaSel = document.createElement("select");
+    igrejaSel.id = "podio-filter-igreja";
+    igrejaSel.className = "podio-filter-select";
+    igrejaSel.setAttribute("aria-label", "Filtrar por igreja");
+    var igAll = document.createElement("option");
+    igAll.value = "";
+    igAll.textContent = "Todas as igrejas";
+    if (!filters.igrejaId) igAll.selected = true;
+    igrejaSel.appendChild(igAll);
+    (state.evento.igrejas || []).forEach(function (g) {
+      var opt = document.createElement("option");
+      opt.value = g.id;
+      opt.textContent = g.nome || g.id;
+      if (filters.igrejaId === g.id) opt.selected = true;
+      igrejaSel.appendChild(opt);
+    });
+    bar.appendChild(igrejaSel);
+
+    var toggles = document.createElement("div");
+    toggles.className = "podio-filter-toggles";
+    [
+      { id: "comAvisos", label: "Com avisos", title: "Igreja repetida na mesma prova" },
+      {
+        id: "semCompetidor",
+        label: "Sem competidor",
+        title: "Medalha preenchida sem nome do competidor",
+      },
+      {
+        id: "desempate",
+        label: "Desempate",
+        title: "Provas usadas no critério de desempate da classificação",
+      },
+    ].forEach(function (def) {
+      var lbl = document.createElement("label");
+      lbl.className = "podio-filter-check";
+      lbl.title = def.title;
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.id = "podio-filter-" + def.id;
+      cb.setAttribute("data-podio-filter-toggle", def.id);
+      cb.checked = !!filters[def.id];
+      lbl.appendChild(cb);
+      var span = document.createElement("span");
+      span.textContent = def.label;
+      lbl.appendChild(span);
+      toggles.appendChild(lbl);
+    });
+    bar.appendChild(toggles);
+
+    var meta = document.createElement("div");
+    meta.className = "podio-filter-meta";
+
+    var count = document.createElement("span");
+    count.id = "podio-filter-count";
+    count.className = "podio-filter-count";
+    count.setAttribute("aria-live", "polite");
+    count.textContent = stats.shown + " de " + stats.total + " provas";
+    meta.appendChild(count);
+
+    if (PF && PF.isActivePodioFilters(filters)) {
+      var btnClear = document.createElement("button");
+      btnClear.type = "button";
+      btnClear.className = "podio-filter-clear-btn";
+      btnClear.id = "podio-filter-clear";
+      btnClear.textContent = "Limpar filtros";
+      meta.appendChild(btnClear);
+    }
+
+    bar.appendChild(meta);
+    return bar;
+  }
+
+  function buildPodioEditorToolbar(stats) {
+    var wrap = document.createElement("div");
+    wrap.className = "podio-toolbar";
+    wrap.appendChild(buildPodioLayoutToolbar());
+    wrap.appendChild(buildPodioFiltersToolbar(stats));
+    return wrap;
   }
 
   function applyUiTheme(theme, opts) {
     opts = opts || {};
     var t = theme === "er" ? "er" : "mr";
-    var current = document.documentElement.getAttribute("data-ui-theme") || "mr";
-    if (!opts.skipConfirm && state.evento && t !== current && t === "er") {
-      requestConfirmation(
-        "Ao mudar para o tema ER, os pesos de participação e os valores de medalhas serão substituídos pelo preset do Encontro Real. Deseja continuar?",
-        function () {
-          applyUiTheme(t, { skipConfirm: true });
-        },
-        null,
-        { confirmLabel: "Aplicar preset ER" }
-      );
-      return;
-    }
     document.documentElement.setAttribute("data-ui-theme", t);
     try {
       localStorage.setItem(UI_THEME_KEY, t);
@@ -4664,10 +7537,15 @@
     }
     var mr = $("#theme-mr");
     var er = $("#theme-er");
-    if (mr) mr.classList.toggle("active", t === "mr");
-    if (er) er.classList.toggle("active", t === "er");
-    if (state.evento) {
-      if (t === "er") applyErClassificationPreset(state.evento);
+    if (mr) {
+      mr.classList.toggle("active", t === "mr");
+      mr.setAttribute("aria-pressed", t === "mr" ? "true" : "false");
+    }
+    if (er) {
+      er.classList.toggle("active", t === "er");
+      er.setAttribute("aria-pressed", t === "er" ? "true" : "false");
+    }
+    if (state.evento && !opts.silent) {
       scheduleSave();
       validate();
       render();
@@ -4710,25 +7588,11 @@
         if (!state.evento || !state.evento.meta) return;
         var u = state.evento.meta.regulamentoUrl;
         if (!u || !String(u).trim()) return;
-        window.open(resolveAssetUrl(String(u).trim()), "_blank", "noopener,noreferrer");
+        openRegulamentoUrl(String(u).trim());
       });
     $("#btn-novo-dados") && $("#btn-novo-dados").addEventListener("click", novoProjetoDados);
     $("#btn-eventos-salvos") &&
       $("#btn-eventos-salvos").addEventListener("click", openEventosSalvosModal);
-    $("#btn-print") &&
-      $("#btn-print").addEventListener("click", function () {
-        // Pequena dica antes de abrir o diálogo: usuários costumam não saber
-        // que "Salvar como PDF" é um destino do diálogo nativo do navegador.
-        showFeedback(
-          "Abrindo a impressão. No diálogo, selecione «Salvar como PDF» se quiser gerar um arquivo.",
-          "info"
-        );
-        // Aguarda o feedback aparecer antes de abrir o diálogo (que bloqueia
-        // a thread em alguns navegadores).
-        setTimeout(function () {
-          window.print();
-        }, 80);
-      });
     $("#btn-exit-presentation") &&
       $("#btn-exit-presentation").addEventListener("click", function () {
         setPresentationMode(false);
@@ -4740,15 +7604,42 @@
     // Esc sai do modo apresentação (diretriz de UX para projetores: rota
     // rápida quando o controle remoto não está acessível).
     document.addEventListener("keydown", function (ev) {
-      if (ev.key === "Escape" && document.body.classList.contains("presentation-mode")) {
-        // Se o modal de confirmação estiver aberto, deixe-o tratar primeiro.
-        var confirmEl = document.getElementById("modal-confirm");
-        if (confirmEl && confirmEl.classList.contains("open")) return;
+      if (ev.key !== "Escape") return;
+      var confirmEl = document.getElementById("modal-confirm");
+      if (confirmEl && confirmEl.classList.contains("open")) return;
+      if (state.tourActive) return;
+      if (state.esgrimaStageOpen) {
+        ev.preventDefault();
+        setEsgrimaStageOpen(false);
+        return;
+      }
+      if (document.body.classList.contains("presentation-mode")) {
         setPresentationMode(false);
       }
     });
+    var stageNext = document.getElementById("esgrima-stage-next");
+    if (stageNext)
+      stageNext.addEventListener("click", function () {
+        sortearEsgrima(false);
+      });
+    var stageAnular = document.getElementById("esgrima-stage-anular");
+    if (stageAnular)
+      stageAnular.addEventListener("click", function () {
+        sortearEsgrima(true);
+      });
+    var stageTimer = document.getElementById("esgrima-stage-timer-btn");
+    if (stageTimer) stageTimer.addEventListener("click", toggleEsgrimaTimer);
+    var stageClose = document.getElementById("esgrima-stage-close");
+    if (stageClose)
+      stageClose.addEventListener("click", function () {
+        setEsgrimaStageOpen(false);
+      });
     initMoreMenu();
     initFileProtocolHint();
+    window.addEventListener("pagehide", flushScheduledSave);
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden") flushScheduledSave();
+    });
   }
 
   /**
@@ -4877,11 +7768,203 @@
     });
   }
 
+  /** Sequência de colocações reveladas na cerimônia (5º→1º, só posições que existem no ranking). */
+  function getCeremonyRevealSequence(teamCount, ord) {
+    if (ord && ord.length) {
+      var seen = {};
+      for (var i = 0; i < ord.length; i++) {
+        var p = ord[i].posicao;
+        if (p >= 1 && p <= 5) seen[p] = true;
+      }
+      var fromOrd = Object.keys(seen)
+        .map(function (k) {
+          return Number(k);
+        })
+        .sort(function (a, b) {
+          return b - a;
+        });
+      if (fromOrd.length) return fromOrd;
+    }
+    var n = Math.max(0, Number(teamCount) || 0);
+    if (!n) return [];
+    var start = Math.min(5, n);
+    var seq = [];
+    for (var pos = start; pos >= 1; pos--) seq.push(pos);
+    return seq;
+  }
+
+  function positionInCeremony(ord, pos) {
+    return getCeremonyRevealSequence(ord.length, ord).indexOf(pos) >= 0;
+  }
+
+  /** true quando a colocação `pos` já foi revelada na cerimônia. */
+  function isPositionRevealed(ceremony, pos) {
+    if (!ceremony) return false;
+    if (ceremony.phase === "complete") return true;
+    if (ceremony.phase === "intro" || ceremony.revealedUpTo == null) return false;
+    return pos >= ceremony.revealedUpTo;
+  }
+
+  /** Avança o estado da cerimônia (função pura — retorna novo objeto). */
+  function advanceCeremonyState(ceremony, teamCount) {
+    var ord = (ceremony && ceremony.snapshot) || [];
+    var seq = getCeremonyRevealSequence(teamCount, ord);
+    if (!ceremony || !seq.length || ceremony.phase === "complete") return ceremony;
+    if (ceremony.phase === "intro") {
+      var first = seq[0];
+      return {
+        phase: first === 1 ? "complete" : "reveal",
+        revealedUpTo: first,
+        snapshot: ceremony.snapshot,
+      };
+    }
+    var idx = seq.indexOf(ceremony.revealedUpTo);
+    if (idx >= 0 && idx < seq.length - 1) {
+      var next = seq[idx + 1];
+      return {
+        phase: next === 1 ? "complete" : "reveal",
+        revealedUpTo: next,
+        snapshot: ceremony.snapshot,
+      };
+    }
+    return {
+      phase: "complete",
+      revealedUpTo: 1,
+      snapshot: ceremony.snapshot,
+    };
+  }
+
+  /** Pula direto para o fim da cerimônia. */
+  function revealAllCeremonyState(ceremony) {
+    if (!ceremony || !ceremony.snapshot || !ceremony.snapshot.length) return ceremony;
+    return {
+      phase: "complete",
+      revealedUpTo: 1,
+      snapshot: ceremony.snapshot,
+    };
+  }
+
+  function resetPresentationCeremony() {
+    var out = compute();
+    var ord =
+      out && state.evento
+        ? E.classificacaoOrdenada(out.detalhes, out.ranks, out.tiebreakByIgreja)
+        : [];
+    state.presentationCeremony = {
+      phase: ord.length ? "intro" : "complete",
+      revealedUpTo: null,
+      snapshot: ord.length ? JSON.parse(JSON.stringify(ord)) : [],
+      ignoreAdvanceUntil: 0,
+    };
+  }
+
+  function clearPresentationCeremony() {
+    state.presentationCeremony = {
+      phase: "intro",
+      revealedUpTo: null,
+      snapshot: null,
+      ignoreAdvanceUntil: 0,
+    };
+  }
+
+  function getCeremonyOrd() {
+    return (state.presentationCeremony && state.presentationCeremony.snapshot) || [];
+  }
+
+  function getRowByPosition(ord, posicao) {
+    for (var i = 0; i < ord.length; i++) {
+      if (ord[i].posicao === posicao) return ord[i];
+    }
+    return null;
+  }
+
+  function ceremonyStatusText(ceremony, ord) {
+    var teamCount = ord.length;
+    if (!ceremony || ceremony.phase === "complete") return "";
+    if (ceremony.phase === "intro") return "Pronto para revelar?";
+    var seq = getCeremonyRevealSequence(teamCount, ord);
+    var idx = seq.indexOf(ceremony.revealedUpTo);
+    if (idx >= 0 && idx < seq.length - 1) {
+      return "Revelando o " + seq[idx + 1] + "º lugar…";
+    }
+    if (ceremony.revealedUpTo === 1)
+      return isErUiTheme() ? "1.º lugar revelado!" : "Campeã revelada!";
+    return "Revelando o " + ceremony.revealedUpTo + "º lugar";
+  }
+
+  function bindPresentationCeremonyHandlers() {
+    unbindPresentationCeremonyHandlers();
+    var host = document.getElementById("presentation-host");
+    if (!host) return;
+
+    presentationCeremonyClickHandler = function (ev) {
+      if (
+        ev.target.closest(".presentation-exit-btn") ||
+        ev.target.closest(".scoreboard-reveal-all-btn")
+      ) {
+        return;
+      }
+      advancePresentationCeremony();
+    };
+
+    presentationCeremonyKeyHandler = function (ev) {
+      if (!document.body.classList.contains("presentation-mode")) return;
+      var confirmEl = document.getElementById("modal-confirm");
+      if (confirmEl && confirmEl.classList.contains("open")) return;
+
+      var isSpace = ev.key === " " || ev.code === "Space";
+      var isEnter = ev.key === "Enter";
+
+      if (isSpace && ev.shiftKey) {
+        ev.preventDefault();
+        revealAllPresentationCeremony();
+        return;
+      }
+      if (isSpace || isEnter) {
+        if (ev.target.closest(".presentation-exit-btn, .scoreboard-reveal-all-btn")) return;
+        ev.preventDefault();
+        advancePresentationCeremony();
+      }
+    };
+
+    host.addEventListener("click", presentationCeremonyClickHandler);
+    document.addEventListener("keydown", presentationCeremonyKeyHandler);
+  }
+
+  function unbindPresentationCeremonyHandlers() {
+    var host = document.getElementById("presentation-host");
+    if (host && presentationCeremonyClickHandler) {
+      host.removeEventListener("click", presentationCeremonyClickHandler);
+    }
+    if (presentationCeremonyKeyHandler) {
+      document.removeEventListener("keydown", presentationCeremonyKeyHandler);
+    }
+    presentationCeremonyClickHandler = null;
+    presentationCeremonyKeyHandler = null;
+  }
+
+  function advancePresentationCeremony() {
+    var ord = getCeremonyOrd();
+    if (!ord.length) return;
+    var cer = state.presentationCeremony;
+    if (cer.ignoreAdvanceUntil && Date.now() < cer.ignoreAdvanceUntil) return;
+    state.presentationCeremony = advanceCeremonyState(cer, ord.length);
+    var host = document.getElementById("presentation-host");
+    if (host && !host.hidden) updateScoreboardReveal(host);
+  }
+
+  function revealAllPresentationCeremony() {
+    state.presentationCeremony = revealAllCeremonyState(state.presentationCeremony);
+    var host = document.getElementById("presentation-host");
+    if (host && !host.hidden) updateScoreboardReveal(host);
+  }
+
   /** Alterna o modo apresentação garantindo aria-pressed e foco coerentes.
-   *  Quando ligado, popula `#presentation-host` com o scoreboard (top 3 em
-   *  cards gigantes + lista compacta abaixo) e esconde toda a UI regular
-   *  via `body.presentation-mode`. Quando desligado, restaura. */
+   *  Quando ligado, popula `#presentation-host` com a cerimônia de revelação
+   *  (5º→1º) e esconde toda a UI regular via `body.presentation-mode`. */
   function setPresentationMode(on) {
+    if (on && state.tourActive) stopTour();
+    if (on && state.esgrimaStageOpen) setEsgrimaStageOpen(false);
     var was = document.body.classList.contains("presentation-mode");
     document.body.classList.toggle("presentation-mode", !!on);
     var pres = document.getElementById("btn-pres");
@@ -4890,13 +7973,24 @@
     var host = document.getElementById("presentation-host");
 
     if (on) {
+      resetPresentationCeremony();
+      state.presentationCeremony.ignoreAdvanceUntil = Date.now() + 450;
       if (host) {
-        renderScoreboard(host);
+        renderScoreboard(host, { force: true });
         host.hidden = false;
         host.setAttribute("aria-hidden", "false");
+        host.setAttribute("tabindex", "0");
       }
-      // Foco no botão de sair (alvo óbvio para teclado/projetor).
-      if (exit) {
+      bindPresentationCeremonyHandlers();
+      /* Foco no palco (não no botão Sair): Espaço/Enter revelam a próxima colocação.
+       *  «Sair da apresentação» continua acessível via Tab ou Escape. */
+      if (host) {
+        try {
+          host.focus();
+        } catch (_e) {
+          /* best-effort */
+        }
+      } else if (exit) {
         try {
           exit.focus();
         } catch (_e) {
@@ -4904,13 +7998,16 @@
         }
       }
     } else {
+      unbindPresentationCeremonyHandlers();
+      clearPresentationCeremony();
       if (host) {
         host.hidden = true;
         host.setAttribute("aria-hidden", "true");
+        host.removeAttribute("tabindex");
         host.innerHTML = "";
+        delete host.dataset.ceremonyBuilt;
       }
       if (was && pres) {
-        // Devolve o foco ao botão que abriu, evitando "foco perdido no body".
         try {
           pres.focus();
         } catch (_e) {
@@ -4920,17 +8017,7 @@
     }
   }
 
-  /** Renderiza o scoreboard de apresentação em `host`. Layout:
-   *  - cabeçalho com nome do evento + data;
-   *  - top 3 em cards gigantes (ouro/prata/bronze, ouro um pouco elevado);
-   *  - lista das demais classificadas em tabela compacta abaixo.
-   *  Se não houver dados, exibe mensagem amigável. */
-  function renderScoreboard(host) {
-    host.innerHTML = "";
-    var ev = state.evento;
-    var meta = (ev && ev.meta) || {};
-    var out = compute();
-
+  function buildScoreboardHeader(meta) {
     var header = document.createElement("header");
     header.className = "scoreboard-header";
     var titulo = document.createElement("h1");
@@ -4939,87 +8026,302 @@
     titulo.textContent = (meta.nome || "Evento sem nome") + " — Classificação";
     var sub = document.createElement("p");
     sub.className = "scoreboard-sub";
-    sub.textContent = [meta.data, meta.local].filter(Boolean).join(" · ");
+    sub.textContent = [formatDataExibicao(meta.data), meta.local].filter(Boolean).join(" · ");
     header.appendChild(titulo);
     if (sub.textContent) header.appendChild(sub);
-    host.appendChild(header);
+    return header;
+  }
 
-    if (!ev || !out) {
+  function updateScoreboardHeader(host) {
+    if (!host || !host.dataset.ceremonyBuilt) return;
+    var ev = state.evento;
+    var meta = (ev && ev.meta) || {};
+    var titulo = host.querySelector("#presentation-title");
+    var sub = host.querySelector(".scoreboard-sub");
+    if (titulo) titulo.textContent = (meta.nome || "Evento sem nome") + " — Classificação";
+    if (sub)
+      sub.textContent = [formatDataExibicao(meta.data), meta.local].filter(Boolean).join(" · ");
+  }
+
+  function prefersReducedMotion() {
+    try {
+      return (
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function cancelScoreboardPointAnim(card) {
+    if (!card || card._scoreAnimRaf == null) return;
+    cancelAnimationFrame(card._scoreAnimRaf);
+    card._scoreAnimRaf = null;
+  }
+
+  /** Contagem crescente do total de pontos (respeita prefers-reduced-motion). */
+  function animateScoreboardPoints(card, valueEl, target) {
+    cancelScoreboardPointAnim(card);
+    var goal = Number(target);
+    if (!Number.isFinite(goal)) goal = 0;
+    if (!valueEl) return;
+    if (prefersReducedMotion() || goal <= 0) {
+      valueEl.textContent = fmt(goal);
+      valueEl.classList.remove("is-counting");
+      return;
+    }
+    var duration = Math.min(1800, Math.max(900, Math.round(goal * 1.6)));
+    var startAt = performance.now();
+    valueEl.textContent = fmt(0);
+    valueEl.classList.add("is-counting");
+    function tick(now) {
+      var t = Math.min(1, (now - startAt) / duration);
+      var eased = 1 - Math.pow(1 - t, 3);
+      valueEl.textContent = fmt(goal * eased);
+      if (t < 1) {
+        card._scoreAnimRaf = requestAnimationFrame(tick);
+      } else {
+        valueEl.textContent = fmt(goal);
+        valueEl.classList.remove("is-counting");
+        card._scoreAnimRaf = null;
+      }
+    }
+    card._scoreAnimRaf = requestAnimationFrame(tick);
+  }
+
+  function scoreboardTrophyHtml(posLabel) {
+    var p = Number(posLabel);
+    if (p < 1 || p > 3) return "";
+    var tier = p === 1 ? "ou" : p === 2 ? "pt" : "br";
+    return (
+      '<span class="scoreboard-trophy scoreboard-trophy--' +
+      tier +
+      '" aria-hidden="true">' +
+      '<svg class="scoreboard-trophy-icon" viewBox="0 0 24 24" focusable="false" aria-hidden="true">' +
+      '<path fill="currentColor" d="M5 3h14v2h1a3 3 0 0 1 3 3v1a6 6 0 0 1-4.5 5.8L18 21H6l-.5-6.2A6 6 0 0 1 1 9V8a3 3 0 0 1 3-3h1V3zm2 2v2h10V5H7zm5 14.5 1.2-7.4A4 4 0 0 0 16.9 11H7.1a4 4 0 0 0 3.7 5.1L12 19.5z"/>' +
+      "</svg></span>"
+    );
+  }
+
+  function burstPresentationConfetti(host, pos) {
+    if (!host || prefersReducedMotion()) return;
+    var palettes = {
+      1: ["#fdd835", "#ffeb3b", "#ffc107", "#fff59d", "#ffb300"],
+      2: ["#cfd8dc", "#eceff1", "#b0bec5", "#ffffff", "#90a4ae"],
+      3: ["#ce8e44", "#ffe0b2", "#ffcc80", "#8d6e63", "#ffb74d"],
+    };
+    var colors = palettes[pos] || palettes[1];
+    var count = pos === 1 ? 96 : pos === 2 ? 72 : 56;
+    var layer = document.createElement("div");
+    layer.className = "scoreboard-confetti";
+    layer.setAttribute("aria-hidden", "true");
+    for (var i = 0; i < count; i++) {
+      var piece = document.createElement("span");
+      piece.className = "scoreboard-confetti-piece";
+      piece.style.left = Math.random() * 100 + "%";
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.setProperty("--drift", Math.round(Math.random() * 240 - 120) + "px");
+      piece.style.setProperty("--spin", Math.round(Math.random() * 720 + 360) + "deg");
+      piece.style.animationDuration = 1.1 + Math.random() * 1.4 + "s";
+      piece.style.animationDelay = Math.random() * 0.35 + "s";
+      if (Math.random() > 0.5) piece.style.borderRadius = "50%";
+      layer.appendChild(piece);
+    }
+    host.appendChild(layer);
+    window.setTimeout(function () {
+      if (layer.parentNode) layer.parentNode.removeChild(layer);
+    }, 2800);
+  }
+
+  function celebratePodiumReveal(host, pos, isNewReveal) {
+    if (!isNewReveal || pos < 1 || pos > 3) return;
+    burstPresentationConfetti(host, pos);
+  }
+
+  function fillScoreboardCard(card, row, posLabel, opts) {
+    opts = opts || {};
+    cancelScoreboardPointAnim(card);
+    if (!row) {
+      card.classList.add("is-hidden");
+      card.classList.remove("is-revealed", "is-revealed-now");
+      card.innerHTML =
+        '<span class="scoreboard-pos scoreboard-pos--placeholder" aria-hidden="true">?</span>' +
+        '<span class="scoreboard-igreja scoreboard-igreja--placeholder">Aguardando…</span>';
+      return;
+    }
+    card.classList.remove("is-hidden");
+    card.classList.add("is-revealed");
+    card.innerHTML =
+      scoreboardTrophyHtml(posLabel) +
+      '<span class="scoreboard-pos">' +
+      posLabel +
+      "º</span>" +
+      '<span class="scoreboard-igreja">' +
+      escapeHtml(row.igreja) +
+      "</span>" +
+      '<span class="scoreboard-pts">' +
+      '<span class="scoreboard-pts-label">Total</span>' +
+      '<span class="scoreboard-pts-value">0</span>' +
+      "</span>";
+    var valueEl = card.querySelector(".scoreboard-pts-value");
+    if (opts.animatePoints) animateScoreboardPoints(card, valueEl, row.total);
+    else if (valueEl) valueEl.textContent = fmt(row.total);
+  }
+
+  function updateScoreboardReveal(host) {
+    if (!host || !host.dataset.ceremonyBuilt) {
+      renderScoreboard(host, { force: true });
+      return;
+    }
+
+    var ceremony = state.presentationCeremony;
+    var ord = getCeremonyOrd();
+
+    host.classList.toggle("scoreboard--intro", ceremony.phase === "intro");
+    host.classList.toggle("scoreboard--complete", ceremony.phase === "complete");
+
+    var status = host.querySelector(".scoreboard-status");
+    if (status) status.textContent = ceremonyStatusText(ceremony, ord);
+
+    var revealAllBtn = host.querySelector(".scoreboard-reveal-all-btn");
+    if (revealAllBtn) revealAllBtn.hidden = ceremony.phase === "complete";
+
+    var medals = [
+      { medal: "pt", pos: 2 },
+      { medal: "ou", pos: 1 },
+      { medal: "br", pos: 3 },
+    ];
+    medals.forEach(function (m) {
+      var card = host.querySelector('.scoreboard-card[data-medal="' + m.medal + '"]');
+      if (!card) return;
+      card.hidden = false;
+      var revealed = isPositionRevealed(ceremony, m.pos);
+      var row = revealed ? getRowByPosition(ord, m.pos) : null;
+      var wasHidden = card.classList.contains("is-hidden");
+      fillScoreboardCard(card, row, m.pos, { animatePoints: revealed && wasHidden });
+      if (revealed && wasHidden) {
+        card.classList.add("is-revealed-now");
+        celebratePodiumReveal(host, m.pos, true);
+        window.setTimeout(function () {
+          card.classList.remove("is-revealed-now");
+        }, 800);
+      }
+      if (m.medal === "ou" && revealed)
+        card.classList.toggle("is-champion", ceremony.phase === "complete");
+    });
+
+    [4, 5].forEach(function (pos) {
+      var card = host.querySelector('.scoreboard-card-compact[data-pos="' + pos + '"]');
+      if (!card) return;
+      if (!positionInCeremony(ord, pos)) {
+        card.hidden = true;
+        return;
+      }
+      card.hidden = false;
+      var revealed = isPositionRevealed(ceremony, pos);
+      var row = revealed ? getRowByPosition(ord, pos) : null;
+      var wasHidden = card.classList.contains("is-hidden");
+      fillScoreboardCard(card, row, pos, { animatePoints: revealed && wasHidden });
+      if (revealed && wasHidden) {
+        card.classList.add("is-revealed-now");
+        window.setTimeout(function () {
+          card.classList.remove("is-revealed-now");
+        }, 800);
+      }
+    });
+
+    var midstrip = host.querySelector(".scoreboard-midstrip");
+    if (midstrip) {
+      var hasMid = [4, 5].some(function (p) {
+        return positionInCeremony(ord, p);
+      });
+      midstrip.hidden = !hasMid;
+    }
+  }
+
+  /** Renderiza o palco de apresentação com cerimônia de revelação 5º→1º. */
+  function renderScoreboard(host, opts) {
+    opts = opts || {};
+    if (!host) return;
+    if (host.dataset.ceremonyBuilt && !opts.force) {
+      updateScoreboardReveal(host);
+      return;
+    }
+
+    host.innerHTML = "";
+    delete host.dataset.ceremonyBuilt;
+
+    var ev = state.evento;
+    var meta = (ev && ev.meta) || {};
+    host.className = "presentation-host scoreboard-stage";
+
+    host.appendChild(buildScoreboardHeader(meta));
+
+    if (!ev || !getCeremonyOrd().length) {
       var empty = document.createElement("p");
       empty.className = "scoreboard-empty";
-      empty.textContent = "Carregue um evento para visualizar a classificação.";
+      empty.textContent = ev
+        ? "Sem dados para classificar ainda."
+        : "Carregue um evento para visualizar a classificação.";
       host.appendChild(empty);
       return;
     }
 
-    var ord = E.classificacaoOrdenada(out.detalhes, out.ranks, out.tiebreakByIgreja);
-    if (!ord || !ord.length) {
-      var noData = document.createElement("p");
-      noData.className = "scoreboard-empty";
-      noData.textContent = "Sem dados para classificar ainda.";
-      host.appendChild(noData);
-      return;
-    }
+    var main = document.createElement("div");
+    main.className = "scoreboard-main";
 
-    // Top 3 em cards (ordem visual: prata, ouro, bronze para destacar o ouro no centro)
+    var status = document.createElement("p");
+    status.className = "scoreboard-status";
+    status.setAttribute("aria-live", "polite");
+    main.appendChild(status);
+
     var top3 = document.createElement("section");
     top3.className = "scoreboard-top3";
-    top3.setAttribute("aria-label", "Top 3 do evento");
-    var medals = ["pt", "ou", "br"];
-    medals.forEach(function (mk) {
-      var idx = mk === "ou" ? 0 : mk === "pt" ? 1 : 2;
-      var r = ord[idx];
-      if (!r) return;
+    top3.setAttribute("aria-label", "Pódio do evento");
+    [
+      { medal: "pt", pos: 2 },
+      { medal: "ou", pos: 1 },
+      { medal: "br", pos: 3 },
+    ].forEach(function (m) {
       var card = document.createElement("article");
-      card.className = "scoreboard-card";
-      card.setAttribute("data-medal", mk);
-      card.innerHTML =
-        '<span class="scoreboard-pos">' +
-        (idx + 1) +
-        "º</span>" +
-        '<span class="scoreboard-igreja">' +
-        escapeHtml(r.igreja) +
-        "</span>" +
-        '<span class="scoreboard-pts">' +
-        '<span class="scoreboard-pts-label">Total</span>' +
-        fmt(r.total) +
-        "</span>";
+      card.className = "scoreboard-card is-hidden";
+      card.setAttribute("data-medal", m.medal);
+      card.setAttribute("data-pos", String(m.pos));
       top3.appendChild(card);
     });
-    host.appendChild(top3);
+    main.appendChild(top3);
 
-    // Demais
-    if (ord.length > 3) {
-      var rest = document.createElement("section");
-      rest.className = "scoreboard-rest";
-      rest.setAttribute("aria-label", "Demais classificadas");
-      var table = document.createElement("table");
-      table.innerHTML =
-        '<thead><tr><th scope="col">#</th><th scope="col">Igreja</th>' +
-        '<th scope="col" style="text-align:right;">Total</th></tr></thead>';
-      var tbody = document.createElement("tbody");
-      ord.slice(3).forEach(function (r) {
-        var tr = document.createElement("tr");
-        tr.innerHTML =
-          '<td class="pos">' +
-          r.posicao +
-          "º</td>" +
-          "<td>" +
-          escapeHtml(r.igreja) +
-          "</td>" +
-          '<td class="tot">' +
-          fmt(r.total) +
-          "</td>";
-        tbody.appendChild(tr);
-      });
-      table.appendChild(tbody);
-      rest.appendChild(table);
-      host.appendChild(rest);
-    }
+    var midstrip = document.createElement("section");
+    midstrip.className = "scoreboard-midstrip";
+    midstrip.setAttribute("aria-label", "4º e 5º lugares");
+    [4, 5].forEach(function (pos) {
+      var card = document.createElement("article");
+      card.className = "scoreboard-card scoreboard-card-compact is-hidden";
+      card.setAttribute("data-pos", String(pos));
+      midstrip.appendChild(card);
+    });
+    main.appendChild(midstrip);
+
+    host.appendChild(main);
+
+    var revealAllBtn = document.createElement("button");
+    revealAllBtn.type = "button";
+    revealAllBtn.className = "scoreboard-reveal-all-btn";
+    revealAllBtn.textContent = "Revelar tudo";
+    revealAllBtn.addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      revealAllPresentationCeremony();
+    });
+    host.appendChild(revealAllBtn);
+
+    host.dataset.ceremonyBuilt = "1";
+    updateScoreboardReveal(host);
   }
 
   /** Tenta carregar o evento de exemplo. Prioriza `window.ConclaveDefaultEvento`
-   *  (injetado por `eventos/conclave-2026-1.evento.embedded.js`), que funciona
+   *  (injetado por `eventos/conclave-mr-2026-2.evento.embedded.js`), que funciona
    *  até em `file://` — cenário típico de pen-drive. Se não houver a constante,
    *  cai para `fetch()` do JSON, que só funciona via http(s). Resolve com uma
    *  cópia profunda (evita o usuário mutar o objeto global por engano). */
@@ -5031,26 +8333,64 @@
         return Promise.reject(e);
       }
     }
-    return fetch("eventos/conclave-2026-1.evento.json").then(function (r) {
+    return fetch("eventos/conclave-mr-2026-2.evento.json").then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     });
   }
 
+  /** URL com `?novo` ou `?evento=novo` inicia com evento em branco (sem exemplo). */
+  function shouldStartWithNovoEvento() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      if (params.has("novo")) return true;
+      var ev = params.get("evento");
+      return ev === "novo" || ev === "vazio";
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function startWithNovoEvento() {
+    var ev = buildNovoEventoSeed();
+    if (setEvento(ev, null)) {
+      state.tab = "config";
+    }
+  }
+
+  /** Completa o PDF do regulamento em projetos já salvos do evento padrão. */
+  function fillBundledRegulamentoIfMissing(savedEvento, bundledEvento) {
+    if (!savedEvento || !savedEvento.meta || !bundledEvento || !bundledEvento.meta) return;
+    if (String(savedEvento.meta.slug || "") !== String(bundledEvento.meta.slug || "")) return;
+    var bundledUrl = String(bundledEvento.meta.regulamentoUrl || "").trim();
+    if (!bundledUrl) return;
+    if (String(savedEvento.meta.regulamentoUrl || "").trim()) return;
+    savedEvento.meta.regulamentoUrl = bundledUrl;
+    if (bundledEvento.meta.regulamentoNome) {
+      savedEvento.meta.regulamentoNome = bundledEvento.meta.regulamentoNome;
+    }
+  }
+
   function tryFetchDefaultEvento() {
     tryLoadDefaultEventoWeb()
       .then(function (ev) {
-        if (!state.evento) {
-          var slug = ev.meta && ev.meta.slug;
-          var saved = slug ? loadFromStorage(slug) : null;
-          if (saved && saved.evento && saved.dados) {
-            setEvento(saved.evento, saved.dados);
-            return;
-          } else {
-            setEvento(ev, saved && saved.dados ? saved.dados : null);
-            return;
-          }
+        if (state.evento) return;
+        var slug = ev.meta && ev.meta.slug;
+        var saved = slug ? loadFromStorage(slug) : null;
+        if (saved && saved.evento && saved.dados && !eventoValidationErrors(saved.evento).length) {
+          fillBundledRegulamentoIfMissing(saved.evento, ev);
+          setEvento(saved.evento, saved.dados);
+          return;
         }
+        if (saved && saved.dados) {
+          showFeedback(
+            "O evento salvo neste navegador estava incompleto. Restauramos a configuração atual e mantivemos os dados de participação e pódio.",
+            "warn"
+          );
+          setEvento(ev, saved.dados);
+          return;
+        }
+        setEvento(ev, null);
       })
       .catch(function () {
         state.autoLoadFailed = true;
@@ -5081,11 +8421,30 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    applyUiTheme(getStoredUiTheme());
+    applyUiTheme("mr", { silent: true });
     initToolbar();
     initThemeToggle();
-    tryFetchDefaultEvento();
+    initTour();
+    if (shouldStartWithNovoEvento()) {
+      startWithNovoEvento();
+    } else {
+      tryFetchDefaultEvento();
+    }
     render();
     registerServiceWorker();
   });
+
+  window.ConclaveTour = {
+    steps: TOUR_STEPS,
+    start: startTour,
+    stop: stopTour,
+    next: nextTourStep,
+    prev: prevTourStep,
+    isActive: function () {
+      return !!state.tourActive;
+    },
+    currentIndex: function () {
+      return state.tourStep;
+    },
+  };
 })();

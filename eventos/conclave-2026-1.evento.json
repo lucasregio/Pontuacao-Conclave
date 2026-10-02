@@ -4,6 +4,7 @@
     "nome": "Conclave MR 2026/1",
     "slug": "conclave-2026-1",
     "data": "2026-04-11",
+    "local": "Vitória — ES",
     "regulamentoUrl": "regulamento-2026.pdf"
   },
   "pesos": {
@@ -19,6 +20,10 @@
     "ou": 300,
     "pt": 200,
     "br": 100
+  },
+  "sorteioEsgrima": {
+    "corpus": "biblia",
+    "tempoSegundos": 20
   },
   "igrejas": [
     { "id": "alianca", "nome": "Primeira Igreja Batista Aliança" },
@@ -123,6 +128,7 @@
       "tipo": "escrita",
       "categoriaId": "junior",
       "categoria": "Junior",
+      "escritaTotalQuestoes": 20,
       "ordem": 10
     },
     {
@@ -131,6 +137,7 @@
       "tipo": "escrita",
       "categoriaId": "adolescente",
       "categoria": "Adolescente",
+      "escritaTotalQuestoes": 20,
       "ordem": 11
     },
     {
@@ -139,6 +146,7 @@
       "tipo": "escrita",
       "categoriaId": "juvenil",
       "categoria": "Juvenil",
+      "escritaTotalQuestoes": 20,
       "ordem": 12
     }
   ]

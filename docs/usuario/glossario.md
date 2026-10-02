@@ -15,6 +15,7 @@ documento como apoio rápido durante o evento.
 - [Desempate](#desempate)
 - [Schema](#schema)
 - [Projeto vs evento](#projeto-vs-evento)
+- [Esgrima (sorteio)](#esgrima-sorteio)
 
 ### MR
 
@@ -54,6 +55,12 @@ e aparece agrupada no pódio e nos relatórios dentro dessa modalidade. Cada pro
 um pódio com três posições: ouro
 (`ou`), prata (`pt`) e bronze (`br`). A pontuação somada à classificação geral por
 medalha é definida em `evento.medalhas[ou|pt|br]`.
+
+### Métricas da prova escrita
+
+Cadastro opcional de **acertos por MR** (`dados.metricasEscrita`) nas provas com
+`tipo: escrita`. Serve para gráficos e exportação CSV; **não soma pontos** à
+classificação — o pódio manual continua sendo a fonte das medalhas na gincana.
 
 ### Pontuacao extra
 
@@ -103,3 +110,10 @@ Dois objetos com papéis distintos:
 - **Projeto** (`.projeto.json`): configuração + dados preenchidos. É o objeto
   `{ evento, dados }`, em que `dados` traz `participacao` (por igreja) e `podium`
   (por prova). É o backup canônico para round-trip.
+
+### Esgrima (sorteio)
+
+Ferramenta da aba **Esgrima** para o líder da prova **Esgrima Bíblico (Debate Bíblico)**
+ditar referências aleatórias sem repetir. Não é o **Debate de versículos** (recitação)
+nem a **Esgrima avançada** (palavra). O histórico fica em `dados.sorteioEsgrima` e
+**não entra** na classificação.

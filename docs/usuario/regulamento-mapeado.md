@@ -25,8 +25,22 @@ Cada item segue a estrutura:
   - **Observação** — regra especial, dependência ou armadilha comum.
 
 Os caminhos JSON usam a notação `evento.pesos.X` ou `dados.participacao[igrejaId].X`.
-A amostra real está em `eventos/conclave-2026-1.evento.json` (configuração) e
+O evento padrão é `eventos/conclave-mr-2026-2.evento.json`. Há também
+`eventos/conclave-2026-1.evento.json` (configuração) e
 `eventos/conclave-2026-1.projeto.exemplo.json` (configuração + dados).
+
+### Conclave MR 2026/2 no app
+
+- **Provas com medalha** (Junior / Adolescente / Juvenil): prova escrita dos
+  Evangelhos, prova escrita da biografia _O Gigante que Dorme_ (ambas com
+  `escritaTotalQuestoes: 20` e mínimo de 12 acertos), Esgrima bíblica (sorteio
+  de 30 s na aba Esgrima), Esgrima avançada e Debate de versículos.
+- **Quiz dos Evangelhos** (Kahoot): o prêmio é um mimo, então não há prova no
+  pódio nem pontos no total.
+- **Desempate interno da prova escrita** (questão mais difícil errada, depois
+  tempo de entrega): aplicado pelos juízes na correção; o app recebe o pódio.
+- **Desempate geral**: só o critério de Debate de Versículos se aplica, pois o
+  evento não tem provas de Conhecimentos Gerais.
 
 ## Itens de participacao
 
@@ -87,6 +101,16 @@ A amostra real está em `eventos/conclave-2026-1.evento.json` (configuração) e
     peso positivo, o motor soma positivo (ou seja: o sinal negativo é
     responsabilidade de quem edita o JSON do evento).
 
+- **Conservação do templo (todas as igrejas)**
+  - Campo (peso, opcional): `evento.pesos.conservacao_templo` (−100 no MR 2026/2).
+  - Campo (entrada): `dados.conservacaoTemploDescumprida` (boolean, um só para o
+    evento).
+  - UI: aba **Participação** → caixa «Conservação do templo descumprida», acima
+    da tabela. Aparece quando o peso é diferente de 0 (editável em
+    **Configuração → Pesos**).
+  - Observação: quando marcada, o peso entra nas punições de **cada** igreja.
+    Sem o peso no evento (ou com 0), a caixa some e nada muda.
+
 ## Pontuacao extra
 
 - **Pontuação extra (antigas "embaixadas")**
@@ -114,6 +138,13 @@ soma o peso correspondente.
     pontua, só referência). O campo `nomeLivre` é usado quando a igreja vencedora
     **não está cadastrada** em `evento.igrejas[]`: o pódio aparece nos relatórios,
     mas o motor **não** atribui pontos a uma igreja inexistente.
+
+- **Sorteio da Esgrima (Debate Bíblico)**
+  - Campo (configuração): `evento.sorteioEsgrima.corpus` e `.tempoSegundos` (opcionais).
+  - Campo (sessão): `dados.sorteioEsgrima[provaId]` com `usados`, `atual`, `historico`.
+  - UI: aba **Esgrima**.
+  - Observação: só provas cujo título contém **"esgrima"** e **não** contém **"avanc"**.
+    Não altera `computeTotals`. O Debate de versículos (recitação) não usa este campo.
 
 ## Desempate
 
@@ -163,6 +194,8 @@ Para validar o cálculo automático contra a planilha do regulamento:
      - `visitantes × pesos.visitante`.
      - `pesos.animacao` se `animacao` for truthy.
    - Some/subtraia `pesos.mau_comportamento` se `mau_comportamento` for truthy.
+   - Some/subtraia `pesos.conservacao_templo` se `dados.conservacaoTemploDescumprida`
+     for verdadeiro.
    - Some `pontuacao_extra` (ou `embaixadas`, se aplicável).
    - Some, em `dados.podium`, cada vez que `igrejaId` da igreja aparece como `ou`,
      `pt` ou `br`, multiplicando pelo `evento.medalhas[ou|pt|br]` correspondente.

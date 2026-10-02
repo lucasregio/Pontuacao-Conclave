@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="pt-BR" data-ui-theme="mr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Changelog — Pontuação Conclave</title>
+    <meta name="description" content="Changelog — documentação da Pontuação Conclave." />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+    <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="../icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="../icons/icon.svg" />
+    <link rel="stylesheet" href="../web/styles.css" />
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <header class="docs-header">
+      <p class="docs-eyebrow"><a href="../index.html">← Voltar ao app</a> · <a href="index.html">Documentação</a></p>
+      <h1>Changelog</h1>
+    </header>
+    <main id="conteudo" tabindex="-1" class="docs-main docs-prose">
+      <article class="docs-article">
+<p>Todas as mudanças relevantes deste projeto serão documentadas neste arquivo.</p>
+<p>O formato segue <a href="https://keepachangelog.com/pt-BR/1.1.0/">Keep a Changelog</a> e o projeto adota <a href="https://semver.org/lang/pt-BR/">Versionamento Semântico</a>.</p>
+<p>A versão registrada em <code>package.json</code> reflete a versão da aplicação web. Como não há build e o app é 100% estático, o &quot;release&quot; corresponde a um deploy do GitHub Pages.</p>
+<h2 id="unreleased">[Unreleased]</h2>
+<h3 id="corrigido">Corrigido</h3>
+<ul>
+<li><strong>Pódio / Relatórios</strong>: os botões «Faixa etária» e «Tipo de prova» (e a barra de filtros) deixam de ficar atrás do título sticky do evento ao rolar. O scroll passa a ocorrer em <code>.content</code>; as barras ficam sticky abaixo da topbar.</li>
+<li><strong>Copiar resumo</strong>: se a Clipboard API não resolver (permissão pendurada), a cópia cai para <code>execCommand</code> ainda no clique e avisa falha após 1,5 s — a UI não fica muda.</li>
+<li><strong>Início → «Gerar relatório oficial»</strong>: gera o perfil <strong>Oficial completo</strong> (auditoria), não o Resumo de divulgação.</li>
+<li><strong>ER 2026/2 no dia</strong>: inscrição e pontualidade começam desmarcadas (check-in); o Pódio avisa se a prova escrita estiver abaixo de 12/20.</li>
+<li><strong>Montagem bíblica</strong> no ER 2026/2 passa a ser tipo <strong>escrita</strong> (gabarito em papel). A regra de 12/20 continua só em Evangelhos e Organização; montagem desclassifica com mais de 10 erros.</li>
+<li><strong>Pódios no Início</strong>: o cartão mostra <code>preenchidas / total</code> de provas, não um percentual (1 de 15 virava «7%»).</li>
+</ul>
+<h3 id="adicionado">Adicionado</h3>
+<ul>
+<li><strong>Conclave MR 2026/2</strong> (<code>eventos/conclave-mr-2026-2.evento.json</code>) passa a ser o evento padrão: 03/10/2026, Igreja Batista Aliança; idades 9–11 / 12–14 / 15–18; 15 provas (escrita dos Evangelhos, escrita da biografia *O Gigante que Dorme*, Esgrima bíblica, Esgrima avançada e Debate de versículos × 3 categorias); Esgrima com 30 s. Regulamento em <code>static/regulamento-mr-2026-2.pdf</code>. O Quiz dos Evangelhos (Kahoot) não pontua. O ER 2026/2 continua disponível em «Carregar evento». Service worker <code>pontuacao-conclave-v23</code>.</li>
+<li><strong>Penalidade coletiva de conservação do templo</strong>: peso opcional <code>pesos.conservacao_templo</code> (−100 no MR 2026/2) e caixa única na aba Participação (<code>dados.conservacaoTemploDescumprida</code>) que desconta de todas as igrejas. Eventos sem o peso não mudam.</li>
+<li><strong>Aba Esgrima</strong>: sorteio de referências bíblicas sem repetição para o líder da Esgrima (Debate Bíblico) ditar, com cronômetro (20 s MR / 30 s ER), histórico por categoria e tela cheia. Não altera a classificação — o pódio continua na aba Pódio. Service worker <code>pontuacao-conclave-v22</code>.</li>
+<li><strong>Tutorial de 5 minutos</strong> (<code>docs/usuario/tutorial-5min.md</code>): fluxo ilustrado do dia (abrir evento, conferir cadastro, participação, pódio, ranking e backup), com capturas do guia visual. A landing <code>docs/index.html</code> abre nesse tour; o Início do app aponta para a mesma página.</li>
+<li><strong>Tutorial guiado na tela</strong>: o botão «Tutorial na tela» (Início e rodapé) percorre as abas reais com destaque, deixa lançar dados no passo atual e carrega o evento de exemplo se ainda não houver evento.</li>
+<li><strong>Checklist do dia</strong> no Início do Conclave ER 2026/2 (check-in, extra, escrita 60% e backup).</li>
+</ul>
+<h2 id="2-0-0-2026-06-20">[2.0.0] - 2026-06-20</h2>
+<h3 id="removido">Removido</h3>
+<ul>
+<li><strong>Imprimir / Salvar PDF</strong> genérico do menu «Mais ações» (<code>#btn-print</code>). O único caminho de PDF passa a ser o relatório oficial na aba Relatórios.</li>
+</ul>
+<ul>
+<li>Campo <strong>Imagem de fundo</strong> em Configuração → Geral e toda a lógica CSS/JS associada (<code>meta.tema.backgroundImage</code>, <code>body.has-bg</code>). O fundo fixo do tema MR/ER permanece.</li>
+</ul>
+<h3 id="adicionado">Adicionado</h3>
+<ul>
+<li><strong>Relatório oficial</strong> com perfis <strong>Resumo</strong> e <strong>Completo</strong> (<code>web/relatorio.js</code> + <code>renderRelatorioOficial()</code>): capa institucional com local, texto de encerramento, bloco de assinaturas, numeração de páginas na impressão e nome sugerido do PDF via <code>document.title</code>. Consulta rápida (medalhas/pódio na tela) separada do documento oficial.</li>
+<li>Testes em <code>tests/relatorio.test.js</code> para perfis e helpers do relatório.</li>
+</ul>
+<ul>
+<li>Campo <strong><code>tipo</code></strong> em cada prova (<code>oral</code> | <code>escrita</code>): coluna em Configuração, seções separadas no pódio/relatórios e coluna «Tipo» no CSV do pódio. Eventos antigos inferem o tipo pelo título («escrita» → escrita; demais → oral).</li>
+</ul>
+<ul>
+<li><strong>Renomeação</strong> do produto para <strong>Pontuação Conclave</strong> (UI, PWA, documentação).</li>
+<li><strong>Reorganização</strong> de pastas: <code>schema/</code>, <code>static/</code>, <code>docs/usuario/</code>, <code>docs/operacional/</code>, <code>referencia/</code> (excluída do deploy Pages).</li>
+<li>Botão <strong>Regulamento</strong> na topbar; campo <strong>Local</strong> em Configuração → Geral.</li>
+<li><strong>Exportar evento</strong> (somente configuração) no menu Mais.</li>
+<li>Confirmação ao trocar para tema <strong>ER</strong> (preset sobrescreve pesos/medalhas).</li>
+<li>Modo apresentação atualiza scoreboard em tempo real durante edição.</li>
+<li>Reordenar categorias/provas por teclado: <strong>Alt+Seta</strong> no grip ⠿.</li>
+<li>Testes: <code>schema.test.js</code>, <code>embedded.test.js</code>, <code>perf.test.js</code>; cobertura ampliada em <code>engine.test.js</code>.</li>
+<li>Service worker bumpado para <code>pontuacao-conclave-v2</code> (Fase 0 — identidade e estrutura).</li>
+<li>Baseline datada em <code>docs/operacional/metrics-baseline.md</code>.</li>
+<li>Limpeza de duplicatas: planilhas em <code>referencia/planilhas/</code> com nomes ASCII; removido backup duplicado por encoding quebrado no macOS.</li>
+</ul>
+<ul>
+<li>Suite de documentação do usuário em <code>docs/usuario/</code> (<code>manual-uso.md</code>, <code>faq.md</code>, <code>glossario.md</code>, <code>troubleshooting.md</code>, <code>atalhos-teclado.md</code>, <code>regulamento-mapeado.md</code>) e landing page estática <code>docs/index.html</code> reusando <code>web/styles.css</code> (sem build, sem JS). Ponto de entrada a partir do app: link &quot;Documentação&quot; na sidebar e no rodapé de <code>index.html</code>.</li>
+<li>Desclutter do header: toolbar reduzida a &quot;Novo evento&quot;, &quot;Carregar projeto&quot;, &quot;Exportar projeto&quot; e o popover <strong>&quot;Mais ações&quot;</strong> (<code>#btn-mais</code> / <code>#more-menu</code>) que consolida &quot;Carregar evento&quot;, &quot;Eventos salvos&quot;, &quot;Modo apresentação&quot;, &quot;Imprimir / Salvar como PDF&quot; e &quot;Limpar dados do evento&quot;. Menu com roving tabindex, <code>aria-expanded</code>, fechamento via clique externo / <code>Esc</code> / mudança de foco. Hint do protocolo <code>file://</code> agora aparece só quando relevante (<code>initFileProtocolHint</code>).</li>
+<li><strong>Relatório oficial</strong> em PDF na aba Relatórios: botão &quot;Gerar relatório oficial&quot; monta um documento de 9 seções via <code>renderRelatorioOficial()</code> em <code>web/app.js</code> (capa, sumário executivo, classificação geral com top 3 destacado, medalhas por igreja, pódio por prova, detalhe de participação, avisos, apêndice de critérios e rodapé). Bloco <code>.relatorio-oficial</code> com layout A4 em <code>web/styles.css</code> e regras <code>@media print</code> que escondem a interface enquanto o relatório está visível (<code>body:has(.relatorio-oficial)</code>).</li>
+<li><strong>Exportar CSV (pódio)</strong> na aba Relatórios: <code>exportPodioCsv()</code> gera <code>{slug}-podio.csv</code> com as colunas Categoria, Prova, Posição, Igreja e Competidor — uma linha por (prova × ouro/prata/bronze), UTF-8 com BOM e separador <code>;</code> (Excel pt-BR abre direto).</li>
+<li><strong>Copiar resumo (Markdown)</strong> na aba Relatórios: <code>buildResumoMarkdown()</code> + <code>copyResumoMarkdown()</code> copiam para a área de transferência um resumo enxuto com Top 3 da classificação e vencedoras por prova agrupadas por categoria. Usa Clipboard API com fallback <code>textarea</code> + <code>execCommand</code> para contexto <code>file://</code>.</li>
+<li><strong>Reformulação completa do shell</strong> (<code>index.html</code> + <code>web/styles.css</code> + <code>web/app.js</code>): novo layout em CSS Grid com <strong>sidebar fixa em desktop</strong> (≥ 1024 px) e <strong>bottom-nav fixa em mobile</strong> (≤ 768 px), populadas a partir do mesmo <code>TAB_ORDER</code>. Topbar enxuta com nome do evento, sub-título, chips de KPI (<code>#kpi-strip</code>) e menu &quot;Mais ações&quot;. <code>TAB_ORDER</code> ganhou <strong><code>dashboard</code></strong> como primeira aba (<code>#panel-dashboard</code>).</li>
+<li><strong>Painel Dashboard</strong> (<code>renderDashboard()</code> / <code>wireDashboard()</code>):<ul>
+<li><strong>Sem evento</strong>: hero de boas-vindas + 3 CTAs grandes (Novo evento, Carregar projeto, Carregar exemplo 2026/1) + lista resumida de eventos salvos no <code>localStorage</code> + card &quot;Comece pela documentação&quot;.</li>
+<li><strong>Com evento</strong>: cabeçalho com nome/data, cards KPI (igrejas, provas, % pódios preenchidos, líder atual) e linha de ações para continuar em Participação, Pódio, Classificação ou abrir o relatório oficial.</li>
+</ul></li>
+<li><strong>Sistema de design tokens semânticos</strong> em <code>web/styles.css</code>: <code>--space-1..8</code>, <code>--radius-sm/md/lg/pill</code>, <code>--shadow-xs..lg</code>, <code>--type-xs..5xl</code>, <code>--surface</code>/<code>--surface-elevated</code>/<code>--surface-sunken</code>, <code>--on-surface</code>/<code>--on-surface-muted</code>, <code>--border</code>/<code>--border-strong</code>, <code>--brand</code>/<code>--brand-strong</code>/<code>--brand-soft</code>/<code>--accent</code>, e estados <code>--info</code>/<code>--success</code>/<code>--warn</code>/<code>--error</code> (com pares <code>-bg</code>/<code>-border</code>/<code>-on</code>). Temas MR/ER agora sobrescrevem apenas <code>--brand</code>/<code>--accent</code>/<code>--on-surface</code>, reaproveitando todo o resto. Os tokens legados (<code>--card</code>, <code>--theme-*</code>, <code>--feedback-*</code>) continuam como aliases dos novos para preservar o CSS ainda não migrado.</li>
+<li><strong>Dark mode automático</strong> via <code>@media (prefers-color-scheme: dark)</code>: overrides apenas dos tokens semânticos de superfície, tinta e estados (light reaplicável manualmente via <code>data-color-scheme=&quot;light&quot;</code> no <code>&lt;html&gt;</code>).</li>
+<li><strong>Modo apresentação como scoreboard</strong> (<code>#presentation-host</code> + <code>renderScoreboard()</code>): cards gigantes para o top 3 com fundos de ouro/prata/bronze (o ouro fica um pouco mais alto em desktop) e tabela compacta para as demais classificadas. Tipografia em <code>clamp()</code> se adapta ao tamanho da tela; <code>Esc</code> continua saindo.</li>
+<li>Service worker em <code>conclave-mr-v7</code>: <code>APP_SHELL</code> agora inclui <code>docs/index.html</code> para que a documentação fique disponível offline e remove a entrada da planilha rápida descontinuada.</li>
+<li>Fundo do app neutralizado: <code>--theme-body-fallback</code> (era <code>#3d7c1f</code> no MR e <code>#1565c0</code> no ER) e <code>--theme-config-head-bg</code> (eram verdes/azuis leitosos) passam a apontar para tokens sunken/brand-soft, evitando o &quot;flash&quot; verde ou azul que acontecia quando a imagem de fundo opcional do evento não carrega (cenário comum em <code>file://</code>).</li>
+<li><code>--card</code> agora aponta para <code>--surface-elevated</code> sólido (antes era um <code>rgba(255, 253, 248, 0.94)</code> &quot;glass&quot; que vazava a cor do body). Os cards ficam consistentes em qualquer fundo, com ou sem dark mode.</li>
+<li>Painel Configuração ganha contorno e fundo <code>--surface</code> próprios, destacando-se como um cartão único; section-heads passam a usar <code>--surface-sunken</code> com borda em <code>--border</code>.</li>
+<li>Sidebar redesenhada como <strong>superfície clara</strong> (<code>--surface</code> + texto em <code>--on-surface-muted</code>, item ativo em <code>--brand-soft</code> com texto na cor do brand). O fundo verde/azul cheio que estava atrapalhando a leitura foi substituído por uma faixa neutra com destaque colorido só onde importa (marca, item ativo, foco). O hero do Dashboard ficou em <code>--surface-elevated</code> com uma fina barra brand→accent na esquerda em vez do gradiente cheio.</li>
+<li><strong>Modo pen-drive (<code>file://</code> totalmente funcional)</strong>:<ul>
+<li>Novo <code>scripts/build-embedded.mjs</code> (+ npm script <code>build:embedded</code>) que gera <code>eventos/conclave-2026-1.evento.embedded.js</code> expondo o evento como <code>window.ConclaveDefaultEvento</code>. <code>index.html</code> carrega esse script antes do <code>app.js</code> e <code>tryLoadDefaultEventoWeb()</code> agora prefere a constante embarcada (cai no <code>fetch()</code> apenas se o embed não existir). Resultado: clicar duas vezes em <code>index.html</code> no pen-drive carrega o exemplo Conclave 2026/1 automaticamente, sem servidor.</li>
+<li>Nova pasta <code>pen-drive/</code> com <code>iniciar.command</code> (macOS/Linux), <code>iniciar.bat</code> (Windows) e <code>LEIA-ME.txt</code>. Os scripts detectam Python 3, sobem <code>python3 -m http.server</code> numa porta livre a partir da 8765 e abrem o navegador automaticamente — habilitando PWA, cache offline e auto-load via <code>fetch()</code> quando o usuário quiser o setup completo.</li>
+<li>Novo npm script <code>serve</code> (<code>python3 -m http.server 8765 --bind 127.0.0.1</code>) como atalho conveniente para o servidor local.</li>
+<li>Service worker bumpado para <code>conclave-mr-v8</code> incluindo <code>eventos/conclave-2026-1.evento.embedded.js</code> no <code>APP_SHELL</code>.</li>
+</ul></li>
+</ul>
+<h3 id="removido">Removido</h3>
+<ul>
+<li><strong><code>pontuacao_conclave.html</code></strong> (planilha rápida autocontida): substituída pela aba Dashboard em <code>index.html</code>, que oferece a mesma entrada rápida (CTAs de novo evento / carregar / carregar exemplo) sem duplicar regras nem markup. Referências removidas de <code>sw.js</code>, <code>index.html</code>, <code>docs/index.html</code>, <code>docs/manual-uso.md</code>, <code>README.md</code>, <code>AGENTS.md</code>, <code>CONTRIBUTING.md</code>, <code>scripts/quality-check.mjs</code> e <code>.github/workflows/lighthouse.yml</code>.</li>
+</ul>
+<h3 id="documentacao">Documentação</h3>
+<ul>
+<li><code>docs/release-checklist.md</code> ganhou smoke test do relatório oficial.</li>
+<li><code>docs/manual-uso.md</code> ganhou as seções &quot;Gerar relatório oficial&quot; e &quot;Outras formas de compartilhar&quot; (CSV pódio + copiar resumo) e perdeu a seção da planilha rápida descontinuada.</li>
+<li>Corrigida concordância de gênero em <code>docs/faq.md</code> e <code>docs/manual-uso.md</code>: MR é <strong>Mensageiras do Rei</strong> (não &quot;Mensageiros&quot;).</li>
+</ul>
+<h2 id="2-0-0-2026-06-19">[2.0.0] — 2026-06-19</h2>
+<p>Refator profundo após uma revisão completa do projeto. Esta versão consolida quatro ondas de melhorias (P0–P3), com foco em qualidade, acessibilidade, robustez e processo. Schema bumped para 2 (com migração automática em memória).</p>
+<h3 id="adicionado">Adicionado</h3>
+<p>#### P0 — fundação de qualidade</p>
+<ul>
+<li>Workflow de CI (<code>.github/workflows/ci.yml</code>) com Node 22 rodando lint, testes e format:check em todo PR/push.</li>
+<li>ESLint 9 (flat config) com regra <code>no-alert: error</code> para banir dialogs nativos.</li>
+<li>Prettier (config + ignore) para formatação consistente.</li>
+<li>Script de fallback <code>scripts/quality-check.mjs</code> que valida sem <code>npm install</code>.</li>
+<li>Banco de testes inicial em <code>tests/engine.test.js</code> cobrindo regras de pontuação, ranking, desempate e validação mínima.</li>
+<li>Documentação base: <code>README.md</code>, <code>AGENTS.md</code>, <code>docs/metrics-baseline.md</code>, <code>docs/performance-budget.md</code>, <code>docs/release-checklist.md</code>.</li>
+<li>Template de PR (<code>.github/pull_request_template.md</code>) alinhado com a checklist.</li>
+</ul>
+<p>#### P1 — robustez de motor e dados</p>
+<ul>
+<li>Suporte a decimais com vírgula no parsing numérico (<code>engine.js:num</code>), para copiar/colar de planilhas pt-BR.</li>
+<li>Helper <code>peso()</code> no engine garante que pesos ausentes/<code>NaN</code> virem 0.</li>
+<li><code>validateEventoMinimal</code> agora detecta tipos errados (<code>igrejas</code>/<code>provas</code> não serem arrays) e lista todas as chaves faltantes.</li>
+<li><code>classificacaoOrdenada</code> ordena por nome com <code>localeCompare(&quot;pt&quot;, { sensitivity: &quot;base&quot;, numeric: true })</code>.</li>
+<li>Round-trip de JSON: <code>tests/roundtrip.test.js</code> garante que exportar e reimportar preserva totais, ranks e contagem de medalhas.</li>
+<li><code>findProjetoOrphanRefs()</code> em <code>app.js</code> reporta IDs de igrejas/provas presentes em <code>dados</code> mas ausentes do evento como <strong>avisos</strong> (não erros).</li>
+<li><code>flushScheduledSave()</code> evita perda de alterações ao trocar de projeto.</li>
+<li><code>FileReader.onerror</code> e tratamento de falha de <code>localStorage</code> reportados via feedback acessível, sem <code>alert()</code>.</li>
+<li>Engine consolidado: <code>pontuacao_conclave.html</code> agora usa <code>window.ConclaveEngine</code> (sem duplicação de regras de pontuação/desempate).</li>
+</ul>
+<p>#### P2 — acessibilidade e mobile</p>
+<ul>
+<li>Foco visível global com <code>:focus-visible</code> e token <code>--focus-ring</code> por tema.</li>
+<li>Suporte a <code>prefers-reduced-motion</code> (desliga animações/transições).</li>
+<li>Skip-link para &quot;Conteúdo principal&quot; com foco gerenciado.</li>
+<li><code>withFocusPreserved()</code> evita perder o cursor durante re-renderizações.</li>
+<li>Modo de apresentação com <code>Escape</code> para sair, <code>aria-pressed</code> e foco no botão de saída.</li>
+<li>Estilos de impressão refinados (<code>@media print</code>) escondendo UI e expandindo tabelas — gera PDF legível direto do navegador.</li>
+<li>Layout mobile-first (≥360px) com ajustes em headers, toolbar, inputs e tabelas.</li>
+<li>PWA: <code>manifest.webmanifest</code>, ícones SVG (<code>icons/icon.svg</code>, <code>icons/icon-maskable.svg</code>) e service worker (<code>sw.js</code>) com estratégia cache-first (app shell) + network-first (dados).</li>
+</ul>
+<p>#### P3 — funcionalidades e processo</p>
+<ul>
+<li><code>meta.schemaVersion = 2</code> com <code>migrateEvento()</code> para upgrade automático em memória de eventos antigos (sem versão).</li>
+<li>Botão <strong>&quot;Exportar CSV&quot;</strong> na aba Classificação (<code>text/csv</code>, UTF-8 com BOM, separador <code>;</code> para abrir no Excel pt-BR direto).</li>
+<li>Modal <strong>&quot;Eventos salvos&quot;</strong>: lista, carrega, exporta e remove projetos do <code>localStorage</code> com confirmação acessível.</li>
+<li>Workflow <code>.github/workflows/pages.yml</code> para deploy automático no GitHub Pages após CI verde em <code>main</code>.</li>
+<li>Componente CSS reutilizável <code>.pill-btn</code> com modificadores <code>--primary</code> / <code>--danger</code>.</li>
+<li>Refatoração interna: <code>buildProvaCardBase</code>, <code>buildMedalRow*</code> e <code>buildConfig*Section</code> reduzem duplicação entre cards de pódio e seções de configuração.</li>
+</ul>
+<h3 id="mudado">Mudado</h3>
+<ul>
+<li><code>engine.js</code>: <code>pontosParticipacao</code> e <code>pontosPunicoes</code> usam <code>peso()</code> em vez de acessar <code>pesos[k]</code> direto. Comportamento semanticamente equivalente quando todos os pesos são finitos, mas não quebra com dados parciais.</li>
+<li>Engine não toca DOM nem usa APIs de browser fora de <code>(window || globalThis)</code> — invariante reforçado e testado.</li>
+<li><code>pontuacao_conclave.html</code> agora delega regras ao engine compartilhado; só mantém localmente o que é específico desta tela (formato de medalhas array → contagem).</li>
+</ul>
+<h3 id="removido">Removido</h3>
+<ul>
+<li>Artefatos legados Python (<code>engine.py</code>, <code>calcular_conclave.py</code>, <code>tests/test_engine.py</code>, <code>requirements.txt</code>) — projeto migrado para 100% web.</li>
+<li>Diretórios <code>build/</code>, <code>dist/</code>, <code>.pytest_cache/</code> (resíduos de empacotamento desktop antigo). Ignorados via <code>.gitignore</code>.</li>
+</ul>
+<h3 id="seguranca">Segurança</h3>
+<ul>
+<li>Content-Security-Policy declarada via <code>&lt;meta http-equiv&gt;</code> em <code>index.html</code> e <code>pontuacao_conclave.html</code> (default-src 'self'; object/frame-ancestors 'none').</li>
+<li>Imagens externas restritas ao protocolo <code>https:</code> (configurável pelo usuário no campo de tema, sem inline base64 vindo de fora).</li>
+</ul>
+<h3 id="acessibilidade">Acessibilidade</h3>
+<ul>
+<li><code>&lt;th scope=&quot;col&quot;&gt;</code> em todas as tabelas principais (config, participação, classificação, gincana e a tabela completa em <code>pontuacao_conclave.html</code>).</li>
+<li>Helper <code>.visually-hidden</code> para rótulos de coluna que não devem aparecer visualmente, mas precisam ser lidos por leitor de tela.</li>
+</ul>
+<h2 id="1-0-0-2026-04-25">[1.0.0] — 2026-04-25</h2>
+<ul>
+<li>Versão inicial em produção (referência histórica): app desktop empacotado via PyInstaller + planilha web autocontida (<code>pontuacao_conclave.html</code>). Deprecada nesta release por completo em favor da experiência 100% web.</li>
+</ul>
+      </article>
+    </main>
+    <footer class="docs-footer">
+      <p>
+        <a href="../index.html">Abrir o app</a> ·
+        <a href="index.html">Índice</a> ·
+        <a href="changelog.html">Changelog</a>
+      </p>
+    </footer>
+  </body>
+</html>

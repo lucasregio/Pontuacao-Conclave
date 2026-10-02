@@ -13,6 +13,7 @@ window.ConclaveDefaultEvento = {
     "nome": "Conclave MR 2026/1",
     "slug": "conclave-2026-1",
     "data": "2026-04-11",
+    "local": "Vitória — ES",
     "regulamentoUrl": "regulamento-2026.pdf"
   },
   "pesos": {
@@ -198,6 +199,7 @@ window.ConclaveDefaultEvento = {
       "tipo": "escrita",
       "categoriaId": "junior",
       "categoria": "Junior",
+      "escritaTotalQuestoes": 20,
       "ordem": 10
     },
     {
@@ -206,6 +208,7 @@ window.ConclaveDefaultEvento = {
       "tipo": "escrita",
       "categoriaId": "adolescente",
       "categoria": "Adolescente",
+      "escritaTotalQuestoes": 20,
       "ordem": 11
     },
     {
@@ -214,6 +217,7 @@ window.ConclaveDefaultEvento = {
       "tipo": "escrita",
       "categoriaId": "juvenil",
       "categoria": "Juvenil",
+      "escritaTotalQuestoes": 20,
       "ordem": 12
     }
   ]

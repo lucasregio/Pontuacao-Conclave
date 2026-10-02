@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR" data-ui-theme="mr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Atalhos de teclado e acessibilidade — Pontuação Conclave</title>
+    <meta name="description" content="Atalhos de teclado e acessibilidade — documentação da Pontuação Conclave." />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+    <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="../../icons/icon.svg" />
+    <link rel="stylesheet" href="../../web/styles.css" />
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <header class="docs-header">
+      <p class="docs-eyebrow"><a href="../../index.html">← Voltar ao app</a> · <a href="../index.html">Documentação</a></p>
+      <h1>Atalhos de teclado e acessibilidade</h1>
+    </header>
+    <main id="conteudo" tabindex="-1" class="docs-main docs-prose">
+      <article class="docs-article">
+<p>Lista compacta dos atalhos disponíveis e dos recursos de acessibilidade já garantidos na interface. Tudo é navegável <strong>só com o teclado</strong>, sem mouse.</p>
+<h2 id="sumario">Sumário</h2>
+<ul>
+<li><a href="#navegacao-geral">Navegacao geral</a></li>
+<li><a href="#skip-link">Skip-link</a></li>
+<li><a href="#abas-e-botoes">Abas e botoes</a></li>
+<li><a href="#modo-apresentacao">Modo apresentacao</a></li>
+<li><a href="#tela-cheia-da-esgrima">Tela cheia da Esgrima</a></li>
+<li><a href="#confirmacoes-acessiveis">Confirmacoes acessiveis</a></li>
+<li><a href="#movimento-reduzido">Movimento reduzido</a></li>
+</ul>
+<h2 id="navegacao-geral">Navegacao geral</h2>
+<ul>
+<li><code>Tab</code>: avança o foco para o próximo controle interativo (link, botão, input, select, área editável).</li>
+<li><code>Shift + Tab</code>: volta o foco para o controle anterior.</li>
+<li>O foco fica <strong>visível</strong> com um anel colorido (token <code>--focus-ring</code> do tema MR/ER). Se não enxergar o anel, é provável que o foco tenha ido para um elemento fora da viewport — role a página até alcançá-lo.</li>
+<li>Em campos de texto e numéricos, <code>←/→</code> navegam dentro do valor, <code>Backspace</code> apaga, <code>Delete</code> apaga para a frente. Tudo padrão do navegador.</li>
+</ul>
+<h2 id="skip-link">Skip-link</h2>
+<p>A primeira <code>Tab</code> em uma página recém-carregada revela o skip-link <strong>&quot;Pular para o conteúdo&quot;</strong>, ancorado em <code>#conteudo-principal</code>. Pressione <code>Enter</code> para pular o cabeçalho e a toolbar e mandar o foco direto para <code>&lt;main&gt;</code>.</p>
+<p>Útil para leitores de tela e para quem não quer percorrer todos os botões da toolbar a cada visita.</p>
+<h2 id="abas-e-botoes">Abas e botoes</h2>
+<ul>
+<li>A <strong>sidebar</strong> (desktop) e a <strong>barra inferior</strong> (mobile) formam um tablist ARIA: use <code>←</code> / <code>→</code> / <code>↑</code> / <code>↓</code>, <code>Home</code> ou <code>End</code> para mover entre Início, Configuração, Participação, Pódio, Prova escrita, Esgrima, Classificação e Relatórios.</li>
+<li>O menu <strong>Mais</strong> (topbar): <code>↑</code> / <code>↓</code> entre itens; <code>Esc</code> fecha; <code>Enter</code> ativa.</li>
+<li>Em <strong>Configuração → Categorias / Provas</strong>, o grip ⠿ de reordenar aceita <strong>Alt+Seta para cima</strong> / <strong>Alt+Seta para baixo</strong> além de arrastar com o mouse.</li>
+<li>Em botões comuns, <code>Enter</code> e <code>Espaço</code> ativam a ação. Botões com <code>aria-pressed</code> (ex.: o tema MR/ER) trocam o estado a cada acionamento.</li>
+<li>Em selects e dropdowns, use as setas <code>↑/↓</code> para escolher e <code>Enter</code> ou <code>Tab</code> para confirmar.</li>
+</ul>
+<h2 id="modo-apresentacao">Modo apresentacao</h2>
+<ul>
+<li>Acionar: botão <strong>Modo apresentação</strong> na topbar (ao lado de <strong>Regulamento</strong>) ou <code>Tab</code> até ele e <code>Enter</code>.</li>
+<li><strong>Cerimônia de revelação</strong>: na tela cheia, <strong>Espaço</strong>, <strong>Enter</strong> ou <strong>clique</strong> no palco revelam a próxima colocação (5º → 4º → 3º → 2º → 1º). O palco exibe somente o <strong>top 5</strong>; consulte a aba Classificação para o ranking completo.</li>
+<li><strong>Revelar tudo</strong>: <code>Shift+Espaço</code> ou botão <strong>Revelar tudo</strong> (canto inferior direito) — pula a cerimônia e mostra a classificação completa.</li>
+<li>Sair: <code>Escape</code> ou clique/<code>Enter</code> no botão <strong>Sair da apresentação</strong> (visível no canto da tela). O foco volta para o botão original que ativou o modo, evitando perder o &quot;lugar&quot; no teclado.</li>
+<li>Em algumas versões do iOS Safari, <code>Escape</code> em teclados externos não chega ao JavaScript. Nesses casos, use o botão de saída.</li>
+</ul>
+<h2 id="tela-cheia-da-esgrima">Tela cheia da Esgrima</h2>
+<p>Na aba <strong>Esgrima</strong>, <strong>Tela cheia da referência</strong> abre um palco só com a passagem sorteada (não é a cerimônia de classificação). <code>Escape</code> ou <strong>Sair da tela cheia</strong> fecham. O cronômetro e o sorteio continuam nos botões do palco.</p>
+<h2 id="confirmacoes-acessiveis">Confirmacoes acessiveis</h2>
+<p>Nenhuma ação destrutiva usa diálogo nativo (<code>alert</code>/<code>confirm</code>/<code>prompt</code>). Todas passam por um <strong>modal-confirm acessível</strong> com:</p>
+<ul>
+<li><code>Tab</code>/<code>Shift+Tab</code> circula apenas dentro do modal (foco preso enquanto aberto).</li>
+<li><code>Enter</code> confirma (ativa o botão padrão <strong>Confirmar</strong>).</li>
+<li><code>Escape</code> cancela (equivalente ao botão <strong>Cancelar</strong>, devolve o foco ao elemento que abriu o modal).</li>
+<li>A mensagem é anunciada por leitor de tela (<code>role=&quot;dialog&quot;</code> + <code>aria-modal=&quot;true&quot;</code> + <code>aria-labelledby</code>).</li>
+</ul>
+<p>Vale para: remover igreja, remover prova, remover evento salvo, <strong>Limpar dados do evento</strong>, etc.</p>
+<h2 id="movimento-reduzido">Movimento reduzido</h2>
+<p>A folha de estilo respeita <code>prefers-reduced-motion: reduce</code> do sistema operacional. Quando essa preferência está ativa, animações e transições são desativadas automaticamente — abas trocam instantaneamente, banners aparecem sem fade, e o modal de confirmação não tem efeito de entrada/saída. Isso ajuda usuários com sensibilidade vestibular e em dispositivos com bateria fraca.</p>
+<p>Para conferir o efeito no macOS: <strong>Ajustes do Sistema → Acessibilidade → Tela → Reduzir movimento</strong>. No Windows: <strong>Configurações → Acessibilidade → Efeitos visuais → Efeitos de animação</strong>.</p>
+      </article>
+    </main>
+    <footer class="docs-footer">
+      <p>
+        <a href="../../index.html">Abrir o app</a> ·
+        <a href="../index.html">Índice</a> ·
+        <a href="../changelog.html">Changelog</a>
+      </p>
+    </footer>
+  </body>
+</html>

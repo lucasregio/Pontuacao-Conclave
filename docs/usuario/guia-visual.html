@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR" data-ui-theme="mr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Guia visual do Pontuação Conclave — Pontuação Conclave</title>
+    <meta name="description" content="Guia visual do Pontuação Conclave — documentação da Pontuação Conclave." />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+    <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="../../icons/icon.svg" />
+    <link rel="stylesheet" href="../../web/styles.css" />
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <header class="docs-header">
+      <p class="docs-eyebrow"><a href="../../index.html">← Voltar ao app</a> · <a href="../index.html">Documentação</a></p>
+      <h1>Guia visual do Pontuação Conclave</h1>
+    </header>
+    <main id="conteudo" tabindex="-1" class="docs-main docs-prose">
+      <article class="docs-article">
+<p>Tour ilustrado de <strong>todas as telas</strong> do app, com capturas geradas pelo Playwright a partir do evento <strong>Conclave ER 2026/2</strong>. Os números nas telas são de demonstração — no dia do evento você lança os dados reais.</p>
+<p>Para aprender o fluxo em 5 minutos, use o <a href="tutorial-5min.html">tutorial rápido</a>.</p>
+<p>Para regenerar as imagens:</p>
+<pre><code>npm run guia:visual
+npm run build:docs</code></pre>
+<h2 id="sumario">Sumário</h2>
+<ul>
+<li><a href="#inicio-dashboard">Início (dashboard)</a></li>
+<li><a href="#menu-mais">Menu Mais</a></li>
+<li><a href="#eventos-salvos">Eventos salvos</a></li>
+<li><a href="#configuracao">Configuração</a></li>
+<li><a href="#participacao">Participação</a></li>
+<li><a href="#podio-por-prova">Pódio por prova</a></li>
+<li><a href="#prova-escrita">Prova escrita</a></li>
+<li><a href="#esgrima">Esgrima</a></li>
+<li><a href="#classificacao">Classificação</a></li>
+<li><a href="#relatorios">Relatórios</a></li>
+<li><a href="#modo-apresentacao">Modo apresentação</a></li>
+<li><a href="#celular">Celular</a></li>
+</ul>
+<h2 id="inicio-dashboard">Início (dashboard)</h2>
+<p>Primeira aba. Mostra o evento ativo (nome, data, local), atalhos para Participação, Pódio, Classificação e Relatório, e a lista de projetos guardados neste navegador.</p>
+<figure class="docs-shot"><img src="guia-visual/01-inicio.png" alt="Aba Início com o Conclave ER 2026/2 ativo" loading="lazy" /><figcaption>Aba Início com o Conclave ER 2026/2 ativo</figcaption></figure>
+<p>A <strong>sidebar</strong> (à esquerda no desktop) lista as oito abas, o seletor de tema <strong>MR / ER</strong> (só troca as cores) e o link da documentação.</p>
+<h2 id="menu-mais">Menu Mais</h2>
+<p>No canto superior direito. Agrupa carregar/exportar evento e projeto, novo evento, eventos salvos e limpar dados. <strong>Modo apresentação</strong> e <strong>Regulamento</strong> ficam na topbar, fora deste menu.</p>
+<figure class="docs-shot"><img src="guia-visual/02-menu-mais.png" alt="Menu Mais aberto com as ações de arquivo" loading="lazy" /><figcaption>Menu Mais aberto com as ações de arquivo</figcaption></figure>
+<ul>
+<li><strong>Carregar evento</strong> — só a configuração (<code>.evento.json</code>).</li>
+<li><strong>Carregar projeto</strong> — configuração + dados lançados (<code>.projeto.json</code>).</li>
+<li><strong>Exportar evento / projeto</strong> — backup. Exporte o projeto cedo no dia do evento.</li>
+<li><strong>Limpar dados</strong> — zera participação e pódio, mantém igrejas e provas.</li>
+</ul>
+<h2 id="eventos-salvos">Eventos salvos</h2>
+<p>Projetos neste navegador (<code>localStorage</code>). Dá para carregar, exportar ou remover. O Conclave MR 2026/1 pode aparecer aqui se você já o usou — no dia do ER, deixe o <strong>Conclave ER 2026/2</strong> como evento ativo.</p>
+<figure class="docs-shot"><img src="guia-visual/03-eventos-salvos.png" alt="Modal de eventos salvos no navegador" loading="lazy" /><figcaption>Modal de eventos salvos no navegador</figcaption></figure>
+<h2 id="configuracao">Configuração</h2>
+<p>Cadastro do evento. Seções recolhíveis: Geral, Igrejas, Pesos, Categorias e Provas.</p>
+<h3 id="geral">Geral</h3>
+<p>Nome, data, local, horários e PDF do regulamento (botão <strong>Regulamento</strong> na topbar).</p>
+<figure class="docs-shot"><img src="guia-visual/04-config-geral.png" alt="Configuração — seção Geral" loading="lazy" /><figcaption>Configuração — seção Geral</figcaption></figure>
+<h3 id="igrejas">Igrejas</h3>
+<p>Uma linha por igreja. Dá para adicionar em lote (um nome por linha). Remover uma igreja apaga a linha na Participação e as medalhas dela no pódio.</p>
+<figure class="docs-shot"><img src="guia-visual/05-config-igrejas.png" alt="Configuração — lista de igrejas padronizadas PIB/IB" loading="lazy" /><figcaption>Configuração — lista de igrejas padronizadas PIB/IB</figcaption></figure>
+<h3 id="pesos-e-medalhas">Pesos e medalhas</h3>
+<p>No ER 2026/2: inscrição 100, pontualidade 200, uniforme/bíblia 50, grito de guerra 50, mau comportamento −150, visitantes 0. Medalhas 300 / 200 / 100. <strong>Não clique no tema ER para “aplicar preset”</strong> — o tema agora é só visual.</p>
+<figure class="docs-shot"><img src="guia-visual/06-config-pesos.png" alt="Configuração — pesos da participação" loading="lazy" /><figcaption>Configuração — pesos da participação</figcaption></figure>
+<h3 id="categorias">Categorias</h3>
+<p>Faixas etárias do regulamento. No ER 2026/2: Junior 9–11, Adolescente 12–14 e Juvenil 15–18. Cada prova é lançada por categoria.</p>
+<figure class="docs-shot"><img src="guia-visual/07-config-categorias.png" alt="Configuração — categorias etárias" loading="lazy" /><figcaption>Configuração — categorias etárias</figcaption></figure>
+<h3 id="provas">Provas</h3>
+<p>15 provas (Evangelhos, Organização, Montagem, Esgrima e Debate × Junior / Adolescente / Juvenil). Tipo <strong>escrita</strong> (Evangelhos, Organização e Montagem) alimenta a aba Prova escrita; tipo <strong>oral</strong> (Esgrima e Debate) só entra no pódio.</p>
+<figure class="docs-shot"><img src="guia-visual/08-config-provas.png" alt="Configuração — lista de provas e valores de medalha" loading="lazy" /><figcaption>Configuração — lista de provas e valores de medalha</figcaption></figure>
+<h2 id="participacao">Participação</h2>
+<p>Uma linha por igreja. No tema ER as colunas são:</p>
+<ul>
+<li><strong>Inscr.</strong> — inscrição até o prazo (100 pts).</li>
+<li><strong>Pont.</strong> — pontualidade no evento (200 pts).</li>
+<li><strong>Presentes / Camisa / Bíblia</strong> — uniforme e Bíblia só pontuam se a contagem for igual ao total de presentes. Não inclua visitantes nesses números.</li>
+<li><strong>Grito</strong> — grito de guerra (50 pts).</li>
+<li><strong>Mau comp.</strong> — conversa/saídas (−150 pts naquela igreja).</li>
+<li><strong>Extra</strong> — CER no pré-conclave (+100) + pastor presente (+50). Se houver penalidade de conservação do templo, subtraia 100 de <strong>todas</strong> as igrejas.</li>
+</ul>
+<p>Se inscrição estiver desmarcada <strong>e</strong> Presentes = 0, a linha inteira de participação zera.</p>
+<figure class="docs-shot"><img src="guia-visual/09-participacao.png" alt="Aba Participação com lançamento de demonstração" loading="lazy" /><figcaption>Aba Participação com lançamento de demonstração</figcaption></figure>
+<h2 id="podio-por-prova">Pódio por prova</h2>
+<p>Ouro, prata e bronze por prova. Digite a igreja (lista automática) e, se quiser, o nome do competidor. Filtros no topo: categoria, busca, avisos, desempate. As medalhas somam na classificação geral.</p>
+<figure class="docs-shot"><img src="guia-visual/10-podio.png" alt="Aba Pódio por prova com medalhas preenchidas" loading="lazy" /><figcaption>Aba Pódio por prova com medalhas preenchidas</figcaption></figure>
+<h2 id="prova-escrita">Prova escrita</h2>
+<p>Cadastro de <strong>acertos por participante</strong> nas provas do tipo escrita. Serve para gráficos e CSV. <strong>Não altera</strong> a classificação — a medalha continua sendo lançada no Pódio. Mínimo do regulamento ER: 12 acertos em 20 (60%) para pontuar medalha.</p>
+<figure class="docs-shot"><img src="guia-visual/11-prova-escrita.png" alt="Aba Prova escrita com ranking individual de demonstração" loading="lazy" /><figcaption>Aba Prova escrita com ranking individual de demonstração</figcaption></figure>
+<h2 id="esgrima">Esgrima</h2>
+<p>Sorteio de referências para o líder da <strong>Esgrima (Debate Bíblico)</strong> ditar, sem repetir na mesma categoria. Cronômetro 20 s (MR) ou 30 s (ER). <strong>Não altera</strong> a classificação — medalhas continuam no Pódio. Debate de versículos e Esgrima avançada não usam esta aba.</p>
+<h2 id="classificacao">Classificação</h2>
+<p>Ranking geral: participação + punições + medalhas + extra. Desempate no ER: ouro → prata → Debate de Versículos → Conhecimentos gerais da Organização → nome. A prova de Evangelhos conta medalhas, mas não entra sozinha no critério de desempate. Use <strong>Exportar CSV</strong> para planilha.</p>
+<figure class="docs-shot"><img src="guia-visual/12-classificacao.png" alt="Aba Classificação com ranking e blocos de premiação" loading="lazy" /><figcaption>Aba Classificação com ranking e blocos de premiação</figcaption></figure>
+<h2 id="relatorios">Relatórios</h2>
+<p><strong>Resumo</strong> (capa, top 3, pódio, encerramento) para divulgação. <strong>Oficial completo</strong> inclui participação, classificação e critérios para arquivo. Gere e use a impressão do navegador (Salvar como PDF).</p>
+<figure class="docs-shot"><img src="guia-visual/13-relatorios.png" alt="Aba Relatórios com consulta rápida e pódio" loading="lazy" /><figcaption>Aba Relatórios com consulta rápida e pódio</figcaption></figure>
+<h2 id="modo-apresentacao">Modo apresentação</h2>
+<p>Tela cheia para projetor, com cerimônia de revelação do 5.º ao 1.º lugar. Clique ou use as setas para avançar. <strong>Esc</strong> sai. A classificação fica congelada até a cerimônia terminar.</p>
+<figure class="docs-shot"><img src="guia-visual/14-apresentacao.png" alt="Modo apresentação — cerimônia de revelação" loading="lazy" /><figcaption>Modo apresentação — cerimônia de revelação</figcaption></figure>
+<h2 id="celular">Celular</h2>
+<p>Abaixo de 768 px a navegação vai para a <strong>barra inferior</strong>. As mesmas oito abas. Prefira um notebook no dia do evento; o celular serve para consulta.</p>
+<figure class="docs-shot"><img src="guia-visual/15-mobile.png" alt="App em viewport de celular com barra inferior" loading="lazy" /><figcaption>App em viewport de celular com barra inferior</figcaption></figure>
+<h2 id="backup-no-dia-do-evento">Backup no dia do evento</h2>
+<ol>
+<li>Abra o app (tema azul ER, evento ER 2026/2).</li>
+<li>Lance Participação e Pódio.</li>
+<li><strong>Mais → Exportar projeto</strong> várias vezes (pen-drive + nuvem).</li>
+<li>Não clique no tema ER esperando mudar pesos — ele só muda as cores.</li>
+</ol>
+      </article>
+    </main>
+    <footer class="docs-footer">
+      <p>
+        <a href="../../index.html">Abrir o app</a> ·
+        <a href="../index.html">Índice</a> ·
+        <a href="../changelog.html">Changelog</a>
+      </p>
+    </footer>
+  </body>
+</html>

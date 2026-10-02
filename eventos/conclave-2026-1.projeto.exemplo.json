@@ -20,6 +20,10 @@
       "pt": 200,
       "br": 100
     },
+    "sorteioEsgrima": {
+      "corpus": "biblia",
+      "tempoSegundos": 20
+    },
     "igrejas": [
       {
         "id": "alianca",
@@ -189,6 +193,7 @@
         "tipo": "escrita",
         "categoriaId": "junior",
         "categoria": "Junior",
+        "escritaTotalQuestoes": 20,
         "ordem": 10
       },
       {
@@ -197,6 +202,7 @@
         "tipo": "escrita",
         "categoriaId": "adolescente",
         "categoria": "Adolescente",
+        "escritaTotalQuestoes": 20,
         "ordem": 11
       },
       {
@@ -205,6 +211,7 @@
         "tipo": "escrita",
         "categoriaId": "juvenil",
         "categoria": "Juvenil",
+        "escritaTotalQuestoes": 20,
         "ordem": 12
       }
     ]
@@ -568,6 +575,22 @@
           "competidor": ""
         }
       }
+    },
+    "metricasEscrita": {
+      "escrita-jun": [
+        { "id": "p-m1", "nome": "Ana Costa", "igrejaId": "alianca", "acertos": 18 },
+        { "id": "p-m2", "nome": "Beatriz Lima", "igrejaId": "ibes", "acertos": 16 },
+        { "id": "p-m3", "nome": "Carla Souza", "igrejaId": "gloria", "acertos": 15 }
+      ],
+      "escrita-adl": [
+        { "id": "p-a1", "nome": "Diana Rocha", "igrejaId": "orla", "acertos": 19 },
+        { "id": "p-a2", "nome": "Elena Martins", "igrejaId": "vila-batista", "acertos": 17 }
+      ],
+      "escrita-juv": [
+        { "id": "p-j1", "nome": "Fernanda Dias", "igrejaId": "aribiri", "acertos": 20 },
+        { "id": "p-j2", "nome": "Gabriela Nunes", "igrejaId": "vila-garrido", "acertos": 14 },
+        { "id": "p-j3", "nome": "Helena Pires", "igrejaId": "alianca", "acertos": 16 }
+      ]
     }
   }
 }

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR" data-ui-theme="mr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Regulamento mapeado para o JSON — Pontuação Conclave</title>
+    <meta name="description" content="Regulamento mapeado para o JSON — documentação da Pontuação Conclave." />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+    <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="../../icons/icon.svg" />
+    <link rel="stylesheet" href="../../web/styles.css" />
+  </head>
+  <body class="docs-page">
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <header class="docs-header">
+      <p class="docs-eyebrow"><a href="../../index.html">← Voltar ao app</a> · <a href="../index.html">Documentação</a></p>
+      <h1>Regulamento mapeado para o JSON</h1>
+    </header>
+    <main id="conteudo" tabindex="-1" class="docs-main docs-prose">
+      <article class="docs-article">
+<p>Para cada item de pontuação previsto no regulamento, este documento mostra <strong>onde o campo vive no JSON</strong>, <strong>onde o organizador edita na UI</strong> e <strong>qual a observação relevante</strong> (regras especiais, fallback, casos de borda). O motor de pontuação real é <code>web/engine.js</code>.</p>
+<h2 id="sumario">Sumário</h2>
+<ul>
+<li><a href="#como-ler-este-mapa">Como ler este mapa</a></li>
+<li><a href="#itens-de-participacao">Itens de participacao</a></li>
+<li><a href="#punicoes">Punicoes</a></li>
+<li><a href="#pontuacao-extra">Pontuacao extra</a></li>
+<li><a href="#gincana">Gincana</a></li>
+<li><a href="#desempate">Desempate</a></li>
+<li><a href="#como-conferir-manualmente">Como conferir manualmente</a></li>
+</ul>
+<h2 id="como-ler-este-mapa">Como ler este mapa</h2>
+<p>Cada item segue a estrutura:</p>
+<ul>
+<li><strong>Nome no regulamento</strong> — como aparece para o juiz.<ul>
+<li><strong>Campo no JSON</strong> — caminho completo a partir de <code>evento</code> ou <code>dados</code>.</li>
+<li><strong>Onde aparece na UI</strong> — aba ou seção em <code>index.html</code>.</li>
+<li><strong>Observação</strong> — regra especial, dependência ou armadilha comum.</li>
+</ul></li>
+</ul>
+<p>Os caminhos JSON usam a notação <code>evento.pesos.X</code> ou <code>dados.participacao[igrejaId].X</code>. O evento padrão é <code>eventos/conclave-mr-2026-2.evento.json</code>. Há também <code>eventos/conclave-2026-1.evento.json</code> (configuração) e <code>eventos/conclave-2026-1.projeto.exemplo.json</code> (configuração + dados).</p>
+<h3 id="conclave-mr-2026-2-no-app">Conclave MR 2026/2 no app</h3>
+<ul>
+<li><strong>Provas com medalha</strong> (Junior / Adolescente / Juvenil): prova escrita dos Evangelhos, prova escrita da biografia *O Gigante que Dorme* (ambas com <code>escritaTotalQuestoes: 20</code> e mínimo de 12 acertos), Esgrima bíblica (sorteio de 30 s na aba Esgrima), Esgrima avançada e Debate de versículos.</li>
+<li><strong>Quiz dos Evangelhos</strong> (Kahoot): o prêmio é um mimo, então não há prova no pódio nem pontos no total.</li>
+<li><strong>Desempate interno da prova escrita</strong> (questão mais difícil errada, depois tempo de entrega): aplicado pelos juízes na correção; o app recebe o pódio.</li>
+<li><strong>Desempate geral</strong>: só o critério de Debate de Versículos se aplica, pois o evento não tem provas de Conhecimentos Gerais.</li>
+</ul>
+<h2 id="itens-de-participacao">Itens de participacao</h2>
+<ul>
+<li><strong>Inscrição</strong><ul>
+<li>Campo (peso): <code>evento.pesos.inscricao</code>.</li>
+<li>Campo (entrada): <code>dados.participacao[igrejaId].inscricao</code> (boolean ou número).</li>
+<li>UI: aba <strong>Participação</strong> → coluna &quot;Inscrição&quot;.</li>
+<li>Observação: para a igreja pontuar <strong>qualquer</strong> item de participação, é preciso que <code>inscricao + mr_total</code> seja maior que zero. Se ambos forem 0, toda a linha de participação fica zerada.</li>
+</ul></li>
+</ul>
+<ul>
+<li><strong>Pontualidade</strong><ul>
+<li>Campo (peso): <code>evento.pesos.pontualidade</code>.</li>
+<li>Campo (entrada): <code>dados.participacao[igrejaId].pontualidade</code> (boolean ou número).</li>
+<li>UI: aba <strong>Participação</strong> → coluna &quot;Pontualidade&quot;.</li>
+<li>Observação: igual a <code>inscricao</code> — <code>true</code> conta como 1 e multiplica pelo peso.</li>
+</ul></li>
+</ul>
+<ul>
+<li><strong>Uniforme (todos de camisa)</strong><ul>
+<li>Campo (peso): <code>evento.pesos.uniforme</code>.</li>
+<li>Campos (entrada): <code>dados.participacao[igrejaId].mr_total</code> e <code>mr_camisa</code>.</li>
+<li>UI: aba <strong>Participação</strong> → colunas &quot;MR total&quot; e &quot;MR camisa&quot;.</li>
+<li>Observação: o ponto de uniforme <strong>só é creditado se <code>mr_camisa === mr_total</code></strong> e <code>mr_total &gt; 0</code>. Não há crédito parcial — basta um MR sem camisa para zerar o item.</li>
+</ul></li>
+</ul>
+<ul>
+<li><strong>Bíblia (todos com Bíblia)</strong><ul>
+<li>Campo (peso): <code>evento.pesos.biblia</code>.</li>
+<li>Campos (entrada): <code>dados.participacao[igrejaId].mr_total</code> e <code>mr_biblia</code>.</li>
+<li>UI: aba <strong>Participação</strong> → colunas &quot;MR total&quot; e &quot;MR bíblia&quot;.</li>
+<li>Observação: mesma regra do uniforme — exige <code>mr_biblia === mr_total</code> e <code>mr_total &gt; 0</code>. Sem crédito parcial.</li>
+</ul></li>
+</ul>
+<ul>
+<li><strong>Visitantes</strong><ul>
+<li>Campo (peso): <code>evento.pesos.visitante</code>.</li>
+<li>Campo (entrada): <code>dados.participacao[igrejaId].visitantes</code> (inteiro).</li>
+<li>UI: aba <strong>Participação</strong> → coluna &quot;Visitantes&quot;.</li>
+<li>Observação: o motor aplica <code>Math.trunc</code> ao valor lido — frações são descartadas. Pontos = <code>visitantes × pesos.visitante</code>.</li>
+</ul></li>
+</ul>
+<ul>
+<li><strong>Animação (torcida)</strong><ul>
+<li>Campo (peso): <code>evento.pesos.animacao</code>.</li>
+<li>Campo (entrada): <code>dados.participacao[igrejaId].animacao</code> (boolean).</li>
+<li>UI: aba <strong>Participação</strong> → coluna &quot;Animação&quot;.</li>
+<li>Observação: soma o peso uma única vez quando o booleano é truthy. Strings como <code>&quot;x&quot;</code>, <code>&quot;sim&quot;</code>, <code>&quot;s&quot;</code>, <code>&quot;1&quot;</code>, <code>&quot;true&quot;</code>, <code>&quot;verdadeiro&quot;</code>, <code>&quot;ok&quot;</code>, <code>&quot;✓&quot;</code> também são aceitas como verdadeiras (compatibilidade com planilhas importadas).</li>
+</ul></li>
+</ul>
+<h2 id="punicoes">Punicoes</h2>
+<ul>
+<li><strong>Mau comportamento</strong><ul>
+<li>Campo (peso): <code>evento.pesos.mau_comportamento</code>.</li>
+<li>Campo (entrada): <code>dados.participacao[igrejaId].mau_comportamento</code> (boolean).</li>
+<li>UI: aba <strong>Participação</strong> → coluna &quot;Mau comportamento&quot;.</li>
+<li>Observação: o peso já é registrado <strong>negativo</strong> no JSON canônico (ex.: <code>-150</code>). O motor soma esse valor; o efeito final é subtrair. Se o JSON tiver o peso positivo, o motor soma positivo (ou seja: o sinal negativo é responsabilidade de quem edita o JSON do evento).</li>
+</ul></li>
+</ul>
+<ul>
+<li><strong>Conservação do templo (todas as igrejas)</strong><ul>
+<li>Campo (peso, opcional): <code>evento.pesos.conservacao_templo</code> (−100 no MR 2026/2).</li>
+<li>Campo (entrada): <code>dados.conservacaoTemploDescumprida</code> (boolean, um só para o evento).</li>
+<li>UI: aba <strong>Participação</strong> → caixa «Conservação do templo descumprida», acima da tabela. Aparece quando o peso é diferente de 0 (editável em <strong>Configuração → Pesos</strong>).</li>
+<li>Observação: quando marcada, o peso entra nas punições de <strong>cada</strong> igreja. Sem o peso no evento (ou com 0), a caixa some e nada muda.</li>
+</ul></li>
+</ul>
+<h2 id="pontuacao-extra">Pontuacao extra</h2>
+<ul>
+<li><strong>Pontuação extra (antigas &quot;embaixadas&quot;)</strong><ul>
+<li>Campo (entrada preferido): <code>dados.participacao[igrejaId].pontuacao_extra</code> (número).</li>
+<li>Campo (legado/fallback): <code>dados.participacao[igrejaId].embaixadas</code> (número).</li>
+<li>UI: aba <strong>Participação</strong> → coluna &quot;Pontuação extra&quot;.</li>
+<li>Observação: o motor lê <code>pontuacao_extra</code> primeiro; só cai em <code>embaixadas</code> quando <code>pontuacao_extra</code> está ausente. Isso garante round-trip com eventos antigos sem mudar o cálculo. Novos eventos devem usar exclusivamente <code>pontuacao_extra</code>.</li>
+</ul></li>
+</ul>
+<h2 id="gincana">Gincana</h2>
+<p>A gincana é a soma de medalhas conquistadas pela igreja em cada prova. Cada medalha soma o peso correspondente.</p>
+<ul>
+<li><strong>Medalhas e pesos</strong><ul>
+<li>Campos (peso): <code>evento.medalhas.ou</code>, <code>evento.medalhas.pt</code>, <code>evento.medalhas.br</code>.</li>
+<li>Campos (entrada): <code>dados.podium[provaId].ou</code>, <code>.pt</code>, <code>.br</code>, cada um com <code>{ igrejaId, competidor?, nomeLivre? }</code>.</li>
+<li>UI: aba <strong>Pódio</strong> → seção por prova.</li>
+<li>Observação: as chaves no JSON são <strong><code>ou</code>, <code>pt</code>, <code>br</code></strong> (não <code>ouro</code>, <code>prata</code>, <code>bronze</code>). O campo <code>competidor</code> é texto livre com o nome do MR vencedor (não pontua, só referência). O campo <code>nomeLivre</code> é usado quando a igreja vencedora <strong>não está cadastrada</strong> em <code>evento.igrejas[]</code>: o pódio aparece nos relatórios, mas o motor <strong>não</strong> atribui pontos a uma igreja inexistente.</li>
+</ul></li>
+</ul>
+<ul>
+<li><strong>Sorteio da Esgrima (Debate Bíblico)</strong><ul>
+<li>Campo (configuração): <code>evento.sorteioEsgrima.corpus</code> e <code>.tempoSegundos</code> (opcionais).</li>
+<li>Campo (sessão): <code>dados.sorteioEsgrima[provaId]</code> com <code>usados</code>, <code>atual</code>, <code>historico</code>.</li>
+<li>UI: aba <strong>Esgrima</strong>.</li>
+<li>Observação: só provas cujo título contém <strong>&quot;esgrima&quot;</strong> e <strong>não</strong> contém <strong>&quot;avanc&quot;</strong>. Não altera <code>computeTotals</code>. O Debate de versículos (recitação) não usa este campo.</li>
+</ul></li>
+</ul>
+<h2 id="desempate">Desempate</h2>
+<p>Quando duas ou mais igrejas terminam com o mesmo <code>total</code>, o motor aplica os critérios abaixo em cascata (todos decrescentes, exceto o nome). Eis a ordem real de <code>classificacaoOrdenada</code> em <code>web/engine.js</code>:</p>
+<ol>
+<li><strong>Total</strong> de pontos (já usado como ordenação primária).</li>
+<li><strong>Contagem</strong> de medalhas de <strong>ouro</strong> (quantas vezes a igreja ficou em 1.º lugar no pódio — <strong>não</strong> o valor numérico de <code>evento.medalhas.ou</code>).</li>
+<li><strong>Contagem</strong> de medalhas de <strong>prata</strong> (idem — <strong>não</strong> <code>evento.medalhas.pt</code>).</li>
+<li><strong>Soma de pontos</strong> em provas cujo título casa com <strong>Conhecimentos Gerais da Bíblia</strong> (usa os pesos <code>evento.medalhas.ou/pt/br</code> de cada prova vencida nesse bucket).</li>
+<li><strong>Soma de pontos</strong> em <strong>Debate de Versículos</strong>.</li>
+<li><strong>Soma de pontos</strong> em <strong>Conhecimentos Gerais da Organização</strong>.</li>
+<li>Nome da igreja, ordenado com <code>localeCompare(&quot;pt&quot;, { sensitivity: &quot;base&quot;, numeric: true })</code>.</li>
+</ol>
+<p>Importante: a identificação das três provas de desempate é feita pelo <strong>título normalizado</strong> (lowercase, sem acentos), <strong>não pelo <code>id</code></strong>. Os critérios de correspondência (em <code>tiebreakProvaBucket</code>) são:</p>
+<ul>
+<li><strong>CG Organização</strong> (<code>cgOrg</code>): título contém <strong>&quot;conhecimentos gerais&quot;</strong> <strong>e</strong> <strong>&quot;organiz&quot;</strong>.</li>
+<li><strong>CG Bíblia</strong> (<code>cgBib</code>): título contém <strong>&quot;conhecimentos gerais&quot;</strong> <strong>e</strong> <strong>&quot;bibl&quot;</strong>.</li>
+<li><strong>Debate de Versículos</strong> (<code>debate</code>): título contém <strong>&quot;debate&quot;</strong> <strong>e</strong> <strong>&quot;versicul&quot;</strong>.</li>
+</ul>
+<p>Por isso, ao renomear uma prova de desempate, mantenha as palavras-chave correspondentes. Se nenhum bucket for casado, a prova ainda vale medalhas normalmente, mas fica inerte para fins de desempate.</p>
+<h2 id="como-conferir-manualmente">Como conferir manualmente</h2>
+<p>Para validar o cálculo automático contra a planilha do regulamento:</p>
+<ol>
+<li>Em <strong>Classificação</strong>, clique em <strong>Exportar CSV</strong>. O arquivo vem com pontos totais e medalhas por igreja.</li>
+<li>Em paralelo, abra o <code>.projeto.json</code> (Exportar projeto) num editor de texto. Para cada igreja:<ul>
+<li>Some manualmente os itens de participação:<ul>
+<li><code>inscricao × pesos.inscricao</code> (se <code>inscricao</code> for <code>true</code> ou <code>1</code>).</li>
+<li><code>pontualidade × pesos.pontualidade</code>.</li>
+<li><code>pesos.uniforme</code> se <code>mr_camisa === mr_total &gt; 0</code>.</li>
+<li><code>pesos.biblia</code> se <code>mr_biblia === mr_total &gt; 0</code>.</li>
+<li><code>visitantes × pesos.visitante</code>.</li>
+<li><code>pesos.animacao</code> se <code>animacao</code> for truthy.</li>
+</ul></li>
+<li>Some/subtraia <code>pesos.mau_comportamento</code> se <code>mau_comportamento</code> for truthy.</li>
+<li>Some/subtraia <code>pesos.conservacao_templo</code> se <code>dados.conservacaoTemploDescumprida</code> for verdadeiro.</li>
+<li>Some <code>pontuacao_extra</code> (ou <code>embaixadas</code>, se aplicável).</li>
+<li>Some, em <code>dados.podium</code>, cada vez que <code>igrejaId</code> da igreja aparece como <code>ou</code>, <code>pt</code> ou <code>br</code>, multiplicando pelo <code>evento.medalhas[ou|pt|br]</code> correspondente.</li>
+</ul></li>
+<li>Compare a soma manual com o <code>total</code> no CSV exportado. Em caso de divergência, confirme primeiro se a igreja realmente passa no filtro <code>inscricao + mr_total &gt; 0</code> (linha de participação inteira pode estar zerada por isso). Em seguida, confira se <code>mr_camisa === mr_total</code> exatamente (uma diferença de 1 zera o uniforme).</li>
+<li>Para o desempate, use a ordem listada na seção anterior. Empates totais que não se resolvem nos critérios 1–5 caem para ordenação alfabética por nome (pt-BR, sem acento, numérico).</li>
+</ol>
+      </article>
+    </main>
+    <footer class="docs-footer">
+      <p>
+        <a href="../../index.html">Abrir o app</a> ·
+        <a href="../index.html">Índice</a> ·
+        <a href="../changelog.html">Changelog</a>
+      </p>
+    </footer>
+  </body>
+</html>

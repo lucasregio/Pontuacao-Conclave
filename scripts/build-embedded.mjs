@@ -2,8 +2,8 @@
 /**
  * build-embedded.mjs
  *
- * Lê eventos/conclave-2026-1.evento.json e gera
- * eventos/conclave-2026-1.evento.embedded.js, expondo o conteúdo como
+ * Lê eventos/conclave-mr-2026-2.evento.json e gera
+ * eventos/conclave-mr-2026-2.evento.embedded.js, expondo o conteúdo como
  * `window.ConclaveDefaultEvento`. Isso permite que `web/app.js` carregue o
  * evento de exemplo mesmo quando aberto via `file://` (cenário típico de
  * uso a partir de um pen-drive, onde `fetch()` é bloqueado pelo navegador).
@@ -19,8 +19,8 @@ import { dirname, resolve } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
-const SRC = resolve(repoRoot, "eventos/conclave-2026-1.evento.json");
-const DEST = resolve(repoRoot, "eventos/conclave-2026-1.evento.embedded.js");
+const SRC = resolve(repoRoot, "eventos/conclave-mr-2026-2.evento.json");
+const DEST = resolve(repoRoot, "eventos/conclave-mr-2026-2.evento.embedded.js");
 
 async function main() {
   const raw = await readFile(SRC, "utf8");
@@ -32,7 +32,7 @@ async function main() {
   const banner =
     "/**\n" +
     " * Gerado automaticamente por scripts/build-embedded.mjs.\n" +
-    " * NÃO EDITE À MÃO. Reedite eventos/conclave-2026-1.evento.json e\n" +
+    " * NÃO EDITE À MÃO. Reedite eventos/conclave-mr-2026-2.evento.json e\n" +
     " * rode `npm run build:embedded` (ou `node scripts/build-embedded.mjs`).\n" +
     " *\n" +
     " * Este arquivo expõe o evento de exemplo como `window.ConclaveDefaultEvento`\n" +
