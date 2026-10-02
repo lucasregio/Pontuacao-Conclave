@@ -1823,6 +1823,36 @@
     return avisos;
   }
 
+  function avisosParticipacaoIncoerente(evento, dados) {
+    var avisos = [];
+    var part = (dados && dados.participacao) || {};
+    ((evento && evento.igrejas) || []).forEach(function (g) {
+      var row = part[g.id];
+      if (!row) return;
+      var total = normalizaContagem(row.mr_total);
+      [
+        ["mr_camisa", "camisa"],
+        ["mr_biblia", "Bíblia"],
+      ].forEach(function (par) {
+        var v = normalizaContagem(row[par[0]]);
+        if (v > total) {
+          avisos.push(
+            "«" +
+              g.nome +
+              "»: " +
+              par[1] +
+              " (" +
+              v +
+              ") maior que o total de membros (" +
+              total +
+              ") — confira a participação."
+          );
+        }
+      });
+    });
+    return avisos;
+  }
+
   function renderWarnings() {
     var el = $("#warnings");
     if (!el) return;
@@ -1834,6 +1864,7 @@
     if (EM && typeof EM.avisosPodiumEscritaMinimo === "function") {
       av = av.concat(EM.avisosPodiumEscritaMinimo(state.evento, state.dados));
     }
+    av = av.concat(avisosParticipacaoIncoerente(state.evento, state.dados));
     if (!av.length) return;
     var div = document.createElement("div");
     div.className = "banner-warn";
@@ -3864,10 +3895,21 @@
     );
   }
 
+  /** Campos de contagem: inteiros ≥ 0 (pontuação extra pode ser negativa). */
+  var PART_CONTAGEM_FIELDS = ["mr_total", "mr_camisa", "mr_biblia", "visitantes"];
+
+  function normalizaContagem(v) {
+    var n = Math.trunc(Number(v));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+
   function tdNum(gid, field, val, label) {
     var n = val != null ? val : 0;
+    var minAttr = PART_CONTAGEM_FIELDS.indexOf(field) >= 0 ? ' min="0"' : "";
     return (
-      '<td><input type="number" step="1" data-gid="' +
+      '<td><input type="number" step="1"' +
+      minAttr +
+      ' data-gid="' +
       escapeHtml(gid) +
       '" data-f="' +
       escapeHtml(field) +
@@ -5470,12 +5512,16 @@
   function wireParticipacao(root) {
     root = root || document;
     root.querySelectorAll("#panel-participacao input[data-gid]").forEach(function (inp) {
-      function sync() {
+      function sync(ev) {
         var gid = inp.getAttribute("data-gid");
         var f = inp.getAttribute("data-f");
         if (!state.dados.participacao[gid]) return;
         if (inp.type === "checkbox") state.dados.participacao[gid][f] = inp.checked;
-        else state.dados.participacao[gid][f] = Number(inp.value);
+        else if (PART_CONTAGEM_FIELDS.indexOf(f) >= 0) {
+          var n = normalizaContagem(inp.value);
+          state.dados.participacao[gid][f] = n;
+          if (ev && ev.type === "change" && inp.value !== String(n)) inp.value = String(n);
+        } else state.dados.participacao[gid][f] = Number(inp.value);
         scheduleSave();
         if (inp.type === "number") scheduleDerivedRefresh(120);
         else refreshDerivedPanels();

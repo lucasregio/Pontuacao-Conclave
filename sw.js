@@ -12,7 +12,7 @@
  * caches antigos automaticamente.
  */
 
-const CACHE_VERSION = "pontuacao-conclave-v24";
+const CACHE_VERSION = "pontuacao-conclave-v25";
 const APP_SHELL = [
   "./",
   "./index.html",
