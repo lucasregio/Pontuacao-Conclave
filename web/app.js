@@ -1796,12 +1796,41 @@
     el.appendChild(div);
   }
 
+  /** Pódio com texto livre que não casa com nenhuma igreja cadastrada: a
+   *  medalha aparece nos relatórios, mas não soma pontos. */
+  function avisosPodiumIgrejaForaDaLista(evento, dados) {
+    var avisos = [];
+    var podium = (dados && dados.podium) || {};
+    var medalNome = { ou: "Ouro", pt: "Prata", br: "Bronze" };
+    ((evento && evento.provas) || []).forEach(function (p) {
+      var places = podium[p.id] || {};
+      ["ou", "pt", "br"].forEach(function (mk) {
+        var ent = places[mk];
+        if (!ent || ent.igrejaId) return;
+        var livre = String(ent.nomeLivre || "").trim();
+        if (!livre) return;
+        avisos.push(
+          "«" +
+            (p.titulo || p.id) +
+            "» (" +
+            medalNome[mk] +
+            "): «" +
+            livre +
+            "» não está na lista de igrejas e não pontua."
+        );
+      });
+    });
+    return avisos;
+  }
+
   function renderWarnings() {
     var el = $("#warnings");
     if (!el) return;
     el.innerHTML = "";
     if (!state.evento || !state.dados) return;
-    var av = E.avisosPodiumDuplicado(state.dados.podium || {});
+    var av = avisosPodiumIgrejaForaDaLista(state.evento, state.dados).concat(
+      E.avisosPodiumDuplicado(state.dados.podium || {})
+    );
     if (EM && typeof EM.avisosPodiumEscritaMinimo === "function") {
       av = av.concat(EM.avisosPodiumEscritaMinimo(state.evento, state.dados));
     }
@@ -5112,7 +5141,9 @@
       totalPt += Number(m.pt || 0);
       totalBr += Number(m.br || 0);
     });
-    var avisosPodio = E.avisosPodiumDuplicado(dados.podium || {});
+    var avisosPodio = avisosPodiumIgrejaForaDaLista(ev, dados).concat(
+      E.avisosPodiumDuplicado(dados.podium || {})
+    );
     if (EM && typeof EM.avisosPodiumEscritaMinimo === "function") {
       avisosPodio = avisosPodio.concat(EM.avisosPodiumEscritaMinimo(ev, dados));
     }
@@ -6943,11 +6974,15 @@
     return applied;
   }
 
-  /** ER 2026/2: inscrição e pontualidade começam desmarcadas para o check-in
-   *  (o template genérico marca as duas). Roda uma vez por projeto salvo. */
+  /** Eventos em que inscrição e pontualidade começam desmarcadas para o
+   *  check-in (o template genérico marca as duas, o que daria 300 pontos a
+   *  igrejas ausentes). */
+  var CHECKIN_DESMARCADO_SLUGS = [CER_PRE_CONCLAVE_SLUG, "conclave-mr-2026-2"];
+
+  /** Desmarca inscrição e pontualidade uma vez por projeto salvo. */
   function applyErCheckinDefaultsOnce(evento, dados) {
     if (!evento || !evento.meta || !dados || !dados.participacao) return false;
-    if (evento.meta.slug !== CER_PRE_CONCLAVE_SLUG) return false;
+    if (CHECKIN_DESMARCADO_SLUGS.indexOf(evento.meta.slug) === -1) return false;
     if (dados.erCheckinReset) return false;
     Object.keys(dados.participacao).forEach(function (id) {
       var row = dados.participacao[id];
@@ -7208,7 +7243,7 @@
         });
         state.dados = E.emptyDadosTemplate(ids, pids);
         var cerIds = applyCerPreConclaveExtraOnce(state.evento, state.dados);
-        applyErCheckinDefaultsOnce(state.evento, state.dados);
+        var checkinReset = applyErCheckinDefaultsOnce(state.evento, state.dados);
         state.podiumCollapsed = {};
         state.podiumProvaGroupCollapsed = {};
         resetRelatorioOficialGerado();
@@ -7221,6 +7256,11 @@
               " no Extra de " +
               cerIds.length +
               " igrejas). Inscrição e pontualidade desmarcadas para o check-in.",
+            "info"
+          );
+        } else if (checkinReset) {
+          showFeedback(
+            "Dados limpos. Inscrição e pontualidade desmarcadas para o check-in.",
             "info"
           );
         } else {

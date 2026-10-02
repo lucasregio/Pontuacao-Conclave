@@ -13,6 +13,14 @@ GitHub Pages.
 
 ### Corrigido
 
+- **MR 2026/2 no dia**: inscrição e pontualidade começam desmarcadas (check-in),
+  como no ER. Antes, igrejas ausentes recebiam 300 pontos.
+- **Pódio com igreja fora da lista** (ex.: nome digitado errado) passa a gerar
+  aviso na faixa de avisos e no relatório oficial — a medalha não pontua.
+- Lista de igrejas do MR 2026/2 atualizada (16 igrejas). Service worker
+  `pontuacao-conclave-v24`, para que máquinas que já abriram o app recebam a
+  lista nova.
+
 - **Pódio / Relatórios**: os botões «Faixa etária» e «Tipo de prova» (e a
   barra de filtros) deixam de ficar atrás do título sticky do evento ao
   rolar. O scroll passa a ocorrer em `.content`; as barras ficam sticky
