@@ -1013,6 +1013,28 @@ body {
   max-width: 60ch;
 }
 
+.dashboard-day-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: var(--type-sm);
+  line-height: var(--line-base);
+  color: var(--on-surface);
+}
+
+.dashboard-day-list li + li {
+  margin-top: 0.45rem;
+}
+
+.dashboard-day-card {
+  border-color: var(--brand);
+}
+
+.prova-escrita-podio-hint {
+  margin: 0.45rem 0 0;
+  font-size: var(--type-xs);
+  color: var(--on-surface-muted);
+}
+
 .dashboard-actions {
   display: flex;
   flex-direction: column;
@@ -1444,6 +1466,15 @@ table.data.participacao-table th {
 
 table.data.participacao-table th.part-th--igreja {
   min-width: 7rem;
+}
+
+.participacao-coletiva {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .part-th-line {
@@ -5507,4 +5538,171 @@ table.data.escrita-table .escrita-col-acoes {
 .config-prova-questoes:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* —— Esgrima: sorteio de referências —— */
+.esgrima-tempo-input {
+  width: 5.5rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--on-surface);
+  font: inherit;
+}
+
+.esgrima-card {
+  margin: 0.5rem 0 1rem;
+  padding: clamp(1.25rem, 4vw, 2.5rem) 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  text-align: center;
+}
+
+.esgrima-card-kicker {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--on-surface-muted);
+}
+
+.esgrima-card-ref {
+  margin: 0;
+  font-size: clamp(1.75rem, 5vw, 3rem);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--on-surface);
+}
+
+.esgrima-card-timer {
+  margin: 0.85rem 0 0;
+  font-size: clamp(1.1rem, 2.5vw, 1.6rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.esgrima-card-timer.is-expired {
+  color: var(--danger, #b91c1c);
+}
+
+.esgrima-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.esgrima-historico-title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.esgrima-historico-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.esgrima-historico-list li.is-atual {
+  font-weight: 700;
+}
+
+body.esgrima-stage-mode {
+  overflow: hidden;
+}
+
+body.esgrima-stage-mode .app-grid,
+body.esgrima-stage-mode .bottom-nav,
+body.esgrima-stage-mode .topbar,
+body.esgrima-stage-mode .sidebar,
+body.presentation-mode .esgrima-stage {
+  display: none !important;
+}
+
+.esgrima-stage {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  box-sizing: border-box;
+  min-height: 100dvh;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background: var(--surface);
+  color: var(--on-surface);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1rem;
+}
+
+body.esgrima-stage-mode .esgrima-stage {
+  display: flex;
+}
+
+.esgrima-stage-kicker {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-surface-muted);
+}
+
+.esgrima-stage-ref {
+  margin: 0;
+  font-size: clamp(2.5rem, 8vw, 5.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.esgrima-stage-timer {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.esgrima-stage-timer.is-expired {
+  color: var(--danger, #b91c1c);
+}
+
+.esgrima-stage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+[data-ui-theme="er"] .esgrima-stage {
+  background: #08306b;
+  color: #fff;
+}
+
+[data-ui-theme="er"] .esgrima-stage-kicker {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+[data-ui-theme="er"] .esgrima-stage-timer {
+  color: #ffd54f;
+}
+
+[data-ui-theme="mr"] .esgrima-stage {
+  background: #14532d;
+  color: #fff;
+}
+
+[data-ui-theme="mr"] .esgrima-stage-kicker {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+[data-ui-theme="mr"] .esgrima-stage-timer {
+  color: #facc15;
 }

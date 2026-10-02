@@ -126,6 +126,115 @@
     return (normalizeAcertos(acertos) / t) * 100;
   }
 
+  /** Mínimo de acertos para medalha na escrita (60%, arredondado para cima). */
+  function minimoAcertosEscrita(totalQuestoes) {
+    var t = Number(totalQuestoes);
+    if (!Number.isFinite(t) || t < 1) t = 20;
+    return Math.ceil(t * 0.6);
+  }
+
+  function normalizeNomeEscrita(s) {
+    return String(s || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  /** Só Evangelhos/CG Org (com total de questões) usam o mínimo de 60%. */
+  function usaMinimoAcertosEscrita(p) {
+    if (!p || p.tipo !== "escrita") return false;
+    var tot = Number(p.escritaTotalQuestoes);
+    return Number.isFinite(tot) && tot >= 1;
+  }
+
+  /**
+   * Avisos quando o pódio de prova escrita aponta igreja/competidor abaixo
+   * de 60% ou sem nota lançada. Não altera totais — só alerta o organizador.
+   * Montagem bíblica não entra: o regulamento usa erros (máx. 10), não 12/20.
+   */
+  function avisosPodiumEscritaMinimo(evento, dados) {
+    var avisos = [];
+    if (!evento || !dados) return avisos;
+    var provas = Array.isArray(evento.provas) ? evento.provas : [];
+    var podium = dados.podium || {};
+    var metricas = dados.metricasEscrita || {};
+    var medalNome = { ou: "Ouro", pt: "Prata", br: "Bronze" };
+    provas.forEach(function (p) {
+      if (!usaMinimoAcertosEscrita(p)) return;
+      var tot = Number(p.escritaTotalQuestoes);
+      var min = minimoAcertosEscrita(tot);
+      var rows = Array.isArray(metricas[p.id]) ? metricas[p.id] : [];
+      var places = podium[p.id] || {};
+      var titulo = (p.titulo != null ? String(p.titulo) : p.id) || "Prova escrita";
+      ["ou", "pt", "br"].forEach(function (mk) {
+        var ent = places[mk] || {};
+        var gid = ent.igrejaId;
+        var nomeComp = normalizeNomeEscrita(ent.competidor || ent.nomeLivre);
+        if (!gid && !nomeComp) return;
+        var hits = rows.filter(function (r) {
+          if (!r) return false;
+          if (gid && r.igrejaId !== gid) return false;
+          if (nomeComp) return normalizeNomeEscrita(r.nome) === nomeComp;
+          return true;
+        });
+        var medal = medalNome[mk] || mk;
+        if (!hits.length) {
+          avisos.push(
+            "«" +
+              titulo +
+              "» (" +
+              medal +
+              "): sem nota na Prova escrita. Só lance medalha com ≥" +
+              min +
+              "/" +
+              tot +
+              " acertos."
+          );
+          return;
+        }
+        if (nomeComp) {
+          var ac = normalizeAcertos(hits[0].acertos);
+          if (ac < min) {
+            avisos.push(
+              "«" +
+                titulo +
+                "» (" +
+                medal +
+                "): " +
+                (hits[0].nome || "competidor") +
+                " com " +
+                ac +
+                "/" +
+                tot +
+                " (mínimo " +
+                min +
+                ")."
+            );
+          }
+          return;
+        }
+        var temMinimo = hits.some(function (r) {
+          return normalizeAcertos(r.acertos) >= min;
+        });
+        if (!temMinimo) {
+          avisos.push(
+            "«" +
+              titulo +
+              "» (" +
+              medal +
+              "): igreja no pódio sem ninguém com ≥" +
+              min +
+              "/" +
+              tot +
+              " acertos."
+          );
+        }
+      });
+    });
+    return avisos;
+  }
+
   window.ConclaveEscritaMetrics = {
     normalizeAcertos: normalizeAcertos,
     rankParticipantes: rankParticipantes,
@@ -135,5 +244,8 @@
     resumoProva: resumoProva,
     validarEntrada: validarEntrada,
     percentual: percentual,
+    minimoAcertosEscrita: minimoAcertosEscrita,
+    usaMinimoAcertosEscrita: usaMinimoAcertosEscrita,
+    avisosPodiumEscritaMinimo: avisosPodiumEscritaMinimo,
   };
 })();

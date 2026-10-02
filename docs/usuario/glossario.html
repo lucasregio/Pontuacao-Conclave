@@ -34,6 +34,7 @@
 <li><a href="#desempate">Desempate</a></li>
 <li><a href="#schema">Schema</a></li>
 <li><a href="#projeto-vs-evento">Projeto vs evento</a></li>
+<li><a href="#esgrima-sorteio">Esgrima (sorteio)</a></li>
 </ul>
 <h3 id="mr">MR</h3>
 <p>Mensageiras do Rei. Programa de educação cristã para meninas e adolescentes em igrejas batistas. Quando o sistema fala em &quot;MR&quot; se refere às pessoas (ou unidades de contagem) participantes pela igreja: <code>mr_total</code>, <code>mr_camisa</code>, <code>mr_biblia</code>.</p>
@@ -74,6 +75,8 @@
 <li><strong>Evento</strong> (<code>.evento.json</code>): apenas a configuração. Contém <code>meta</code>, <code>pesos</code>, <code>medalhas</code>, <code>igrejas</code>, <code>categorias</code> e <code>provas</code>. Não contém pontuação.</li>
 <li><strong>Projeto</strong> (<code>.projeto.json</code>): configuração + dados preenchidos. É o objeto <code>{ evento, dados }</code>, em que <code>dados</code> traz <code>participacao</code> (por igreja) e <code>podium</code> (por prova). É o backup canônico para round-trip.</li>
 </ul>
+<h3 id="esgrima-sorteio">Esgrima (sorteio)</h3>
+<p>Ferramenta da aba <strong>Esgrima</strong> para o líder da prova <strong>Esgrima Bíblico (Debate Bíblico)</strong> ditar referências aleatórias sem repetir. Não é o <strong>Debate de versículos</strong> (recitação) nem a <strong>Esgrima avançada</strong> (palavra). O histórico fica em <code>dados.sorteioEsgrima</code> e <strong>não entra</strong> na classificação.</p>
       </article>
     </main>
     <footer class="docs-footer">

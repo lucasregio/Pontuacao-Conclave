@@ -30,7 +30,8 @@ exportados, importados e mantidos no `localStorage` do próprio navegador.
    `http(s)://` em vez de `file://`.
 2. Na aba **Início**, use **Novo evento**, **Carregar projeto** ou o menu **Mais**
    → **Carregar evento** / **Exportar evento** / **Exportar projeto**.
-3. Edite as abas: **Configuração**, **Participação**, **Pódio**, **Classificação**,
+3. Edite as abas: **Configuração**, **Participação**, **Pódio**, **Prova escrita**,
+   **Esgrima**, **Classificação**, **Relatórios**.
    **Relatórios**.
 4. **Exportar projeto** salva evento + dados; **Exportar evento** salva só a
    configuração. **Eventos salvos** (menu Mais) gerencia cópias no `localStorage`.
@@ -57,7 +58,9 @@ Detalhes em `pen-drive/LEIA-ME.txt`.
 
 1. **`web/engine.js`** — motor puro (`window.ConclaveEngine`), sem DOM.
 2. **`web/app.js`** — UI, estado, persistência, modais, cache de `computeTotals`.
-3. **`web/styles.css`** — temas MR/ER, responsividade, impressão, apresentação.
+3. **`web/escrita-metrics.js`** / **`web/sorteio-esgrima.js`** — métricas da escrita e
+   sorteio da Esgrima; não alteram a classificação.
+4. **`web/styles.css`** — temas MR/ER, responsividade, impressão, apresentação.
 
 Esquemas em `schema/evento.schema.json` e `schema/projeto.schema.json`. Amostras
 em `eventos/conclave-2026-1.*`.

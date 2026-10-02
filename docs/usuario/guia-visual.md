@@ -20,6 +20,7 @@ npm run build:docs
 - [Participação](#participacao)
 - [Pódio por prova](#podio-por-prova)
 - [Prova escrita](#prova-escrita)
+- [Esgrima](#esgrima)
 - [Classificação](#classificacao)
 - [Relatórios](#relatorios)
 - [Modo apresentação](#modo-apresentacao)
@@ -31,7 +32,7 @@ Primeira aba. Mostra o evento ativo (nome, data, local), atalhos para Participa�
 
 ![Aba Início com o Conclave ER 2026/2 ativo](guia-visual/01-inicio.png)
 
-A **sidebar** (à esquerda no desktop) lista as sete abas, o seletor de tema **MR / ER** (só troca as cores) e o link da documentação.
+A **sidebar** (à esquerda no desktop) lista as oito abas, o seletor de tema **MR / ER** (só troca as cores) e o link da documentação.
 
 ## Menu Mais
 
@@ -80,7 +81,7 @@ Faixas etárias do regulamento. No ER 2026/2: Junior 9–11, Adolescente 12–14
 
 ### Provas
 
-15 provas (Evangelhos, Organização, Montagem, Esgrima e Debate × Junior / Adolescente / Juvenil). Tipo **escrita** alimenta a aba Prova escrita; tipo **oral** só entra no pódio.
+15 provas (Evangelhos, Organização, Montagem, Esgrima e Debate × Junior / Adolescente / Juvenil). Tipo **escrita** (Evangelhos, Organização e Montagem) alimenta a aba Prova escrita; tipo **oral** (Esgrima e Debate) só entra no pódio.
 
 ![Configuração — lista de provas e valores de medalha](guia-visual/08-config-provas.png)
 
@@ -111,6 +112,10 @@ Cadastro de **acertos por participante** nas provas do tipo escrita. Serve para 
 
 ![Aba Prova escrita com ranking individual de demonstração](guia-visual/11-prova-escrita.png)
 
+## Esgrima
+
+Sorteio de referências para o líder da **Esgrima (Debate Bíblico)** ditar, sem repetir na mesma categoria. Cronômetro 20 s (MR) ou 30 s (ER). **Não altera** a classificação — medalhas continuam no Pódio. Debate de versículos e Esgrima avançada não usam esta aba.
+
 ## Classificação
 
 Ranking geral: participação + punições + medalhas + extra. Desempate no ER: ouro → prata → Debate de Versículos → Conhecimentos gerais da Organização → nome. A prova de Evangelhos conta medalhas, mas não entra sozinha no critério de desempate. Use **Exportar CSV** para planilha.
@@ -131,7 +136,7 @@ Tela cheia para projetor, com cerimônia de revelação do 5.º ao 1.º lugar. C
 
 ## Celular
 
-Abaixo de 768 px a navegação vai para a **barra inferior**. As mesmas sete abas. Prefira um notebook no dia do evento; o celular serve para consulta.
+Abaixo de 768 px a navegação vai para a **barra inferior**. As mesmas oito abas. Prefira um notebook no dia do evento; o celular serve para consulta.
 
 ![App em viewport de celular com barra inferior](guia-visual/15-mobile.png)
 

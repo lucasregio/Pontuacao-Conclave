@@ -20,6 +20,10 @@
       "pt": 200,
       "br": 100
     },
+    "sorteioEsgrima": {
+      "corpus": "biblia",
+      "tempoSegundos": 20
+    },
     "igrejas": [
       {
         "id": "alianca",

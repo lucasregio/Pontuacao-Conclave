@@ -54,7 +54,8 @@
 <p><strong>Causa provável</strong>: o service worker (<code>sw.js</code>) está servindo a versão em cache. É o comportamento esperado do PWA para funcionar offline, mas atrapalha quando você quer forçar o refresh.</p>
 <p><strong>O que fazer</strong> (Chrome/Edge no Android, Safari no iOS é semelhante):</p>
 <ol>
-<li>Abra DevTools (no desktop) → aba <strong>Application</strong> → <strong>Service Workers</strong>.</li>
+<li>No computador, force o recarregamento: <strong>Ctrl+F5</strong> (ou Ctrl+Shift+R).</li>
+<li>Se ainda estiver velho: DevTools → <strong>Application</strong> → <strong>Service Workers</strong>.</li>
 <li>Marque <strong>Update on reload</strong> e recarregue a página.</li>
 <li>Se persistir, clique em <strong>Unregister</strong> e recarregue.</li>
 <li>No celular, alternativa rápida: desinstale o atalho do PWA e reinstale a partir da página atualizada. O cache antigo é descartado.</li>

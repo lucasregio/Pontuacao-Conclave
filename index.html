@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-ui-theme="er">
+<html lang="pt-BR" data-ui-theme="mr">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -10,7 +10,7 @@
     />
     <!--
       Política de Segurança de Conteúdo (CSP):
-      - script-src 'self': só carrega web/engine.js, web/app.js, sw.js (mesma origem).
+      - script-src 'self': só carrega scripts da mesma origem (engine, app, sorteio, sw).
       - style-src 'self' 'unsafe-inline': necessário para atribuições style.X via JS
         (theme-color dinâmico, etc.). Não há <style> inline no HTML.
       - img-src 'self' data: blob: https:: ícones locais (icons/) e blobs de download.
@@ -49,21 +49,21 @@
             <span class="theme-toggle-label">Tema</span>
             <button
               type="button"
-              class="theme-btn"
+              class="theme-btn active"
               id="theme-mr"
               data-ui-theme="mr"
               title="MR: verde, amarelo e branco"
-              aria-pressed="false"
+              aria-pressed="true"
             >
               MR
             </button>
             <button
               type="button"
-              class="theme-btn active"
+              class="theme-btn"
               id="theme-er"
               data-ui-theme="er"
               title="ER: azul, amarelo e branco"
-              aria-pressed="true"
+              aria-pressed="false"
             >
               ER
             </button>
@@ -250,6 +250,14 @@
           aria-label="Prova escrita"
         ></section>
         <section
+          id="panel-esgrima"
+          class="panel"
+          role="tabpanel"
+          aria-labelledby="tab-esgrima"
+          hidden
+          aria-label="Esgrima"
+        ></section>
+        <section
           id="panel-classificacao"
           class="panel"
           role="tabpanel"
@@ -294,6 +302,31 @@
       Sair da apresentação
     </button>
 
+    <div
+      id="esgrima-stage"
+      class="esgrima-stage"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="esgrima-stage-ref"
+    >
+      <p class="esgrima-stage-kicker" id="esgrima-stage-kicker">Esgrima bíblica</p>
+      <p id="esgrima-stage-ref" class="esgrima-stage-ref">—</p>
+      <p id="esgrima-stage-timer" class="esgrima-stage-timer" aria-live="polite">0:30</p>
+      <div class="esgrima-stage-actions">
+        <button type="button" class="pill-btn" id="esgrima-stage-timer-btn">
+          Iniciar cronômetro
+        </button>
+        <button type="button" class="pill-btn pill-btn--primary" id="esgrima-stage-next">
+          Sortear
+        </button>
+        <button type="button" class="pill-btn" id="esgrima-stage-anular">
+          Anular e sortear outra
+        </button>
+        <button type="button" class="pill-btn" id="esgrima-stage-close">Sair da tela cheia</button>
+      </div>
+    </div>
+
     <div id="tour-root" class="tour-root" hidden aria-hidden="true">
       <div class="tour-veil-part" id="tour-veil-t"></div>
       <div class="tour-veil-part" id="tour-veil-l"></div>
@@ -327,10 +360,12 @@
          Permite que o auto-load funcione mesmo em `file://` (pen-drive, etc.).
          Gerado por `npm run build:embedded`. Carregamento opcional: se faltar,
          o app cai no fetch() do JSON original. -->
-    <script src="eventos/conclave-er-2026-2.evento.embedded.js" defer></script>
+    <script src="eventos/conclave-mr-2026-2.evento.embedded.js" defer></script>
     <script src="web/engine.js" defer></script>
     <script src="web/escrita-metrics.js" defer></script>
     <script src="web/escrita-charts.js" defer></script>
+    <script src="web/biblia-estrutura.js" defer></script>
+    <script src="web/sorteio-esgrima.js" defer></script>
     <script src="web/podio-filters.js" defer></script>
     <script src="web/relatorio.js" defer></script>
     <script src="web/app.js" defer></script>

@@ -21,6 +21,10 @@
     "pt": 200,
     "br": 100
   },
+  "sorteioEsgrima": {
+    "corpus": "biblia",
+    "tempoSegundos": 20
+  },
   "igrejas": [
     { "id": "alianca", "nome": "Primeira Igreja Batista Aliança" },
     { "id": "ibes", "nome": "Igreja Batista do Ibes" },

@@ -41,7 +41,14 @@
 <li><strong>Observação</strong> — regra especial, dependência ou armadilha comum.</li>
 </ul></li>
 </ul>
-<p>Os caminhos JSON usam a notação <code>evento.pesos.X</code> ou <code>dados.participacao[igrejaId].X</code>. A amostra real está em <code>eventos/conclave-2026-1.evento.json</code> (configuração) e <code>eventos/conclave-2026-1.projeto.exemplo.json</code> (configuração + dados).</p>
+<p>Os caminhos JSON usam a notação <code>evento.pesos.X</code> ou <code>dados.participacao[igrejaId].X</code>. O evento padrão é <code>eventos/conclave-mr-2026-2.evento.json</code>. Há também <code>eventos/conclave-2026-1.evento.json</code> (configuração) e <code>eventos/conclave-2026-1.projeto.exemplo.json</code> (configuração + dados).</p>
+<h3 id="conclave-mr-2026-2-no-app">Conclave MR 2026/2 no app</h3>
+<ul>
+<li><strong>Provas com medalha</strong> (Junior / Adolescente / Juvenil): prova escrita dos Evangelhos, prova escrita da biografia *O Gigante que Dorme* (ambas com <code>escritaTotalQuestoes: 20</code> e mínimo de 12 acertos), Esgrima bíblica (sorteio de 30 s na aba Esgrima), Esgrima avançada e Debate de versículos.</li>
+<li><strong>Quiz dos Evangelhos</strong> (Kahoot): o prêmio é um mimo, então não há prova no pódio nem pontos no total.</li>
+<li><strong>Desempate interno da prova escrita</strong> (questão mais difícil errada, depois tempo de entrega): aplicado pelos juízes na correção; o app recebe o pódio.</li>
+<li><strong>Desempate geral</strong>: só o critério de Debate de Versículos se aplica, pois o evento não tem provas de Conhecimentos Gerais.</li>
+</ul>
 <h2 id="itens-de-participacao">Itens de participacao</h2>
 <ul>
 <li><strong>Inscrição</strong><ul>
@@ -100,6 +107,14 @@
 <li>Observação: o peso já é registrado <strong>negativo</strong> no JSON canônico (ex.: <code>-150</code>). O motor soma esse valor; o efeito final é subtrair. Se o JSON tiver o peso positivo, o motor soma positivo (ou seja: o sinal negativo é responsabilidade de quem edita o JSON do evento).</li>
 </ul></li>
 </ul>
+<ul>
+<li><strong>Conservação do templo (todas as igrejas)</strong><ul>
+<li>Campo (peso, opcional): <code>evento.pesos.conservacao_templo</code> (−100 no MR 2026/2).</li>
+<li>Campo (entrada): <code>dados.conservacaoTemploDescumprida</code> (boolean, um só para o evento).</li>
+<li>UI: aba <strong>Participação</strong> → caixa «Conservação do templo descumprida», acima da tabela. Aparece quando o peso é diferente de 0 (editável em <strong>Configuração → Pesos</strong>).</li>
+<li>Observação: quando marcada, o peso entra nas punições de <strong>cada</strong> igreja. Sem o peso no evento (ou com 0), a caixa some e nada muda.</li>
+</ul></li>
+</ul>
 <h2 id="pontuacao-extra">Pontuacao extra</h2>
 <ul>
 <li><strong>Pontuação extra (antigas &quot;embaixadas&quot;)</strong><ul>
@@ -117,6 +132,14 @@
 <li>Campos (entrada): <code>dados.podium[provaId].ou</code>, <code>.pt</code>, <code>.br</code>, cada um com <code>{ igrejaId, competidor?, nomeLivre? }</code>.</li>
 <li>UI: aba <strong>Pódio</strong> → seção por prova.</li>
 <li>Observação: as chaves no JSON são <strong><code>ou</code>, <code>pt</code>, <code>br</code></strong> (não <code>ouro</code>, <code>prata</code>, <code>bronze</code>). O campo <code>competidor</code> é texto livre com o nome do MR vencedor (não pontua, só referência). O campo <code>nomeLivre</code> é usado quando a igreja vencedora <strong>não está cadastrada</strong> em <code>evento.igrejas[]</code>: o pódio aparece nos relatórios, mas o motor <strong>não</strong> atribui pontos a uma igreja inexistente.</li>
+</ul></li>
+</ul>
+<ul>
+<li><strong>Sorteio da Esgrima (Debate Bíblico)</strong><ul>
+<li>Campo (configuração): <code>evento.sorteioEsgrima.corpus</code> e <code>.tempoSegundos</code> (opcionais).</li>
+<li>Campo (sessão): <code>dados.sorteioEsgrima[provaId]</code> com <code>usados</code>, <code>atual</code>, <code>historico</code>.</li>
+<li>UI: aba <strong>Esgrima</strong>.</li>
+<li>Observação: só provas cujo título contém <strong>&quot;esgrima&quot;</strong> e <strong>não</strong> contém <strong>&quot;avanc&quot;</strong>. Não altera <code>computeTotals</code>. O Debate de versículos (recitação) não usa este campo.</li>
 </ul></li>
 </ul>
 <h2 id="desempate">Desempate</h2>
@@ -151,6 +174,7 @@
 <li><code>pesos.animacao</code> se <code>animacao</code> for truthy.</li>
 </ul></li>
 <li>Some/subtraia <code>pesos.mau_comportamento</code> se <code>mau_comportamento</code> for truthy.</li>
+<li>Some/subtraia <code>pesos.conservacao_templo</code> se <code>dados.conservacaoTemploDescumprida</code> for verdadeiro.</li>
 <li>Some <code>pontuacao_extra</code> (ou <code>embaixadas</code>, se aplicável).</li>
 <li>Some, em <code>dados.podium</code>, cada vez que <code>igrejaId</code> da igreja aparece como <code>ou</code>, <code>pt</code> ou <code>br</code>, multiplicando pelo <code>evento.medalhas[ou|pt|br]</code> correspondente.</li>
 </ul></li>

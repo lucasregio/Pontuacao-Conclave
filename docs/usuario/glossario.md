@@ -15,6 +15,7 @@ documento como apoio rápido durante o evento.
 - [Desempate](#desempate)
 - [Schema](#schema)
 - [Projeto vs evento](#projeto-vs-evento)
+- [Esgrima (sorteio)](#esgrima-sorteio)
 
 ### MR
 
@@ -109,3 +110,10 @@ Dois objetos com papéis distintos:
 - **Projeto** (`.projeto.json`): configuração + dados preenchidos. É o objeto
   `{ evento, dados }`, em que `dados` traz `participacao` (por igreja) e `podium`
   (por prova). É o backup canônico para round-trip.
+
+### Esgrima (sorteio)
+
+Ferramenta da aba **Esgrima** para o líder da prova **Esgrima Bíblico (Debate Bíblico)**
+ditar referências aleatórias sem repetir. Não é o **Debate de versículos** (recitação)
+nem a **Esgrima avançada** (palavra). O histórico fica em `dados.sorteioEsgrima` e
+**não entra** na classificação.

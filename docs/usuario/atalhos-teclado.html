@@ -28,6 +28,7 @@
 <li><a href="#skip-link">Skip-link</a></li>
 <li><a href="#abas-e-botoes">Abas e botoes</a></li>
 <li><a href="#modo-apresentacao">Modo apresentacao</a></li>
+<li><a href="#tela-cheia-da-esgrima">Tela cheia da Esgrima</a></li>
 <li><a href="#confirmacoes-acessiveis">Confirmacoes acessiveis</a></li>
 <li><a href="#movimento-reduzido">Movimento reduzido</a></li>
 </ul>
@@ -43,7 +44,7 @@
 <p>Útil para leitores de tela e para quem não quer percorrer todos os botões da toolbar a cada visita.</p>
 <h2 id="abas-e-botoes">Abas e botoes</h2>
 <ul>
-<li>A <strong>sidebar</strong> (desktop) e a <strong>barra inferior</strong> (mobile) formam um tablist ARIA: use <code>←</code> / <code>→</code> / <code>↑</code> / <code>↓</code>, <code>Home</code> ou <code>End</code> para mover entre Início, Configuração, Participação, Pódio, Classificação e Relatórios.</li>
+<li>A <strong>sidebar</strong> (desktop) e a <strong>barra inferior</strong> (mobile) formam um tablist ARIA: use <code>←</code> / <code>→</code> / <code>↑</code> / <code>↓</code>, <code>Home</code> ou <code>End</code> para mover entre Início, Configuração, Participação, Pódio, Prova escrita, Esgrima, Classificação e Relatórios.</li>
 <li>O menu <strong>Mais</strong> (topbar): <code>↑</code> / <code>↓</code> entre itens; <code>Esc</code> fecha; <code>Enter</code> ativa.</li>
 <li>Em <strong>Configuração → Categorias / Provas</strong>, o grip ⠿ de reordenar aceita <strong>Alt+Seta para cima</strong> / <strong>Alt+Seta para baixo</strong> além de arrastar com o mouse.</li>
 <li>Em botões comuns, <code>Enter</code> e <code>Espaço</code> ativam a ação. Botões com <code>aria-pressed</code> (ex.: o tema MR/ER) trocam o estado a cada acionamento.</li>
@@ -57,6 +58,8 @@
 <li>Sair: <code>Escape</code> ou clique/<code>Enter</code> no botão <strong>Sair da apresentação</strong> (visível no canto da tela). O foco volta para o botão original que ativou o modo, evitando perder o &quot;lugar&quot; no teclado.</li>
 <li>Em algumas versões do iOS Safari, <code>Escape</code> em teclados externos não chega ao JavaScript. Nesses casos, use o botão de saída.</li>
 </ul>
+<h2 id="tela-cheia-da-esgrima">Tela cheia da Esgrima</h2>
+<p>Na aba <strong>Esgrima</strong>, <strong>Tela cheia da referência</strong> abre um palco só com a passagem sorteada (não é a cerimônia de classificação). <code>Escape</code> ou <strong>Sair da tela cheia</strong> fecham. O cronômetro e o sorteio continuam nos botões do palco.</p>
 <h2 id="confirmacoes-acessiveis">Confirmacoes acessiveis</h2>
 <p>Nenhuma ação destrutiva usa diálogo nativo (<code>alert</code>/<code>confirm</code>/<code>prompt</code>). Todas passam por um <strong>modal-confirm acessível</strong> com:</p>
 <ul>

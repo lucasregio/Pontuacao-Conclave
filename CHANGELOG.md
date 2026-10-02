@@ -22,9 +22,32 @@ GitHub Pages.
   a UI não fica muda.
 - **Início → «Gerar relatório oficial»**: gera o perfil **Oficial completo**
   (auditoria), não o Resumo de divulgação.
+- **ER 2026/2 no dia**: inscrição e pontualidade começam desmarcadas (check-in);
+  o Pódio avisa se a prova escrita estiver abaixo de 12/20.
+- **Montagem bíblica** no ER 2026/2 passa a ser tipo **escrita** (gabarito em
+  papel). A regra de 12/20 continua só em Evangelhos e Organização; montagem
+  desclassifica com mais de 10 erros.
+- **Pódios no Início**: o cartão mostra `preenchidas / total` de provas, não
+  um percentual (1 de 15 virava «7%»).
 
 ### Adicionado
 
+- **Conclave MR 2026/2** (`eventos/conclave-mr-2026-2.evento.json`) passa a
+  ser o evento padrão: 03/10/2026, Igreja Batista Aliança; idades 9–11 /
+  12–14 / 15–18; 15 provas (escrita dos Evangelhos, escrita da biografia
+  _O Gigante que Dorme_, Esgrima bíblica, Esgrima avançada e Debate de
+  versículos × 3 categorias); Esgrima com 30 s. Regulamento em
+  `static/regulamento-mr-2026-2.pdf`. O Quiz dos Evangelhos (Kahoot) não
+  pontua. O ER 2026/2 continua disponível em «Carregar evento». Service
+  worker `pontuacao-conclave-v23`.
+- **Penalidade coletiva de conservação do templo**: peso opcional
+  `pesos.conservacao_templo` (−100 no MR 2026/2) e caixa única na aba
+  Participação (`dados.conservacaoTemploDescumprida`) que desconta de todas
+  as igrejas. Eventos sem o peso não mudam.
+- **Aba Esgrima**: sorteio de referências bíblicas sem repetição para o líder
+  da Esgrima (Debate Bíblico) ditar, com cronômetro (20 s MR / 30 s ER),
+  histórico por categoria e tela cheia. Não altera a classificação — o pódio
+  continua na aba Pódio. Service worker `pontuacao-conclave-v22`.
 - **Tutorial de 5 minutos** (`docs/usuario/tutorial-5min.md`): fluxo ilustrado
   do dia (abrir evento, conferir cadastro, participação, pódio, ranking e
   backup), com capturas do guia visual. A landing `docs/index.html` abre nesse
@@ -32,6 +55,8 @@ GitHub Pages.
 - **Tutorial guiado na tela**: o botão «Tutorial na tela» (Início e rodapé)
   percorre as abas reais com destaque, deixa lançar dados no passo atual e
   carrega o evento de exemplo se ainda não houver evento.
+- **Checklist do dia** no Início do Conclave ER 2026/2 (check-in, extra,
+  escrita 60% e backup).
 
 ## [2.0.0] - 2026-06-20
 

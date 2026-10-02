@@ -7,6 +7,8 @@
   var PF = window.ConclavePodioFilters;
   var EM = window.ConclaveEscritaMetrics;
   var EC = window.ConclaveEscritaCharts;
+  var SE = window.ConclaveSorteioEsgrima;
+  var BE = window.ConclaveBibliaEstrutura;
   var state = {
     evento: null,
     dados: null,
@@ -53,6 +55,11 @@
     /** Prova escrita: prova selecionada na aba métricas */
     escritaProvaId: null,
     escritaChartsRaf: null,
+    /** Esgrima: prova selecionada, cronômetro e tela cheia da referência */
+    esgrimaProvaId: null,
+    esgrimaTimer: { running: false, remainingMs: 0, deadline: 0 },
+    esgrimaTimerId: null,
+    esgrimaStageOpen: false,
     /** Tutorial guiado na tela (destaque das áreas reais). */
     tourActive: false,
     tourStep: 0,
@@ -148,7 +155,7 @@
     strip.appendChild(chip("Igrejas", k.igrejas));
     strip.appendChild(chip("Provas", k.provas));
     var tonePodio = k.podiosPct >= 100 ? "success" : k.podiosPct >= 50 ? "warn" : null;
-    strip.appendChild(chip("Pódios", k.podiosPct + "%", tonePodio));
+    strip.appendChild(chip("Pódios", k.podiosPreenchidos + "/" + k.provas, tonePodio));
   }
 
   /**
@@ -382,7 +389,17 @@
   }
 
   /** Infere modalidade a partir do título quando `tipo` está ausente (legado). */
+  function isProvaMontagemBiblica(p) {
+    var id = String((p && p.id) || "").toLowerCase();
+    if (id.indexOf("montagem") !== -1) return true;
+    var t = String((p && p.titulo) || "")
+      .trim()
+      .toLowerCase();
+    return t.indexOf("montagem") !== -1;
+  }
+
   function inferProvaTipo(p) {
+    if (isProvaMontagemBiblica(p)) return "escrita";
     var t = String((p && p.titulo) || "")
       .trim()
       .toLowerCase();
@@ -392,6 +409,10 @@
 
   function normalizeProvaTipos(ev) {
     (ev.provas || []).forEach(function (p) {
+      if (isProvaMontagemBiblica(p)) {
+        p.tipo = "escrita";
+        return;
+      }
       if (p.tipo !== "oral" && p.tipo !== "escrita") p.tipo = inferProvaTipo(p);
     });
   }
@@ -418,6 +439,147 @@
     Object.keys(state.dados.metricasEscrita).forEach(function (pid) {
       if (escritaIds.indexOf(pid) < 0) delete state.dados.metricasEscrita[pid];
     });
+  }
+
+  function provasEsgrima(ev) {
+    return (ev && ev.provas ? ev.provas : []).filter(function (p) {
+      return SE && SE.isProvaEsgrima(p.titulo);
+    });
+  }
+
+  function defaultSorteioEsgrimaEvento() {
+    var cfg = (state.evento && state.evento.sorteioEsgrima) || {};
+    var tempoFallback = themeFromEvento(state.evento) === "er" ? 30 : 20;
+    return {
+      corpus: SE ? SE.normalizeCorpus(cfg.corpus) : "biblia",
+      tempoSegundos: SE ? SE.normalizeTempo(cfg.tempoSegundos, tempoFallback) : tempoFallback,
+    };
+  }
+
+  function ensureSorteioEsgrima() {
+    if (!state.evento || !state.dados || !SE) return;
+    if (!state.dados.sorteioEsgrima || typeof state.dados.sorteioEsgrima !== "object") {
+      state.dados.sorteioEsgrima = {};
+    }
+    var ids = provasEsgrima(state.evento).map(function (p) {
+      return p.id;
+    });
+    var defaults = defaultSorteioEsgrimaEvento();
+    ids.forEach(function (pid) {
+      state.dados.sorteioEsgrima[pid] = SE.normalizeSessao(
+        state.dados.sorteioEsgrima[pid],
+        defaults
+      );
+    });
+    Object.keys(state.dados.sorteioEsgrima).forEach(function (pid) {
+      if (ids.indexOf(pid) < 0) delete state.dados.sorteioEsgrima[pid];
+    });
+  }
+
+  function getEsgrimaProvaAtual() {
+    if (!state.evento) return null;
+    var list = provasEsgrima(state.evento);
+    if (!list.length) return null;
+    if (state.esgrimaProvaId) {
+      var found = list.find(function (p) {
+        return p.id === state.esgrimaProvaId;
+      });
+      if (found) return found;
+    }
+    return list[0];
+  }
+
+  function getEsgrimaSessao() {
+    ensureSorteioEsgrima();
+    var prova = getEsgrimaProvaAtual();
+    if (!prova || !state.dados || !state.dados.sorteioEsgrima) return null;
+    return state.dados.sorteioEsgrima[prova.id] || null;
+  }
+
+  function setEsgrimaSessao(sessao) {
+    var prova = getEsgrimaProvaAtual();
+    if (!prova || !state.dados) return;
+    ensureSorteioEsgrima();
+    state.dados.sorteioEsgrima[prova.id] = sessao;
+  }
+
+  function esgrimaTempoLimiteMs() {
+    var sessao = getEsgrimaSessao();
+    var sec = sessao && sessao.tempoSegundos ? sessao.tempoSegundos : 20;
+    return sec * 1000;
+  }
+
+  function formatEsgrimaTempo(ms) {
+    var sec = Math.max(0, Math.ceil(Number(ms) / 1000));
+    if (!Number.isFinite(sec)) sec = 0;
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  function esgrimaTimerRemaining() {
+    var t = state.esgrimaTimer;
+    if (!t) return 0;
+    if (t.running && t.deadline) return Math.max(0, t.deadline - Date.now());
+    return Math.max(0, t.remainingMs || 0);
+  }
+
+  function resetEsgrimaTimer() {
+    var ms = esgrimaTempoLimiteMs();
+    state.esgrimaTimer = {
+      running: false,
+      remainingMs: ms,
+      deadline: 0,
+    };
+    stopEsgrimaTimerTickIfIdle();
+  }
+
+  function stopEsgrimaTimerTickIfIdle() {
+    if (state.esgrimaTimer && state.esgrimaTimer.running) return;
+    if (state.esgrimaTimerId) {
+      clearInterval(state.esgrimaTimerId);
+      state.esgrimaTimerId = null;
+    }
+  }
+
+  function ensureEsgrimaTimerTick() {
+    if (state.esgrimaTimerId) return;
+    state.esgrimaTimerId = setInterval(tickEsgrimaTimer, 200);
+  }
+
+  function tickEsgrimaTimer() {
+    var t = state.esgrimaTimer;
+    if (!t || !t.running) {
+      stopEsgrimaTimerTickIfIdle();
+      return;
+    }
+    t.remainingMs = Math.max(0, t.deadline - Date.now());
+    if (t.remainingMs <= 0) {
+      t.running = false;
+      t.remainingMs = 0;
+      t.deadline = 0;
+      stopEsgrimaTimerTickIfIdle();
+    }
+    updateEsgrimaTimerDom();
+  }
+
+  function toggleEsgrimaTimer() {
+    var t = state.esgrimaTimer || { running: false, remainingMs: 0, deadline: 0 };
+    if (t.running) {
+      t.remainingMs = esgrimaTimerRemaining();
+      t.running = false;
+      t.deadline = 0;
+      state.esgrimaTimer = t;
+      stopEsgrimaTimerTickIfIdle();
+    } else {
+      var left = t.remainingMs > 0 ? t.remainingMs : esgrimaTempoLimiteMs();
+      t.remainingMs = left;
+      t.running = left > 0;
+      t.deadline = t.running ? Date.now() + left : 0;
+      state.esgrimaTimer = t;
+      if (t.running) ensureEsgrimaTimerTick();
+    }
+    updateEsgrimaTimerDom();
   }
 
   function buildIgrejaNomeMap(ev) {
@@ -840,6 +1002,7 @@
     });
     syncIgrejasIntoDados();
     ensureMetricasEscrita();
+    ensureSorteioEsgrima();
   }
 
   function ensureUniqueIgrejaId(ev, baseId) {
@@ -1475,6 +1638,7 @@
     "participacao",
     "podio",
     "escrita",
+    "esgrima",
     "classificacao",
     "relatorios",
   ];
@@ -1507,6 +1671,11 @@
       label: "Prova escrita",
       short: "Escrita",
       icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/><rect x="15" y="14" width="3" height="6" rx="0.5" fill="currentColor" stroke="none" opacity="0.35"/></svg>',
+    },
+    esgrima: {
+      label: "Esgrima",
+      short: "Esgrima",
+      icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20 20 4"/><path d="M8 20h4"/><path d="M14 4h6v6"/></svg>',
     },
     classificacao: {
       label: "Classificação",
@@ -1633,10 +1802,16 @@
     el.innerHTML = "";
     if (!state.evento || !state.dados) return;
     var av = E.avisosPodiumDuplicado(state.dados.podium || {});
+    if (EM && typeof EM.avisosPodiumEscritaMinimo === "function") {
+      av = av.concat(EM.avisosPodiumEscritaMinimo(state.evento, state.dados));
+    }
     if (!av.length) return;
     var div = document.createElement("div");
     div.className = "banner-warn";
-    div.textContent = av.join(" ");
+    var shown = av.slice(0, 3);
+    var extra = av.length - shown.length;
+    div.textContent =
+      shown.join(" ") + (extra > 0 ? " (+" + extra + " aviso" + (extra > 1 ? "s" : "") + ")" : "");
     el.appendChild(div);
   }
 
@@ -2138,7 +2313,8 @@
   /** Calcula KPIs derivados do estado atual para o Dashboard e topbar:
    *  - igrejas: total cadastrado;
    *  - provas: total cadastrado;
-   *  - podiosPct: % de provas com ao menos 1 medalha atribuída. */
+   *  - podiosPreenchidos: provas com ao menos 1 medalha;
+   *  - podiosPct: mesma fração em % (só para cor do chip). */
   function computeKpis() {
     var ev = state.evento;
     var dados = state.dados || {};
@@ -2240,7 +2416,7 @@
       wrap.appendChild(docs);
     } else {
       // -------------- Resumo (com evento) --------------
-      var kpis = computeKpis() || { igrejas: 0, provas: 0, podiosPct: 0 };
+      var kpis = computeKpis() || { igrejas: 0, provas: 0, podiosPct: 0, podiosPreenchidos: 0 };
       var meta = ev.meta || {};
 
       var summary = document.createElement("section");
@@ -2260,6 +2436,22 @@
           : "");
       wrap.appendChild(summary);
 
+      if (meta.slug === "conclave-er-2026-2") {
+        var day = document.createElement("section");
+        day.className = "dashboard-card dashboard-day-card";
+        day.setAttribute("aria-label", "Checklist do dia");
+        day.innerHTML =
+          '<h3 class="dashboard-card-title">Hoje no ER 2026/2</h3>' +
+          '<ol class="dashboard-day-list">' +
+          "<li><strong>Chegada.</strong> Marque inscrição na Participação; pontualidade só quem chegou no horário. Quem não vier fica desmarcado.</li>" +
+          "<li><strong>Embaixadores.</strong> Preencha total / camisa / bíblia para soltar os 50+50 de uniforme e bíblia.</li>" +
+          "<li><strong>Extra.</strong> CER das 6 igrejas já está +100. Pastor presente: some +50 no Extra. Templo, se houver penalidade: −100 em todas.</li>" +
+          "<li><strong>Prova escrita.</strong> Evangelhos e Organização: medalha só com ≥12/20. Montagem: mais de 10 erros desclassifica. A aba Escrita não altera o ranking sozinha.</li>" +
+          "<li><strong>Backup.</strong> Várias vezes: Mais → Exportar projeto (pen-drive).</li>" +
+          "</ol>";
+        wrap.appendChild(day);
+      }
+
       var kpiGrid = document.createElement("div");
       kpiGrid.className = "dashboard-kpi-grid";
       kpiGrid.appendChild(buildKpiCard("Igrejas", kpis.igrejas, "Cadastradas no evento"));
@@ -2267,8 +2459,8 @@
       kpiGrid.appendChild(
         buildKpiCard(
           "Pódios",
-          kpis.podiosPct + "%",
-          kpis.podiosPreenchidos + " de " + kpis.provas + " preenchidos"
+          kpis.podiosPreenchidos + " / " + kpis.provas,
+          "provas com pelo menos uma medalha"
         )
       );
       wrap.appendChild(kpiGrid);
@@ -2711,6 +2903,9 @@
       '" /></label>' +
       '<label class="config-field"><span>Mau comportamento (geralmente negativo)</span><input type="number" step="1" data-cfg="pesos.mau_comportamento" value="' +
       escapeHtml(String(pev.mau_comportamento != null ? pev.mau_comportamento : 0)) +
+      '" /></label>' +
+      '<label class="config-field"><span>Conservação do templo (todas as igrejas; 0 desativa)</span><input type="number" step="1" data-cfg="pesos.conservacao_templo" value="' +
+      escapeHtml(String(pev.conservacao_templo != null ? pev.conservacao_templo : 0)) +
       '" /></label>';
     return [pesHint, pesGrid];
   }
@@ -3604,6 +3799,25 @@
     });
     table.appendChild(tbody);
     wrap.appendChild(table);
+    var pesoConserv = Number(pz.conservacao_templo);
+    if (Number.isFinite(pesoConserv) && pesoConserv !== 0) {
+      var conserv = document.createElement("label");
+      conserv.className = "participacao-coletiva";
+      var chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.id = "part-conservacao-templo";
+      chk.checked = !!state.dados.conservacaoTemploDescumprida;
+      conserv.appendChild(chk);
+      conserv.appendChild(
+        document.createTextNode(
+          " Conservação do templo descumprida (" +
+            (pesoConserv > 0 ? "+" : "−") +
+            Math.abs(pesoConserv) +
+            " em todas as igrejas)"
+        )
+      );
+      host.appendChild(conserv);
+    }
     host.appendChild(wrap);
   }
 
@@ -3721,6 +3935,32 @@
       var ent = places[mk] || { igrejaId: null, competidor: "" };
       body.appendChild(opts.renderMedalRow(p, mk, ent, provaTitulo));
     });
+
+    if (p.tipo === "escrita") {
+      var hint = document.createElement("p");
+      hint.className = "prova-escrita-podio-hint";
+      var usaMinimo =
+        EM && typeof EM.usaMinimoAcertosEscrita === "function"
+          ? EM.usaMinimoAcertosEscrita(p)
+          : Number(p.escritaTotalQuestoes) >= 1;
+      if (usaMinimo) {
+        var totQ = Number(p.escritaTotalQuestoes);
+        var minQ =
+          EM && typeof EM.minimoAcertosEscrita === "function" ? EM.minimoAcertosEscrita(totQ) : 12;
+        hint.textContent =
+          "Medalha só com ≥" +
+          minQ +
+          "/" +
+          totQ +
+          " acertos (60%). Lance a nota na aba Prova escrita.";
+      } else if (isProvaMontagemBiblica(p)) {
+        hint.textContent =
+          "Mais de 10 erros desclassifica (sem medalha). Classifica quem tem menos erros, depois menor tempo.";
+      } else {
+        hint.textContent = "Lance a nota na aba Prova escrita. Isso não altera o ranking sozinho.";
+      }
+      body.appendChild(hint);
+    }
 
     card.appendChild(body);
     return card;
@@ -4873,6 +5113,9 @@
       totalBr += Number(m.br || 0);
     });
     var avisosPodio = E.avisosPodiumDuplicado(dados.podium || {});
+    if (EM && typeof EM.avisosPodiumEscritaMinimo === "function") {
+      avisosPodio = avisosPodio.concat(EM.avisosPodiumEscritaMinimo(ev, dados));
+    }
     var orphans = findProjetoOrphanRefs({ evento: ev, dados: dados });
 
     var doc = el("section", {
@@ -5208,6 +5451,15 @@
       }
       inp.addEventListener("change", sync);
       if (inp.type === "number") inp.addEventListener("input", sync);
+    });
+    root.querySelectorAll("#part-conservacao-templo").forEach(function (chk) {
+      chk.addEventListener("change", function () {
+        if (!state.dados) return;
+        if (chk.checked) state.dados.conservacaoTemploDescumprida = true;
+        else delete state.dados.conservacaoTemploDescumprida;
+        scheduleSave();
+        refreshDerivedPanels();
+      });
     });
     root.querySelectorAll("#panel-participacao button.part-bool-all").forEach(function (btn) {
       btn.addEventListener("click", function (ev) {
@@ -5704,6 +5956,371 @@
     showFeedback("Métricas da prova escrita exportadas como CSV.", "info");
   }
 
+  function esgrimaCatalogo() {
+    return BE || { livros: [] };
+  }
+
+  function esgrimaReferenciaAtualTexto() {
+    if (!SE) return "—";
+    var sessao = getEsgrimaSessao();
+    if (!sessao || !sessao.atual) return "—";
+    return SE.formatarReferencia(sessao.atual, esgrimaCatalogo()) || "—";
+  }
+
+  function updateEsgrimaTimerDom() {
+    var left = esgrimaTimerRemaining();
+    var txt = formatEsgrimaTempo(left);
+    var esgotado = left <= 0;
+    var running = !!(state.esgrimaTimer && state.esgrimaTimer.running);
+    var labelBtn = running
+      ? "Pausar cronômetro"
+      : esgotado
+        ? "Reiniciar cronômetro"
+        : "Iniciar cronômetro";
+    function apply(el, btn) {
+      if (el) {
+        el.textContent = txt;
+        el.classList.toggle("is-expired", esgotado && !running);
+      }
+      if (btn) btn.textContent = labelBtn;
+    }
+    apply(
+      document.getElementById("esgrima-timer-display"),
+      document.getElementById("btn-esgrima-timer")
+    );
+    apply(
+      document.getElementById("esgrima-stage-timer"),
+      document.getElementById("esgrima-stage-timer-btn")
+    );
+  }
+
+  function updateEsgrimaStageDom() {
+    var stage = document.getElementById("esgrima-stage");
+    if (!stage) return;
+    var open = !!state.esgrimaStageOpen;
+    stage.hidden = !open;
+    stage.setAttribute("aria-hidden", open ? "false" : "true");
+    document.body.classList.toggle("esgrima-stage-mode", open);
+    var prova = getEsgrimaProvaAtual();
+    var kicker = document.getElementById("esgrima-stage-kicker");
+    if (kicker) kicker.textContent = prova ? prova.titulo || "Esgrima bíblica" : "Esgrima bíblica";
+    var refEl = document.getElementById("esgrima-stage-ref");
+    if (refEl) refEl.textContent = esgrimaReferenciaAtualTexto();
+    var sessao = getEsgrimaSessao();
+    var nextBtn = document.getElementById("esgrima-stage-next");
+    if (nextBtn) nextBtn.textContent = sessao && sessao.atual ? "Sortear próxima" : "Sortear";
+    updateEsgrimaTimerDom();
+  }
+
+  function setEsgrimaStageOpen(open) {
+    state.esgrimaStageOpen = !!open;
+    updateEsgrimaStageDom();
+    if (open) {
+      var closeBtn = document.getElementById("esgrima-stage-close");
+      if (closeBtn) closeBtn.focus();
+    }
+  }
+
+  function sortearEsgrima(anular) {
+    if (!SE || !state.evento || !state.dados) return;
+    var sessao = getEsgrimaSessao();
+    if (!sessao) {
+      showFeedback("Não há prova de Esgrima neste evento.", "warn");
+      return;
+    }
+    var out = anular
+      ? SE.anularAtual(sessao, esgrimaCatalogo())
+      : SE.proximo(sessao, esgrimaCatalogo());
+    setEsgrimaSessao(out.sessao);
+    resetEsgrimaTimer();
+    scheduleSave();
+    if (out.esgotado) {
+      showFeedback("Todas as referências deste corpus já foram sorteadas nesta sessão.", "warn");
+    }
+    renderEsgrima();
+    wireEsgrima();
+    updateEsgrimaStageDom();
+    reactivatePanel();
+  }
+
+  function renderEsgrima() {
+    var host = $("#panel-esgrima");
+    if (!host) return;
+    host.innerHTML = "";
+    if (!state.evento || !state.dados) {
+      host.textContent = "Carregue um evento para sortear referências da Esgrima.";
+      return;
+    }
+    if (!SE) {
+      host.textContent = "Módulo de sorteio indisponível.";
+      return;
+    }
+    ensureSorteioEsgrima();
+    var lista = provasEsgrima(state.evento);
+    if (!lista.length) {
+      host.innerHTML =
+        '<p class="escrita-empty-hint">Nenhuma prova de Esgrima (Debate Bíblico) neste evento. A Esgrima avançada não usa este sorteio — o líder dita uma palavra, não uma referência.</p>';
+      return;
+    }
+    var prova = getEsgrimaProvaAtual();
+    if (prova) state.esgrimaProvaId = prova.id;
+    var sessao = getEsgrimaSessao();
+    if (sessao && (!state.esgrimaTimer || !state.esgrimaTimer.running)) {
+      var limit = esgrimaTempoLimiteMs();
+      var rem = state.esgrimaTimer ? state.esgrimaTimer.remainingMs : 0;
+      if (!sessao.atual && rem !== limit) resetEsgrimaTimer();
+      else if (!rem) resetEsgrimaTimer();
+    }
+    var cnt = SE.contagem(sessao, esgrimaCatalogo());
+    var refTxt = esgrimaReferenciaAtualTexto();
+
+    var head = document.createElement("div");
+    head.className = "escrita-panel-head esgrima-panel-head";
+
+    var labSel = document.createElement("label");
+    labSel.innerHTML = "<span>Prova</span>";
+    var sel = document.createElement("select");
+    sel.id = "esgrima-prova-select";
+    sel.className = "escrita-prova-select";
+    var grouped = groupProvasByCategoria(null, lista);
+    grouped.order.forEach(function (catKey) {
+      var og = document.createElement("optgroup");
+      og.label = labelCategoria(catKey);
+      (grouped.groups[catKey] || []).forEach(function (p) {
+        var opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.titulo || p.id;
+        if (prova && p.id === prova.id) opt.selected = true;
+        og.appendChild(opt);
+      });
+      sel.appendChild(og);
+    });
+    labSel.appendChild(sel);
+
+    var labCorpus = document.createElement("label");
+    labCorpus.innerHTML = "<span>Corpus</span>";
+    var selCorpus = document.createElement("select");
+    selCorpus.id = "esgrima-corpus-select";
+    selCorpus.className = "escrita-prova-select";
+    SE.labelsCorpus().forEach(function (optData) {
+      var opt = document.createElement("option");
+      opt.value = optData.id;
+      opt.textContent = optData.label;
+      if (sessao && sessao.corpus === optData.id) opt.selected = true;
+      selCorpus.appendChild(opt);
+    });
+    labCorpus.appendChild(selCorpus);
+
+    var labTempo = document.createElement("label");
+    labTempo.innerHTML = "<span>Tempo (s)</span>";
+    var inpTempo = document.createElement("input");
+    inpTempo.type = "number";
+    inpTempo.id = "esgrima-tempo-input";
+    inpTempo.className = "esgrima-tempo-input";
+    inpTempo.min = String(SE.TEMPO_MIN);
+    inpTempo.max = String(SE.TEMPO_MAX);
+    inpTempo.step = "1";
+    inpTempo.value = String(sessao ? sessao.tempoSegundos : 20);
+    inpTempo.setAttribute("aria-label", "Tempo máximo em segundos");
+    labTempo.appendChild(inpTempo);
+
+    var chips = document.createElement("div");
+    chips.className = "escrita-summary-chips";
+    chips.innerHTML =
+      '<span class="escrita-chip"><span>Sorteados</span> <strong>' +
+      escapeHtml(String(cnt.usados)) +
+      "</strong></span>" +
+      '<span class="escrita-chip"><span>Restantes</span> <strong>' +
+      escapeHtml(String(cnt.restantes)) +
+      "</strong></span>";
+
+    head.appendChild(labSel);
+    head.appendChild(labCorpus);
+    head.appendChild(labTempo);
+    head.appendChild(chips);
+    host.appendChild(head);
+
+    var hint = document.createElement("p");
+    hint.className = "escrita-empty-hint";
+    hint.textContent =
+      "Sorteio para o líder ditar a referência e dar o comando CARREGAR. Não altera a classificação — o pódio continua sendo lançado na aba Pódio. Livros de um capítulo aparecem só com livro e versículo.";
+    host.appendChild(hint);
+
+    var card = document.createElement("div");
+    card.className = "esgrima-card";
+    card.innerHTML =
+      '<p class="esgrima-card-kicker">Referência para ditar</p>' +
+      '<p class="esgrima-card-ref" id="esgrima-ref-display">' +
+      escapeHtml(refTxt) +
+      "</p>" +
+      '<p class="esgrima-card-timer" id="esgrima-timer-display">' +
+      escapeHtml(formatEsgrimaTempo(esgrimaTimerRemaining())) +
+      "</p>";
+    host.appendChild(card);
+
+    var actions = document.createElement("div");
+    actions.className = "esgrima-actions";
+    function addBtn(id, label, primary) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = primary ? "pill-btn pill-btn--primary" : "pill-btn";
+      b.id = id;
+      b.textContent = label;
+      actions.appendChild(b);
+      return b;
+    }
+    addBtn("btn-esgrima-sortear", sessao && sessao.atual ? "Sortear próxima" : "Sortear", true);
+    addBtn("btn-esgrima-anular", "Anular e sortear outra", false);
+    addBtn("btn-esgrima-timer", "Iniciar cronômetro", false);
+    addBtn("btn-esgrima-stage", "Tela cheia da referência", false);
+    addBtn("btn-esgrima-reset", "Reiniciar sessão", false);
+    host.appendChild(actions);
+
+    var histWrap = document.createElement("div");
+    histWrap.className = "esgrima-historico";
+    var histTitle = document.createElement("h3");
+    histTitle.className = "esgrima-historico-title";
+    histTitle.textContent = "Histórico desta categoria";
+    histWrap.appendChild(histTitle);
+    var hist = (sessao && sessao.historico) || [];
+    if (!hist.length) {
+      var emptyH = document.createElement("p");
+      emptyH.className = "escrita-empty-hint";
+      emptyH.textContent = "Nenhuma referência sorteada ainda nesta sessão.";
+      histWrap.appendChild(emptyH);
+    } else {
+      var ol = document.createElement("ol");
+      ol.className = "esgrima-historico-list";
+      hist.forEach(function (chave, idx) {
+        var li = document.createElement("li");
+        if (sessao && chave === sessao.atual) li.className = "is-atual";
+        li.textContent = SE.formatarReferencia(chave, esgrimaCatalogo()) || chave;
+        if (sessao && chave === sessao.atual) {
+          li.textContent += " (atual)";
+        }
+        li.setAttribute("data-idx", String(idx + 1));
+        ol.appendChild(li);
+      });
+      histWrap.appendChild(ol);
+    }
+    host.appendChild(histWrap);
+    updateEsgrimaTimerDom();
+    updateEsgrimaStageDom();
+  }
+
+  function wireEsgrima() {
+    var host = $("#panel-esgrima");
+    if (!host) return;
+
+    var sel = host.querySelector("#esgrima-prova-select");
+    if (sel) {
+      sel.addEventListener("change", function () {
+        state.esgrimaProvaId = sel.value;
+        resetEsgrimaTimer();
+        renderEsgrima();
+        wireEsgrima();
+        updateEsgrimaStageDom();
+        reactivatePanel();
+      });
+    }
+
+    var selCorpus = host.querySelector("#esgrima-corpus-select");
+    if (selCorpus) {
+      selCorpus.addEventListener("change", function () {
+        var sessao = getEsgrimaSessao();
+        if (!sessao || !SE) return;
+        var novo = selCorpus.value;
+        if (novo === sessao.corpus) return;
+        function applyCorpus() {
+          var cur = getEsgrimaSessao();
+          if (!cur) return;
+          var next = SE.sessaoVazia({
+            corpus: novo,
+            tempoSegundos: cur.tempoSegundos,
+          });
+          setEsgrimaSessao(next);
+          resetEsgrimaTimer();
+          scheduleSave();
+          renderEsgrima();
+          wireEsgrima();
+          updateEsgrimaStageDom();
+          reactivatePanel();
+        }
+        if (sessao.historico && sessao.historico.length) {
+          requestConfirmation(
+            "Trocar o corpus reinicia o histórico desta categoria (as referências já sorteadas voltam a poder sair). Continuar?",
+            applyCorpus,
+            function () {
+              renderEsgrima();
+              wireEsgrima();
+              reactivatePanel();
+            },
+            { title: "Trocar corpus", confirmLabel: "Trocar e reiniciar", destructive: true }
+          );
+          return;
+        }
+        applyCorpus();
+      });
+    }
+
+    var inpTempo = host.querySelector("#esgrima-tempo-input");
+    if (inpTempo) {
+      inpTempo.addEventListener("change", function () {
+        var sessao = getEsgrimaSessao();
+        if (!sessao || !SE) return;
+        sessao.tempoSegundos = SE.normalizeTempo(inpTempo.value, sessao.tempoSegundos);
+        inpTempo.value = String(sessao.tempoSegundos);
+        if (!state.esgrimaTimer || !state.esgrimaTimer.running) resetEsgrimaTimer();
+        scheduleSave();
+        updateEsgrimaTimerDom();
+      });
+    }
+
+    var btnSortear = host.querySelector("#btn-esgrima-sortear");
+    if (btnSortear)
+      btnSortear.addEventListener("click", function () {
+        sortearEsgrima(false);
+      });
+    var btnAnular = host.querySelector("#btn-esgrima-anular");
+    if (btnAnular)
+      btnAnular.addEventListener("click", function () {
+        sortearEsgrima(true);
+      });
+    var btnTimer = host.querySelector("#btn-esgrima-timer");
+    if (btnTimer) btnTimer.addEventListener("click", toggleEsgrimaTimer);
+    var btnStage = host.querySelector("#btn-esgrima-stage");
+    if (btnStage) {
+      btnStage.addEventListener("click", function () {
+        setEsgrimaStageOpen(true);
+      });
+    }
+    var btnReset = host.querySelector("#btn-esgrima-reset");
+    if (btnReset) {
+      btnReset.addEventListener("click", function () {
+        var sessao = getEsgrimaSessao();
+        if (!sessao) return;
+        requestConfirmation(
+          "Reiniciar apaga o histórico e as referências já sorteadas desta categoria. Não altera o pódio.",
+          function () {
+            var cur = getEsgrimaSessao();
+            if (!cur || !SE) return;
+            setEsgrimaSessao(
+              SE.sessaoVazia({ corpus: cur.corpus, tempoSegundos: cur.tempoSegundos })
+            );
+            resetEsgrimaTimer();
+            scheduleSave();
+            renderEsgrima();
+            wireEsgrima();
+            updateEsgrimaStageDom();
+            reactivatePanel();
+          },
+          null,
+          { title: "Reiniciar sessão", confirmLabel: "Reiniciar", destructive: true }
+        );
+      });
+    }
+  }
+
   /* TOUR_STEPS_START */
   /** Passos do tutorial guiado (só dados; o DOM é resolvido em runtime). */
   var TOUR_STEPS = [
@@ -5718,8 +6335,8 @@
       id: "abas",
       tab: "dashboard",
       targets: ["#sidebar-nav", "#bottom-nav"],
-      title: "As sete abas",
-      body: "No dia do evento você usa principalmente Participação e Pódio. Classificação e Relatórios leem o que você lançou. Configuração já vem pronta no evento oficial.",
+      title: "As oito abas",
+      body: "No dia do evento você usa principalmente Participação e Pódio. A aba Esgrima sorteia referências para o líder ditar (não pontua). Classificação e Relatórios leem o que você lançou. Configuração já vem pronta no evento oficial.",
     },
     {
       id: "mais",
@@ -5949,6 +6566,7 @@
     if (document.body.classList.contains("presentation-mode")) {
       setPresentationMode(false);
     }
+    if (state.esgrimaStageOpen) setEsgrimaStageOpen(false);
     var menu = document.getElementById("more-menu");
     var mais = document.getElementById("btn-mais");
     if (menu) menu.hidden = true;
@@ -6043,6 +6661,8 @@
     wirePodio();
     renderEscrita();
     wireEscrita();
+    renderEsgrima();
+    wireEsgrima();
     renderClassificacao();
     renderRelatorios();
     wireRelatorios();
@@ -6323,6 +6943,42 @@
     return applied;
   }
 
+  /** ER 2026/2: inscrição e pontualidade começam desmarcadas para o check-in
+   *  (o template genérico marca as duas). Roda uma vez por projeto salvo. */
+  function applyErCheckinDefaultsOnce(evento, dados) {
+    if (!evento || !evento.meta || !dados || !dados.participacao) return false;
+    if (evento.meta.slug !== CER_PRE_CONCLAVE_SLUG) return false;
+    if (dados.erCheckinReset) return false;
+    Object.keys(dados.participacao).forEach(function (id) {
+      var row = dados.participacao[id];
+      if (!row) return;
+      row.inscricao = false;
+      row.pontualidade = false;
+    });
+    dados.erCheckinReset = true;
+    return true;
+  }
+
+  function notifyErDiaReady(cerIds, checkinReset) {
+    if (checkinReset && cerIds && cerIds.length) {
+      showFeedback(
+        "Pronto para o check-in: inscrição e pontualidade desmarcadas. CER +" +
+          CER_PRE_CONCLAVE_PONTOS +
+          " no Extra das 6 igrejas da reunião pré-conclave.",
+        "info"
+      );
+      return;
+    }
+    if (checkinReset) {
+      showFeedback(
+        "Inscrição e pontualidade desmarcadas para o check-in. Marque cada igreja na chegada.",
+        "info"
+      );
+      return;
+    }
+    notifyCerPreConclaveIfApplied(cerIds);
+  }
+
   function notifyCerPreConclaveIfApplied(ids) {
     if (!ids || !ids.length || !state.evento) return;
     var nomes = ids.map(function (id) {
@@ -6363,6 +7019,8 @@
     state.relatorioSectionCollapsed = {};
     state.relatorioPodiumCollapsed = {};
     state.escritaProvaId = null;
+    state.esgrimaProvaId = null;
+    state.esgrimaStageOpen = false;
     resetRelatorioOficialGerado();
     var ids = state.evento.igrejas.map(function (g) {
       return g.id;
@@ -6376,12 +7034,15 @@
     } else {
       state.dados = E.emptyDadosTemplate(ids, pids);
       ensureMetricasEscrita();
+      ensureSorteioEsgrima();
     }
+    resetEsgrimaTimer();
     var cerIds = applyCerPreConclaveExtraOnce(state.evento, state.dados);
+    var checkinReset = applyErCheckinDefaultsOnce(state.evento, state.dados);
     validate();
     scheduleSave();
     render();
-    notifyCerPreConclaveIfApplied(cerIds);
+    notifyErDiaReady(cerIds, checkinReset);
     return true;
   }
 
@@ -6547,6 +7208,7 @@
         });
         state.dados = E.emptyDadosTemplate(ids, pids);
         var cerIds = applyCerPreConclaveExtraOnce(state.evento, state.dados);
+        applyErCheckinDefaultsOnce(state.evento, state.dados);
         state.podiumCollapsed = {};
         state.podiumProvaGroupCollapsed = {};
         resetRelatorioOficialGerado();
@@ -6558,7 +7220,7 @@
               CER_PRE_CONCLAVE_PONTOS +
               " no Extra de " +
               cerIds.length +
-              " igrejas).",
+              " igrejas). Inscrição e pontualidade desmarcadas para o check-in.",
             "info"
           );
         } else {
@@ -6902,14 +7564,36 @@
     // Esc sai do modo apresentação (diretriz de UX para projetores: rota
     // rápida quando o controle remoto não está acessível).
     document.addEventListener("keydown", function (ev) {
-      if (ev.key === "Escape" && document.body.classList.contains("presentation-mode")) {
-        // Se o modal de confirmação ou o tutorial estiver aberto, deixe-os tratar primeiro.
-        var confirmEl = document.getElementById("modal-confirm");
-        if (confirmEl && confirmEl.classList.contains("open")) return;
-        if (state.tourActive) return;
+      if (ev.key !== "Escape") return;
+      var confirmEl = document.getElementById("modal-confirm");
+      if (confirmEl && confirmEl.classList.contains("open")) return;
+      if (state.tourActive) return;
+      if (state.esgrimaStageOpen) {
+        ev.preventDefault();
+        setEsgrimaStageOpen(false);
+        return;
+      }
+      if (document.body.classList.contains("presentation-mode")) {
         setPresentationMode(false);
       }
     });
+    var stageNext = document.getElementById("esgrima-stage-next");
+    if (stageNext)
+      stageNext.addEventListener("click", function () {
+        sortearEsgrima(false);
+      });
+    var stageAnular = document.getElementById("esgrima-stage-anular");
+    if (stageAnular)
+      stageAnular.addEventListener("click", function () {
+        sortearEsgrima(true);
+      });
+    var stageTimer = document.getElementById("esgrima-stage-timer-btn");
+    if (stageTimer) stageTimer.addEventListener("click", toggleEsgrimaTimer);
+    var stageClose = document.getElementById("esgrima-stage-close");
+    if (stageClose)
+      stageClose.addEventListener("click", function () {
+        setEsgrimaStageOpen(false);
+      });
     initMoreMenu();
     initFileProtocolHint();
     window.addEventListener("pagehide", flushScheduledSave);
@@ -7240,6 +7924,7 @@
    *  (5º→1º) e esconde toda a UI regular via `body.presentation-mode`. */
   function setPresentationMode(on) {
     if (on && state.tourActive) stopTour();
+    if (on && state.esgrimaStageOpen) setEsgrimaStageOpen(false);
     var was = document.body.classList.contains("presentation-mode");
     document.body.classList.toggle("presentation-mode", !!on);
     var pres = document.getElementById("btn-pres");
@@ -7596,7 +8281,7 @@
   }
 
   /** Tenta carregar o evento de exemplo. Prioriza `window.ConclaveDefaultEvento`
-   *  (injetado por `eventos/conclave-er-2026-2.evento.embedded.js`), que funciona
+   *  (injetado por `eventos/conclave-mr-2026-2.evento.embedded.js`), que funciona
    *  até em `file://` — cenário típico de pen-drive. Se não houver a constante,
    *  cai para `fetch()` do JSON, que só funciona via http(s). Resolve com uma
    *  cópia profunda (evita o usuário mutar o objeto global por engano). */
@@ -7608,7 +8293,7 @@
         return Promise.reject(e);
       }
     }
-    return fetch("eventos/conclave-er-2026-2.evento.json").then(function (r) {
+    return fetch("eventos/conclave-mr-2026-2.evento.json").then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     });
@@ -7696,7 +8381,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    applyUiTheme("er", { silent: true });
+    applyUiTheme("mr", { silent: true });
     initToolbar();
     initThemeToggle();
     initTour();

@@ -41,6 +41,40 @@ test("amostras evento e projeto satisfazem required do schema", () => {
   assert.equal(nestedErrs.length, 0, nestedErrs.join("; "));
 });
 
+test("schema de projeto descreve sorteioEsgrima opcional", () => {
+  const projetoSchema = loadJson(path.join(schemaDir, "projeto.schema.json"));
+  assert.ok(projetoSchema.properties.dados.properties.sorteioEsgrima);
+  assert.ok(projetoSchema.$defs.sorteioEsgrimaSessao);
+});
+
+test("amostra ER define tempo de 30 s no sorteio da Esgrima", () => {
+  const er = loadJson(path.join(eventosDir, "conclave-er-2026-2.evento.json"));
+  assert.equal(er.sorteioEsgrima.tempoSegundos, 30);
+  assert.equal(er.sorteioEsgrima.corpus, "biblia");
+});
+
+test("amostra MR 2026/2 segue o regulamento", () => {
+  const eventoSchema = loadJson(path.join(schemaDir, "evento.schema.json"));
+  const mr = loadJson(path.join(eventosDir, "conclave-mr-2026-2.evento.json"));
+  const errs = checkRequired(mr, eventoSchema.required, "evento");
+  errs.push(...checkRequired(mr.pesos, eventoSchema.properties.pesos.required, "pesos"));
+  assert.equal(errs.length, 0, errs.join("; "));
+
+  assert.equal(mr.meta.slug, "conclave-mr-2026-2");
+  assert.equal(mr.pesos.conservacao_templo, -100);
+  assert.equal(mr.sorteioEsgrima.tempoSegundos, 30);
+  assert.deepEqual(
+    mr.categorias.map((c) => c.idade),
+    ["9–11", "12–14", "15–18"]
+  );
+  assert.equal(mr.provas.length, 15);
+  const escritas = mr.provas.filter((p) => p.tipo === "escrita");
+  assert.equal(escritas.length, 6);
+  escritas.forEach((p) => assert.equal(p.escritaTotalQuestoes, 20));
+  const pids = mr.provas.map((p) => p.id);
+  assert.equal(new Set(pids).size, pids.length);
+});
+
 test("medalhas e pesos das amostras são numéricos", () => {
   const evento = loadJson(path.join(eventosDir, "conclave-2026-1.evento.json"));
   for (const k of ["ou", "pt", "br"]) {

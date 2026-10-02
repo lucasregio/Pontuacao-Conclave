@@ -9,6 +9,7 @@ na interface. Tudo é navegável **só com o teclado**, sem mouse.
 - [Skip-link](#skip-link)
 - [Abas e botoes](#abas-e-botoes)
 - [Modo apresentacao](#modo-apresentacao)
+- [Tela cheia da Esgrima](#tela-cheia-da-esgrima)
 - [Confirmacoes acessiveis](#confirmacoes-acessiveis)
 - [Movimento reduzido](#movimento-reduzido)
 
@@ -36,7 +37,7 @@ a cada visita.
 
 - A **sidebar** (desktop) e a **barra inferior** (mobile) formam um tablist ARIA: use
   `←` / `→` / `↑` / `↓`, `Home` ou `End` para mover entre Início, Configuração,
-  Participação, Pódio, Classificação e Relatórios.
+  Participação, Pódio, Prova escrita, Esgrima, Classificação e Relatórios.
 - O menu **Mais** (topbar): `↑` / `↓` entre itens; `Esc` fecha; `Enter` ativa.
 - Em **Configuração → Categorias / Provas**, o grip ⠿ de reordenar aceita
   **Alt+Seta para cima** / **Alt+Seta para baixo** além de arrastar com o mouse.
@@ -58,6 +59,12 @@ a cada visita.
   perder o "lugar" no teclado.
 - Em algumas versões do iOS Safari, `Escape` em teclados externos não chega ao
   JavaScript. Nesses casos, use o botão de saída.
+
+## Tela cheia da Esgrima
+
+Na aba **Esgrima**, **Tela cheia da referência** abre um palco só com a passagem
+sorteada (não é a cerimônia de classificação). `Escape` ou **Sair da tela cheia**
+fecham. O cronômetro e o sorteio continuam nos botões do palco.
 
 ## Confirmacoes acessiveis
 

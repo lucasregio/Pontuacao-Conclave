@@ -10,8 +10,10 @@ A **100% static web application** for Conclave scoring (**Pontuação Conclave**
 
 ## Repository layout
 
-- `index.html` — main entry point (Dashboard, Config, Participation, Podium, Ranking, Reports tabs).
+- `index.html` — main entry point (Dashboard, Config, Participation, Podium, Written, Esgrima, Ranking, Reports tabs).
 - `web/engine.js` — **pure scoring engine** (`window.ConclaveEngine`). No DOM.
+- `web/escrita-metrics.js` — métricas da prova escrita (`window.ConclaveEscritaMetrics`); não altera totais.
+- `web/biblia-estrutura.js` / `web/sorteio-esgrima.js` — catálogo de referências e sorteio da Esgrima (`window.ConclaveSorteioEsgrima`); não altera totais.
 - `web/app.js` — UI / DOM / state / persistence.
 - `web/styles.css` — MR/ER themes, presentation mode, print.
 - `schema/evento.schema.json` / `schema/projeto.schema.json` — canonical JSON contracts.

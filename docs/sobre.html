@@ -42,7 +42,7 @@
 <ol>
 <li>Abra <code>index.html</code> em qualquer navegador moderno. Para PWA/offline, sirva via <code>http(s)://</code> em vez de <code>file://</code>.</li>
 <li>Na aba <strong>Início</strong>, use <strong>Novo evento</strong>, <strong>Carregar projeto</strong> ou o menu <strong>Mais</strong> → <strong>Carregar evento</strong> / <strong>Exportar evento</strong> / <strong>Exportar projeto</strong>.</li>
-<li>Edite as abas: <strong>Configuração</strong>, <strong>Participação</strong>, <strong>Pódio</strong>, <strong>Classificação</strong>, <strong>Relatórios</strong>.</li>
+<li>Edite as abas: <strong>Configuração</strong>, <strong>Participação</strong>, <strong>Pódio</strong>, <strong>Prova escrita</strong>, <strong>Esgrima</strong>, <strong>Classificação</strong>, <strong>Relatórios</strong>. <strong>Relatórios</strong>.</li>
 <li><strong>Exportar projeto</strong> salva evento + dados; <strong>Exportar evento</strong> salva só a configuração. <strong>Eventos salvos</strong> (menu Mais) gerencia cópias no <code>localStorage</code>.</li>
 <li><strong>Regulamento</strong> (topbar) abre o PDF configurado em Configuração → Geral (ficheiros em <code>static/</code>).</li>
 </ol>
@@ -56,6 +56,7 @@
 <ol>
 <li><strong><code>web/engine.js</code></strong> — motor puro (<code>window.ConclaveEngine</code>), sem DOM.</li>
 <li><strong><code>web/app.js</code></strong> — UI, estado, persistência, modais, cache de <code>computeTotals</code>.</li>
+<li><strong><code>web/escrita-metrics.js</code></strong> / <strong><code>web/sorteio-esgrima.js</code></strong> — métricas da escrita e sorteio da Esgrima; não alteram a classificação.</li>
 <li><strong><code>web/styles.css</code></strong> — temas MR/ER, responsividade, impressão, apresentação.</li>
 </ol>
 <p>Esquemas em <code>schema/evento.schema.json</code> e <code>schema/projeto.schema.json</code>. Amostras em <code>eventos/conclave-2026-1.*</code>.</p>

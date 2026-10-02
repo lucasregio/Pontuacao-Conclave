@@ -1,6 +1,6 @@
 /**
  * Gerado automaticamente por scripts/build-embedded.mjs.
- * NÃO EDITE À MÃO. Reedite eventos/conclave-er-2026-2.evento.json e
+ * NÃO EDITE À MÃO. Reedite eventos/conclave-mr-2026-2.evento.json e
  * rode `npm run build:embedded` (ou `node scripts/build-embedded.mjs`).
  *
  * Este arquivo expõe o evento de exemplo como `window.ConclaveDefaultEvento`
@@ -10,23 +10,24 @@
 window.ConclaveDefaultEvento = {
   "meta": {
     "schemaVersion": 2,
-    "nome": "Conclave ER 2026/2",
-    "slug": "conclave-er-2026-2",
-    "data": "2026-09-12",
+    "nome": "Conclave MR 2026/2",
+    "slug": "conclave-mr-2026-2",
+    "data": "2026-10-03",
     "horarioInicio": "14:00",
     "horarioEncerramento": "17:00",
-    "local": "PIB em Alvorada — Av. Ernesto Canal, 1160, Alvorada, Vila Velha – ES",
-    "regulamentoUrl": "static/regulamento-er-2026-2.pdf",
-    "regulamentoNome": "Regulamento Conclave ER 2026-2.pdf"
+    "local": "Igreja Batista Aliança — R. Itapina, 03, Rio Marinho, Vila Velha – ES",
+    "regulamentoUrl": "static/regulamento-mr-2026-2.pdf",
+    "regulamentoNome": "Regulamento Conclave MR 2026-2.pdf"
   },
   "pesos": {
     "inscricao": 100,
     "pontualidade": 200,
     "uniforme": 50,
     "biblia": 50,
-    "visitante": 0,
-    "animacao": 50,
-    "mau_comportamento": -150
+    "visitante": 10,
+    "animacao": 150,
+    "mau_comportamento": -150,
+    "conservacao_templo": -100
   },
   "medalhas": {
     "ou": 300,
@@ -40,67 +41,71 @@ window.ConclaveDefaultEvento = {
   "igrejas": [
     {
       "id": "alianca",
-      "nome": "IB Aliança"
-    },
-    {
-      "id": "gloria",
-      "nome": "IB da Glória (IBG)"
-    },
-    {
-      "id": "orla",
-      "nome": "IB da Orla"
-    },
-    {
-      "id": "novo-mexico",
-      "nome": "IB de Novo México"
-    },
-    {
-      "id": "santa-rita",
-      "nome": "IB de Santa Rita"
+      "nome": "Primeira Igreja Batista Aliança"
     },
     {
       "id": "ibes",
-      "nome": "IB do IBES"
+      "nome": "Igreja Batista do Ibes"
     },
     {
-      "id": "jardim-asteca",
-      "nome": "IB em Jardim Asteca"
+      "id": "gloria",
+      "nome": "Igreja Batista da Glória"
     },
     {
-      "id": "jardim-marilandia",
-      "nome": "IB em Jardim Marilândia"
-    },
-    {
-      "id": "paul",
-      "nome": "IB em Paul"
-    },
-    {
-      "id": "23-maio",
-      "nome": "PIB 23 de Maio"
-    },
-    {
-      "id": "alecrim",
-      "nome": "PIB Alecrim"
+      "id": "orla",
+      "nome": "Igreja da Orla"
     },
     {
       "id": "vila-batista",
-      "nome": "PIB de Vila Batista"
+      "nome": "Vila Batista"
     },
     {
-      "id": "alvorada",
-      "nome": "PIB em Alvorada"
-    },
-    {
-      "id": "cobilandia",
-      "nome": "PIB em Cobilândia"
+      "id": "aribiri",
+      "nome": "PIB Aribiri"
     },
     {
       "id": "vila-garrido",
-      "nome": "PIB em Vila Garrido"
+      "nome": "Primeira Igreja Batista em Vila Garrido"
+    },
+    {
+      "id": "novo-mexico",
+      "nome": "Novo México"
+    },
+    {
+      "id": "santa-rita",
+      "nome": "Igreja Batista de Santa Rita"
+    },
+    {
+      "id": "23-maio",
+      "nome": "Primeira igreja Batista 23 de maio"
+    },
+    {
+      "id": "guarapari",
+      "nome": "batista Guaranhuns"
+    },
+    {
+      "id": "pibjg",
+      "nome": "Primeira Igreja Batista em João Goulart (PIBJG)"
+    },
+    {
+      "id": "brunellas",
+      "nome": "Primeira Igreja Batista em Brunellas"
+    },
+    {
+      "id": "cobilandia",
+      "nome": "Pib Cobilandia"
+    },
+    {
+      "id": "alvorada",
+      "nome": "Primeira igreja Batista em Alvorada"
+    },
+    {
+      "id": "cocal",
+      "nome": "Pib Cocal"
     },
     {
       "id": "santa-monica",
-      "nome": "PIB Santa Mônica"
+      "nome": "Igreja batista de Santa Mônica"
     }
   ],
   "categorias": [
@@ -152,8 +157,8 @@ window.ConclaveDefaultEvento = {
       "ordem": 3
     },
     {
-      "id": "escrita-org-jun",
-      "titulo": "Prova escrita — Conhecimentos gerais da Organização — Junior",
+      "id": "escrita-bio-jun",
+      "titulo": "Prova escrita — Biografia O Gigante que Dorme — Junior",
       "tipo": "escrita",
       "categoriaId": "junior",
       "categoria": "Junior",
@@ -161,8 +166,8 @@ window.ConclaveDefaultEvento = {
       "ordem": 4
     },
     {
-      "id": "escrita-org-adl",
-      "titulo": "Prova escrita — Conhecimentos gerais da Organização — Adolescente",
+      "id": "escrita-bio-adl",
+      "titulo": "Prova escrita — Biografia O Gigante que Dorme — Adolescente",
       "tipo": "escrita",
       "categoriaId": "adolescente",
       "categoria": "Adolescente",
@@ -170,8 +175,8 @@ window.ConclaveDefaultEvento = {
       "ordem": 5
     },
     {
-      "id": "escrita-org-juv",
-      "titulo": "Prova escrita — Conhecimentos gerais da Organização — Juvenil",
+      "id": "escrita-bio-juv",
+      "titulo": "Prova escrita — Biografia O Gigante que Dorme — Juvenil",
       "tipo": "escrita",
       "categoriaId": "juvenil",
       "categoria": "Juvenil",
@@ -179,36 +184,12 @@ window.ConclaveDefaultEvento = {
       "ordem": 6
     },
     {
-      "id": "montagem-jun",
-      "titulo": "Montagem bíblica — Junior",
-      "tipo": "escrita",
-      "categoriaId": "junior",
-      "categoria": "Junior",
-      "ordem": 7
-    },
-    {
-      "id": "montagem-adl",
-      "titulo": "Montagem bíblica — Adolescente",
-      "tipo": "escrita",
-      "categoriaId": "adolescente",
-      "categoria": "Adolescente",
-      "ordem": 8
-    },
-    {
-      "id": "montagem-juv",
-      "titulo": "Montagem bíblica — Juvenil",
-      "tipo": "escrita",
-      "categoriaId": "juvenil",
-      "categoria": "Juvenil",
-      "ordem": 9
-    },
-    {
       "id": "esgrima-jun",
       "titulo": "Esgrima bíblica — Junior",
       "tipo": "oral",
       "categoriaId": "junior",
       "categoria": "Junior",
-      "ordem": 10
+      "ordem": 7
     },
     {
       "id": "esgrima-adl",
@@ -216,11 +197,35 @@ window.ConclaveDefaultEvento = {
       "tipo": "oral",
       "categoriaId": "adolescente",
       "categoria": "Adolescente",
-      "ordem": 11
+      "ordem": 8
     },
     {
       "id": "esgrima-juv",
       "titulo": "Esgrima bíblica — Juvenil",
+      "tipo": "oral",
+      "categoriaId": "juvenil",
+      "categoria": "Juvenil",
+      "ordem": 9
+    },
+    {
+      "id": "esgrima-av-jun",
+      "titulo": "Esgrima avançada — Junior",
+      "tipo": "oral",
+      "categoriaId": "junior",
+      "categoria": "Junior",
+      "ordem": 10
+    },
+    {
+      "id": "esgrima-av-adl",
+      "titulo": "Esgrima avançada — Adolescente",
+      "tipo": "oral",
+      "categoriaId": "adolescente",
+      "categoria": "Adolescente",
+      "ordem": 11
+    },
+    {
+      "id": "esgrima-av-juv",
+      "titulo": "Esgrima avançada — Juvenil",
       "tipo": "oral",
       "categoriaId": "juvenil",
       "categoria": "Juvenil",

@@ -19,6 +19,7 @@ isso se ainda não houver evento).
 - **Participação** — pontos de cada igreja (inscrição, pontualidade, uniforme).
 - **Pódio por prova** — ouro, prata e bronze. É o que soma medalha no ranking.
 - **Prova escrita** — acertos individuais. Opcional; **não altera** a classificação.
+- **Esgrima** — sorteio de referências para o líder ditar. Opcional; **não altera** a classificação.
 - **Classificação** — ranking automático com desempate.
 - **Relatórios** — PDF de divulgação ou arquivo oficial.
 
@@ -60,13 +61,17 @@ evento novo. Dá para colar vários nomes de uma vez (um por linha).
 ![Lista de provas com tipo oral ou escrita](guia-visual/08-config-provas.png)
 
 Cada prova tem categoria (Junior, Adolescente, Juvenil) e tipo. Tipo **escrita**
-alimenta a aba Prova escrita; tipo **oral** entra só no pódio.
+alimenta a aba Prova escrita; tipo **oral** entra só no pódio. No ER, **Evangelhos,
+Organização e Montagem bíblica** são escritas; Esgrima e Debate são orais.
 
 ## Minuto 3 — Lance a Participação
 
 Uma linha por igreja. O total à direita atualiza na hora.
 
 ![Aba Participação com uma linha por igreja](guia-visual/09-participacao.png)
+
+No ER 2026/2 o check-in começa com inscrição e pontualidade **desmarcadas**.
+Marque cada igreja na chegada; quem não vier fica em branco.
 
 O que cada coluna faz no ER:
 
@@ -79,7 +84,9 @@ O que cada coluna faz no ER:
 - **Extra** — CER no pré-conclave e pastor presente. Penalidade de conservação
   do templo, se houver, entra subtraindo de **todas** as igrejas.
 
-Se inscrição estiver desmarcada **e** Presentes = 0, a linha inteira zera.
+Se inscrição estiver desmarcada **e** Presentes = 0, os pontos de participação
+(inscrição, pontualidade, uniforme, bíblia, grito) ficam zerados. Extra (CER,
+pastor), medalhas e mau comportamento continuam valendo.
 
 ## Minuto 4 — Lance o Pódio
 
@@ -96,6 +103,9 @@ A medalha lançada aqui é o que entra na classificação geral.
 
 > A aba **Prova escrita** registra acertos para gráfico e CSV. Ela **não**
 > substitui o pódio. Sem ouro/prata/bronze no Pódio, a igreja não soma medalha.
+> No ER, Evangelhos e Organização: medalha só com **≥12 acertos em 20** (60%).
+> Montagem bíblica: **mais de 10 erros desclassifica**. O app avisa no topo se o
+> pódio de Evangelhos/Organização estiver abaixo de 12/20.
 
 ## Minuto 5 — Ranking, backup e palco
 
@@ -122,7 +132,8 @@ a cerimônia terminar.
 ## Folha de cola
 
 - **Tema MR/ER** troca cor, não peso.
-- **Pódio** pontua. **Prova escrita** só documenta acertos.
+- **Pódio** pontua. **Prova escrita** só documenta acertos. **Esgrima** só sorteia
+  referências para o líder ditar.
 - Backup = **Exportar projeto**. Evento sozinho não leva o lançamento.
 - Os dados ficam neste navegador até você exportar. Trocar de Chrome para
   Firefox, ou abrir anônimo, parece “perda” de dados.

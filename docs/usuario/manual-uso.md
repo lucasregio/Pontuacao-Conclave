@@ -33,7 +33,7 @@ Completo de auditoria).
 
 ### Sidebar e barra inferior
 
-Em telas largas (≥ 1024px), a **sidebar** à esquerda lista as seis abas com ícones,
+Em telas largas (≥ 1024px), a **sidebar** à esquerda lista as abas com ícones,
 o seletor de tema **MR / ER** e o link para esta documentação. Em celular e tablet,
 a **barra inferior** repete as mesmas abas com rótulos curtos.
 
@@ -78,8 +78,10 @@ Siga o [tutorial de 5 minutos](tutorial-5min.md), com capturas de cada tela. Res
    e (opcional) o nome do competidor.
 6. (Opcional) Vá para **Prova escrita** e cadastre acertos de cada MR nas provas do tipo
    escrita — gera gráficos analíticos; **não altera** a classificação geral.
-7. Vá para **Classificação** para ver o ranking ordenado com desempate aplicado.
-8. Salve com **Exportar projeto** (menu Mais) ou **Exportar evento** se quiser só a
+7. (Opcional) Na aba **Esgrima**, sorteie as referências para o líder ditar. Também **não
+   altera** a classificação — o pódio da prova continua no passo 5.
+8. Vá para **Classificação** para ver o ranking ordenado com desempate aplicado.
+9. Salve com **Exportar projeto** (menu Mais) ou **Exportar evento** se quiser só a
    configuração. **Exportar CSV** fica na aba Classificação.
 
 Os dados também ficam guardados automaticamente no `localStorage` deste navegador, mas
@@ -228,6 +230,27 @@ Campos no JSON:
 
 Em `evento.provas[]`, provas escrita podem ter `escritaTotalQuestoes` (inteiro ≥ 1)
 para calcular percentuais nos gráficos e no CSV.
+
+## Esgrima (sorteio de referências)
+
+A aba **Esgrima** ajuda o líder da prova **Esgrima Bíblico (Debate Bíblico)** a ditar
+passagens aleatórias **sem repetir** na mesma categoria (Junior, Adolescente, Juvenil).
+O app **não calcula** quem marcou o ponto — ouro/prata/bronze continuam no **Pódio**.
+
+- Selecione a prova (uma sessão por categoria).
+- **Sortear** mostra livro, capítulo e versículo. Livros de um só capítulo (Obadias,
+  Filemom, 2 João, 3 João, Judas) aparecem só com livro e versículo, como o regulamento
+  pede.
+- **Anular e sortear outra** usa uma nova passagem no empate; a anulada não volta ao
+  pool.
+- O **cronômetro** vem em 20 s (MR) ou 30 s (ER). Inicie depois do comando **CARREGAR**.
+- **Tela cheia da referência** é um palco próprio (Esc sai); não mistura com o modo
+  apresentação da classificação.
+- O corpus padrão é a **Bíblia toda**. Dá para restringir a AT, NT ou Evangelhos; trocar
+  o corpus com histórico pede confirmação e reinicia a sessão da categoria.
+
+Os dados ficam em `dados.sorteioEsgrima[provaId]` e saem no **Exportar projeto**. O
+motor de pontuação ignora esse campo.
 
 ## Classificacao e desempate
 

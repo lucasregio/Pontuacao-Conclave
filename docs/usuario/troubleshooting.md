@@ -48,12 +48,13 @@ quer forçar o refresh.
 
 **O que fazer** (Chrome/Edge no Android, Safari no iOS é semelhante):
 
-1. Abra DevTools (no desktop) → aba **Application** → **Service Workers**.
-2. Marque **Update on reload** e recarregue a página.
-3. Se persistir, clique em **Unregister** e recarregue.
-4. No celular, alternativa rápida: desinstale o atalho do PWA e reinstale a partir
+1. No computador, force o recarregamento: **Ctrl+F5** (ou Ctrl+Shift+R).
+2. Se ainda estiver velho: DevTools → **Application** → **Service Workers**.
+3. Marque **Update on reload** e recarregue a página.
+4. Se persistir, clique em **Unregister** e recarregue.
+5. No celular, alternativa rápida: desinstale o atalho do PWA e reinstale a partir
    da página atualizada. O cache antigo é descartado.
-5. Em último caso, limpe o site nos ajustes do navegador (cuidado: também apaga o
+6. Em último caso, limpe o site nos ajustes do navegador (cuidado: também apaga o
    `localStorage` — exporte um `.projeto.json` antes).
 
 ## O navegador diz que o localStorage esta cheio

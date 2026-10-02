@@ -55,6 +55,12 @@
     return p;
   }
 
+  /** Punição aplicada a todas as igrejas (ex.: templo não conservado). */
+  function pontosPunicaoColetiva(dados, pesos) {
+    if (!dados || !truthy(dados.conservacaoTemploDescumprida)) return 0;
+    return peso(pesos, "conservacao_templo");
+  }
+
   function gincanaPorIgreja(podium, medalhas, igrejaIds) {
     const tot = {};
     igrejaIds.forEach(function (iid) {
@@ -162,13 +168,14 @@
     const participacao = (dados && dados.participacao) || {};
     const podium = (dados && dados.podium) || {};
     const gincTotals = gincanaPorIgreja(podium, medalhas, igrejaIds);
+    const pColetiva = pontosPunicaoColetiva(dados, pesos);
     const detalhes = [];
     for (let gi = 0; gi < igrejas.length; gi++) {
       const g = igrejas[gi];
       const gid = g.id;
       const row = participacao[gid] || {};
       const pPart = pontosParticipacao(row, pesos);
-      const pPuni = pontosPunicoes(row, pesos);
+      const pPuni = pontosPunicoes(row, pesos) + pColetiva;
       const pGinc = Number(gincTotals[gid] || 0);
       const pExt = pontuacaoExtra(row);
       const total = pPart + pPuni + pGinc + pExt;
@@ -348,6 +355,7 @@
     // reimplementação divergente das regras de pontuação/punição.
     pontosParticipacao: pontosParticipacao,
     pontosPunicoes: pontosPunicoes,
+    pontosPunicaoColetiva: pontosPunicaoColetiva,
     pontuacaoExtra: pontuacaoExtra,
     truthy: truthy,
     num: num,

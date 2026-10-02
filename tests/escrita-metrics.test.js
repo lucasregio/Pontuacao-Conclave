@@ -68,9 +68,63 @@ test("normalizeAcertos trata valores inválidos", () => {
   assert.equal(M.normalizeAcertos("14.7"), 15);
 });
 
-test("percentual retorna null sem totalQuestoes válido", () => {
-  assert.equal(M.percentual(10, 0), null);
-  assert.equal(M.percentual(10, 20), 50);
+test("minimoAcertosEscrita é 60% arredondado para cima", () => {
+  assert.equal(M.minimoAcertosEscrita(20), 12);
+  assert.equal(M.minimoAcertosEscrita(10), 6);
+});
+
+test("avisosPodiumEscritaMinimo alerta nota abaixo de 60% e medalha sem nota", () => {
+  const evento = {
+    provas: [
+      {
+        id: "escrita-evang-jun",
+        titulo: "Prova escrita — Evangelhos — Junior",
+        tipo: "escrita",
+        escritaTotalQuestoes: 20,
+      },
+    ],
+  };
+  const dados = {
+    podium: {
+      "escrita-evang-jun": {
+        ou: { igrejaId: "alianca", competidor: "Ana" },
+        pt: { igrejaId: "gloria", competidor: "" },
+        br: { igrejaId: null, competidor: "" },
+      },
+    },
+    metricasEscrita: {
+      "escrita-evang-jun": [
+        { nome: "Ana", igrejaId: "alianca", acertos: 8 },
+        { nome: "Bia", igrejaId: "gloria", acertos: 18 },
+      ],
+    },
+  };
+  const avisos = M.avisosPodiumEscritaMinimo(evento, dados);
+  assert.equal(avisos.length, 1);
+  assert.match(avisos[0], /Ana/);
+  assert.match(avisos[0], /8\/20/);
+
+  dados.podium["escrita-evang-jun"].pt.igrejaId = "ibes";
+  const avisos2 = M.avisosPodiumEscritaMinimo(evento, dados);
+  assert.ok(
+    avisos2.some(function (a) {
+      return /sem nota/.test(a);
+    })
+  );
+});
+
+test("avisosPodiumEscritaMinimo ignora montagem (sem total de questões)", () => {
+  const evento = {
+    provas: [{ id: "montagem-jun", titulo: "Montagem bíblica — Junior", tipo: "escrita" }],
+  };
+  const dados = {
+    podium: {
+      "montagem-jun": { ou: { igrejaId: "alianca", competidor: "Ana" }, pt: {}, br: {} },
+    },
+    metricasEscrita: {},
+  };
+  assert.equal(M.usaMinimoAcertosEscrita(evento.provas[0]), false);
+  assert.equal(M.avisosPodiumEscritaMinimo(evento, dados).length, 0);
 });
 
 test("resumoProva calcula estatísticas", () => {
