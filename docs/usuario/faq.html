@@ -4,8 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Perguntas frequentes (FAQ) — Pontuação Conclave</title>
-    <meta name="description" content="Perguntas frequentes (FAQ) — documentação da Pontuação Conclave." />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+    <meta
+      name="description"
+      content="Perguntas frequentes (FAQ) — documentação da Pontuação Conclave."
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    />
     <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light" />
@@ -16,75 +22,210 @@
   <body class="docs-page">
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
     <header class="docs-header">
-      <p class="docs-eyebrow"><a href="../../index.html">← Voltar ao app</a> · <a href="../index.html">Documentação</a></p>
+      <p class="docs-eyebrow">
+        <a href="../../index.html">← Voltar ao app</a> · <a href="../index.html">Documentação</a>
+      </p>
       <h1>Perguntas frequentes (FAQ)</h1>
     </header>
     <main id="conteudo" tabindex="-1" class="docs-main docs-prose">
       <article class="docs-article">
-<p>Respostas curtas para as dúvidas mais comuns de organizadores e juízes da <strong>Pontuação Conclave</strong>. Para o fluxo do dia com capturas, veja o <a href="tutorial-5min.html">tutorial-5min</a>. Para o passo a passo completo, veja <a href="manual-uso.html">manual-uso</a>.</p>
-<h2 id="sumario">Sumário</h2>
-<ul>
-<li><a href="#perdi-meus-dados-ao-trocar-de-navegador">Perdi meus dados ao trocar de navegador</a></li>
-<li><a href="#posso-usar-offline">Posso usar offline</a></li>
-<li><a href="#como-compartilho-o-evento-com-outro-juiz">Como compartilho o evento com outro juiz</a></li>
-<li><a href="#funciona-em-celular">Funciona em celular</a></li>
-<li><a href="#como-apago-um-evento-salvo-localmente">Como apago um evento salvo localmente</a></li>
-<li><a href="#os-dados-saem-da-minha-maquina">Os dados saem da minha maquina</a></li>
-<li><a href="#posso-editar-o-json-manualmente">Posso editar o JSON manualmente</a></li>
-<li><a href="#o-que-muda-entre-tema-mr-e-er">O que muda entre tema MR e ER</a></li>
-<li><a href="#por-que-inscricao-comeca-desmarcada-no-er">Por que inscrição começa desmarcada no ER</a></li>
-<li><a href="#a-prova-escrita-entra-sozinha-na-classificacao">A prova escrita entra sozinha na classificacao</a></li>
-<li><a href="#como-funciona-o-sorteio-da-esgrima">Como funciona o sorteio da Esgrima</a></li>
-<li><a href="#como-exporto-para-o-excel">Como exporto para o Excel</a></li>
-</ul>
-<h2 id="perdi-meus-dados-ao-trocar-de-navegador">Perdi meus dados ao trocar de navegador</h2>
-<p>O salvamento automático usa <code>localStorage</code>, que é por <strong>navegador + origem</strong>. Trocar do Chrome para o Firefox, abrir em outro computador, usar uma janela anônima ou limpar o cache descarta o que estava guardado nesse contexto.</p>
-<p>O backup canônico, portátil entre máquinas, é o <strong>Exportar projeto</strong>. Ele gera um arquivo <code>.projeto.json</code> com tudo (configuração + Participação + Pódio). Para retomar em outro navegador, abra com <strong>Carregar projeto</strong>.</p>
-<h2 id="posso-usar-offline">Posso usar offline</h2>
-<p>Sim. O app é uma PWA com service worker (<code>sw.js</code>). Após a primeira visita online ele funciona sem rede.</p>
-<p>Restrição importante: o service worker <strong>só registra quando a página é servida via <code>http://</code> ou <code>https://</code></strong>. Abrir o <code>index.html</code> direto pelo Finder/Explorer (URL começando com <code>file://</code>) faz o app rodar normalmente, mas sem cache de SW — ou seja, se o arquivo desaparecer do disco, não há fallback.</p>
-<h2 id="como-compartilho-o-evento-com-outro-juiz">Como compartilho o evento com outro juiz</h2>
-<p>Use <strong>Exportar projeto</strong> na toolbar. O arquivo <code>.projeto.json</code> resultante contém configuração + dados; envie por e-mail, WhatsApp, pendrive ou nuvem. Quem recebe abre o <code>index.html</code> no próprio navegador e clica em <strong>Carregar projeto (.json)</strong> para importar. Sem cadastro, sem servidor, sem login.</p>
-<h2 id="funciona-em-celular">Funciona em celular</h2>
-<p>Sim. O layout é mobile-first e os fluxos principais funcionam a partir de viewport de <strong>360px</strong> de largura. Tabelas grandes (Participação, Pódio, Classificação) rolam horizontalmente quando não cabem, sem cortar conteúdo. Para o dia do evento, leve um backup <code>.projeto.json</code> no celular: dá para pontuar e exportar do telefone se a máquina principal falhar.</p>
-<h2 id="como-apago-um-evento-salvo-localmente">Como apago um evento salvo localmente</h2>
-<p>Na toolbar, clique em <strong>Eventos salvos</strong>. O modal lista todos os projetos guardados neste navegador. Cada linha tem um botão de remoção; ele dispara um modal-confirm acessível (Enter confirma, Escape cancela) — não há <code>confirm()</code> nativo. Antes de remover, considere <strong>Exportar</strong> o projeto para preservar uma cópia em arquivo.</p>
-<h2 id="os-dados-saem-da-minha-maquina">Os dados saem da minha maquina</h2>
-<p>Não. A Pontuação Conclave é uma aplicação <strong>100% estática</strong>, sem backend, sem analytics e sem chamadas de rede além das necessárias para o app shell. Tudo o que você digita vive apenas no <code>localStorage</code> do seu navegador. Os dados só saem do dispositivo se <strong>você</strong> exportar e enviar o <code>.projeto.json</code>.</p>
-<h2 id="posso-editar-o-json-manualmente">Posso editar o JSON manualmente</h2>
-<p>Pode. Os dois schemas canônicos vivem na raiz do repositório e descrevem todos os campos:</p>
-<ul>
-<li><code>schema/evento.schema.json</code> para a configuração (<code>evento</code>).</li>
-<li><code>schema/projeto.schema.json</code> para a estrutura completa (<code>evento</code> + <code>dados</code>).</li>
-</ul>
-<p>Validadores online aceitam JSON Schema 2020-12 e apontam erros linha a linha. Cuidados frequentes:</p>
-<ul>
-<li>Medalhas usam as chaves curtas <code>ou</code>, <code>pt</code>, <code>br</code> (não <code>ouro</code>/<code>prata</code>/<code>bronze</code>).</li>
-<li>Pesos têm 7 chaves obrigatórias: <code>inscricao</code>, <code>pontualidade</code>, <code>uniforme</code>, <code>biblia</code>, <code>visitante</code>, <code>animacao</code>, <code>mau_comportamento</code>.</li>
-<li>IDs de igrejas e provas seguem <code>^[a-z0-9_-]+$</code> e devem ser únicos.</li>
-<li>Para a pontuação extra (antigo &quot;embaixadas&quot;), use <code>pontuacao_extra</code>.</li>
-</ul>
-<h2 id="o-que-muda-entre-tema-mr-e-er">O que muda entre tema MR e ER</h2>
-<p>O botão <strong>Tema</strong> na toolbar troca entre dois conjuntos de cores e valores típicos:</p>
-<ul>
-<li><strong>MR</strong>: paleta verde/amarelo/branco, com os pesos e medalhas tradicionais do Conclave das Mensageiras do Rei.</li>
-<li><strong>ER</strong>: paleta azul/amarelo/branco, com medalhas tipicamente em 500/300/150 e bônus de participação +100 em pontualidade, uniforme, bíblia e pastor.</li>
-</ul>
-<p>Importante: o tema <strong>não sobrescreve</strong> os valores do JSON do evento. Os pesos e medalhas finais são sempre os que estão em <code>evento.pesos</code> e <code>evento.medalhas</code>. O tema só ajusta a aparência (cores, foco, contraste).</p>
-<h2 id="por-que-inscricao-comeca-desmarcada-no-er">Por que inscrição começa desmarcada no ER</h2>
-<p>No Conclave ER 2026/2 o check-in começa com <strong>inscrição</strong> e <strong>pontualidade</strong> desmarcadas. Marque cada igreja na chegada; quem não vier fica em branco (não ganha os 100+200). O Extra do CER (+100 nas 6 igrejas da reunião pré-conclave) já vem lançado e <strong>não some</strong> se a inscrição estiver desmarcada.</p>
-<h2 id="a-prova-escrita-entra-sozinha-na-classificacao">A prova escrita entra sozinha na classificacao</h2>
-<p>Não. A aba <strong>Prova escrita</strong> é só métrica (gráfico/CSV). A medalha entra na classificação pelo <strong>Pódio</strong>. No ER, Evangelhos e Organização: <strong>≥12 acertos em 20</strong> (60%). Montagem bíblica é escrita em papel, mas a regra é outra: <strong>mais de 10 erros desclassifica</strong>. Se o pódio de Evangelhos/Organização ficar abaixo de 12/20, o app mostra um aviso amarelo no topo — os totais não se corrigem sozinhos.</p>
-<h2 id="como-funciona-o-sorteio-da-esgrima">Como funciona o sorteio da Esgrima</h2>
-<p>A aba <strong>Esgrima</strong> sorteia livro, capítulo e versículo para o líder <strong>ditar</strong> (Debate Bíblico), sem repetir na mesma categoria. O cronômetro segue o regulamento (20 s no MR, 30 s no ER). <strong>Anular e sortear outra</strong> serve para empate. Isso <strong>não</strong> pontua: ouro, prata e bronze continuam no <strong>Pódio</strong>. O Debate de versículos (recitação) e a Esgrima avançada (palavra) não usam este sorteio.</p>
-<h2 id="como-exporto-para-o-excel">Como exporto para o Excel</h2>
-<p>Na aba <strong>Classificação</strong>, clique em <strong>Exportar CSV</strong>. O arquivo gerado é UTF-8 com BOM e usa <code>;</code> como separador de colunas — formato pronto para o Excel pt-BR abrir direto, sem assistente de importação. Vale também para LibreOffice Calc e Google Sheets.</p>
+        <p>
+          Respostas curtas para as dúvidas mais comuns de organizadores e juízes da
+          <strong>Pontuação Conclave</strong>. Para o fluxo do dia com capturas, veja o
+          <a href="tutorial-5min.html">tutorial-5min</a>. Para o passo a passo completo, veja
+          <a href="manual-uso.html">manual-uso</a>.
+        </p>
+        <h2 id="sumario">Sumário</h2>
+        <ul>
+          <li>
+            <a href="#perdi-meus-dados-ao-trocar-de-navegador"
+              >Perdi meus dados ao trocar de navegador</a
+            >
+          </li>
+          <li><a href="#posso-usar-offline">Posso usar offline</a></li>
+          <li>
+            <a href="#como-compartilho-o-evento-com-outro-juiz"
+              >Como compartilho o evento com outro juiz</a
+            >
+          </li>
+          <li><a href="#funciona-em-celular">Funciona em celular</a></li>
+          <li>
+            <a href="#como-apago-um-evento-salvo-localmente"
+              >Como apago um evento salvo localmente</a
+            >
+          </li>
+          <li><a href="#os-dados-saem-da-minha-maquina">Os dados saem da minha maquina</a></li>
+          <li><a href="#posso-editar-o-json-manualmente">Posso editar o JSON manualmente</a></li>
+          <li><a href="#o-que-muda-entre-tema-mr-e-er">O que muda entre tema MR e ER</a></li>
+          <li>
+            <a href="#por-que-inscricao-comeca-desmarcada-no-er"
+              >Por que inscrição começa desmarcada no ER</a
+            >
+          </li>
+          <li>
+            <a href="#a-prova-escrita-entra-sozinha-na-classificacao"
+              >A prova escrita entra sozinha na classificacao</a
+            >
+          </li>
+          <li>
+            <a href="#como-funciona-o-sorteio-da-esgrima">Como funciona o sorteio da Esgrima</a>
+          </li>
+          <li><a href="#como-exporto-para-o-excel">Como exporto para o Excel</a></li>
+        </ul>
+        <h2 id="perdi-meus-dados-ao-trocar-de-navegador">
+          Perdi meus dados ao trocar de navegador
+        </h2>
+        <p>
+          O salvamento automático usa <code>localStorage</code>, que é por
+          <strong>navegador + origem</strong>. Trocar do Chrome para o Firefox, abrir em outro
+          computador, usar uma janela anônima ou limpar o cache descarta o que estava guardado nesse
+          contexto.
+        </p>
+        <p>
+          O backup canônico, portátil entre máquinas, é o <strong>Exportar projeto</strong>. Ele
+          gera um arquivo <code>.projeto.json</code> com tudo (configuração + Participação + Pódio).
+          Para retomar em outro navegador, abra com <strong>Carregar projeto</strong>.
+        </p>
+        <h2 id="posso-usar-offline">Posso usar offline</h2>
+        <p>
+          Sim. O app é uma PWA com service worker (<code>sw.js</code>). Após a primeira visita
+          online ele funciona sem rede.
+        </p>
+        <p>
+          Restrição importante: o service worker
+          <strong
+            >só registra quando a página é servida via <code>http://</code> ou
+            <code>https://</code></strong
+          >. Abrir o <code>index.html</code> direto pelo Finder/Explorer (URL começando com
+          <code>file://</code>) faz o app rodar normalmente, mas sem cache de SW — ou seja, se o
+          arquivo desaparecer do disco, não há fallback.
+        </p>
+        <h2 id="como-compartilho-o-evento-com-outro-juiz">
+          Como compartilho o evento com outro juiz
+        </h2>
+        <p>
+          Use <strong>Exportar projeto</strong> na toolbar. O arquivo
+          <code>.projeto.json</code> resultante contém configuração + dados; envie por e-mail,
+          WhatsApp, pendrive ou nuvem. Quem recebe abre o <code>index.html</code> no próprio
+          navegador e clica em <strong>Carregar projeto (.json)</strong> para importar. Sem
+          cadastro, sem servidor, sem login.
+        </p>
+        <h2 id="funciona-em-celular">Funciona em celular</h2>
+        <p>
+          Sim. O layout é mobile-first e os fluxos principais funcionam a partir de viewport de
+          <strong>360px</strong> de largura. Tabelas grandes (Participação, Pódio, Classificação)
+          rolam horizontalmente quando não cabem, sem cortar conteúdo. Para o dia do evento, leve um
+          backup <code>.projeto.json</code> no celular: dá para pontuar e exportar do telefone se a
+          máquina principal falhar.
+        </p>
+        <h2 id="como-apago-um-evento-salvo-localmente">Como apago um evento salvo localmente</h2>
+        <p>
+          Na toolbar, clique em <strong>Eventos salvos</strong>. O modal lista todos os projetos
+          guardados neste navegador. Cada linha tem um botão de remoção; ele dispara um
+          modal-confirm acessível (Enter confirma, Escape cancela) — não há
+          <code>confirm()</code> nativo. Antes de remover, considere <strong>Exportar</strong> o
+          projeto para preservar uma cópia em arquivo.
+        </p>
+        <h2 id="os-dados-saem-da-minha-maquina">Os dados saem da minha maquina</h2>
+        <p>
+          Não. A Pontuação Conclave é uma aplicação <strong>100% estática</strong>, sem backend, sem
+          analytics e sem chamadas de rede além das necessárias para o app shell. Tudo o que você
+          digita vive apenas no <code>localStorage</code> do seu navegador. Os dados só saem do
+          dispositivo se <strong>você</strong> exportar e enviar o <code>.projeto.json</code>.
+        </p>
+        <h2 id="posso-editar-o-json-manualmente">Posso editar o JSON manualmente</h2>
+        <p>
+          Pode. Os dois schemas canônicos vivem na raiz do repositório e descrevem todos os campos:
+        </p>
+        <ul>
+          <li><code>schema/evento.schema.json</code> para a configuração (<code>evento</code>).</li>
+          <li>
+            <code>schema/projeto.schema.json</code> para a estrutura completa (<code>evento</code> +
+            <code>dados</code>).
+          </li>
+        </ul>
+        <p>
+          Validadores online aceitam JSON Schema 2020-12 e apontam erros linha a linha. Cuidados
+          frequentes:
+        </p>
+        <ul>
+          <li>
+            Medalhas usam as chaves curtas <code>ou</code>, <code>pt</code>, <code>br</code> (não
+            <code>ouro</code>/<code>prata</code>/<code>bronze</code>).
+          </li>
+          <li>
+            Pesos têm 7 chaves obrigatórias: <code>inscricao</code>, <code>pontualidade</code>,
+            <code>uniforme</code>, <code>biblia</code>, <code>visitante</code>,
+            <code>animacao</code>, <code>mau_comportamento</code>.
+          </li>
+          <li>IDs de igrejas e provas seguem <code>^[a-z0-9_-]+$</code> e devem ser únicos.</li>
+          <li>
+            Para a pontuação extra (antigo &quot;embaixadas&quot;), use
+            <code>pontuacao_extra</code>.
+          </li>
+        </ul>
+        <h2 id="o-que-muda-entre-tema-mr-e-er">O que muda entre tema MR e ER</h2>
+        <p>
+          O botão <strong>Tema</strong> na toolbar troca entre dois conjuntos de cores e valores
+          típicos:
+        </p>
+        <ul>
+          <li>
+            <strong>MR</strong>: paleta verde/amarelo/branco, com os pesos e medalhas tradicionais
+            do Conclave das Mensageiras do Rei.
+          </li>
+          <li>
+            <strong>ER</strong>: paleta azul/amarelo/branco, com medalhas tipicamente em 500/300/150
+            e bônus de participação +100 em pontualidade, uniforme, bíblia e pastor.
+          </li>
+        </ul>
+        <p>
+          Importante: o tema <strong>não sobrescreve</strong> os valores do JSON do evento. Os pesos
+          e medalhas finais são sempre os que estão em <code>evento.pesos</code> e
+          <code>evento.medalhas</code>. O tema só ajusta a aparência (cores, foco, contraste).
+        </p>
+        <h2 id="por-que-inscricao-comeca-desmarcada-no-er">
+          Por que inscrição começa desmarcada no ER
+        </h2>
+        <p>
+          No Conclave ER 2026/2 o check-in começa com <strong>inscrição</strong> e
+          <strong>pontualidade</strong> desmarcadas. Marque cada igreja na chegada; quem não vier
+          fica em branco (não ganha os 100+200). O Extra do CER (+100 nas 6 igrejas da reunião
+          pré-conclave) já vem lançado e <strong>não some</strong> se a inscrição estiver
+          desmarcada.
+        </p>
+        <h2 id="a-prova-escrita-entra-sozinha-na-classificacao">
+          A prova escrita entra sozinha na classificacao
+        </h2>
+        <p>
+          Não. A aba <strong>Prova escrita</strong> é só métrica (gráfico/CSV). A medalha entra na
+          classificação pelo <strong>Pódio</strong>. No ER, Evangelhos e Organização:
+          <strong>≥12 acertos em 20</strong> (60%). Montagem bíblica é escrita em papel, mas a regra
+          é outra: <strong>mais de 10 erros desclassifica</strong>. Se o pódio de
+          Evangelhos/Organização ficar abaixo de 12/20, o app mostra um aviso amarelo no topo — os
+          totais não se corrigem sozinhos.
+        </p>
+        <h2 id="como-funciona-o-sorteio-da-esgrima">Como funciona o sorteio da Esgrima</h2>
+        <p>
+          A aba <strong>Esgrima</strong> sorteia livro, capítulo e versículo para o líder
+          <strong>ditar</strong> (Debate Bíblico), sem repetir na mesma categoria. O cronômetro
+          segue o regulamento (20 s no MR, 30 s no ER).
+          <strong>Anular e sortear outra</strong> serve para empate. Isso
+          <strong>não</strong> pontua: ouro, prata e bronze continuam no <strong>Pódio</strong>. O
+          Debate de versículos (recitação) e a Esgrima avançada (palavra) não usam este sorteio.
+        </p>
+        <h2 id="como-exporto-para-o-excel">Como exporto para o Excel</h2>
+        <p>
+          Na aba <strong>Classificação</strong>, clique em <strong>Exportar CSV</strong>. O arquivo
+          gerado é UTF-8 com BOM e usa <code>;</code> como separador de colunas — formato pronto
+          para o Excel pt-BR abrir direto, sem assistente de importação. Vale também para
+          LibreOffice Calc e Google Sheets.
+        </p>
       </article>
     </main>
     <footer class="docs-footer">
       <p>
-        <a href="../../index.html">Abrir o app</a> ·
-        <a href="../index.html">Índice</a> ·
+        <a href="../../index.html">Abrir o app</a> · <a href="../index.html">Índice</a> ·
         <a href="../changelog.html">Changelog</a>
       </p>
     </footer>

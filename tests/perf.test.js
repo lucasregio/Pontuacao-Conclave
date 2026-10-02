@@ -33,8 +33,5 @@ test(`computeTotals no sample de referência ≤ ${BUDGET_MS}ms (mediana de 5 ru
   }
   samples.sort((a, b) => a - b);
   const median = samples[2];
-  assert.ok(
-    median <= BUDGET_MS,
-    `mediana ${median.toFixed(1)}ms excedeu ${BUDGET_MS}ms`
-  );
+  assert.ok(median <= BUDGET_MS, `mediana ${median.toFixed(1)}ms excedeu ${BUDGET_MS}ms`);
 });
