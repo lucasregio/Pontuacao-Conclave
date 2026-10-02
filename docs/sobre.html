@@ -4,8 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Pontuação Conclave (Web) — Pontuação Conclave</title>
-    <meta name="description" content="Pontuação Conclave (Web) — documentação da Pontuação Conclave." />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+    <meta
+      name="description"
+      content="Pontuação Conclave (Web) — documentação da Pontuação Conclave."
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    />
     <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light" />
@@ -16,55 +22,126 @@
   <body class="docs-page">
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
     <header class="docs-header">
-      <p class="docs-eyebrow"><a href="../index.html">← Voltar ao app</a> · <a href="index.html">Documentação</a></p>
+      <p class="docs-eyebrow">
+        <a href="../index.html">← Voltar ao app</a> · <a href="index.html">Documentação</a>
+      </p>
       <h1>Pontuação Conclave (Web)</h1>
     </header>
     <main id="conteudo" tabindex="-1" class="docs-main docs-prose">
       <article class="docs-article">
-<p>Aplicação <strong>100% estática</strong> para registro e classificação de pontuação do Conclave. Roda direto no navegador a partir de <code>index.html</code>, sem backend de runtime. Os dados (evento + entradas) são manipulados como JSON e podem ser exportados, importados e mantidos no <code>localStorage</code> do próprio navegador.</p>
-<blockquote class="docs-callout"><p>Este projeto migrou de uma versão Python desktop para uma aplicação web pura. Os artefatos Python históricos foram removidos e <strong>não devem ser reintroduzidos</strong>. Scripts legados ficam em <code>referencia/scripts/</code> apenas como arquivo histórico.</p></blockquote>
-<h2 id="sumario">Sumário</h2>
-<ul>
-<li><a href="#como-usar">Como usar</a></li>
-<li><a href="#rodar-de-pen-drive-sem-servidor">Rodar de pen-drive (sem servidor)</a></li>
-<li><a href="#arquitetura">Arquitetura</a></li>
-<li><a href="#comandos">Comandos</a></li>
-<li><a href="#estrutura-de-pastas">Estrutura de pastas</a></li>
-<li><a href="#modelo-de-dados">Modelo de dados</a></li>
-<li><a href="#regras-de-pontuação-engine">Regras de pontuação (engine)</a></li>
-<li><a href="#acessibilidade-e-ux">Acessibilidade e UX</a></li>
-<li><a href="#pwa-e-modo-offline">PWA e modo offline</a></li>
-<li><a href="#deploy-github-pages">Deploy (GitHub Pages)</a></li>
-<li><a href="#convenções-de-contribuição">Convenções de contribuição</a></li>
-<li><a href="#documentação-adicional">Documentação adicional</a></li>
-</ul>
-<h2 id="como-usar">Como usar</h2>
-<ol>
-<li>Abra <code>index.html</code> em qualquer navegador moderno. Para PWA/offline, sirva via <code>http(s)://</code> em vez de <code>file://</code>.</li>
-<li>Na aba <strong>Início</strong>, use <strong>Novo evento</strong>, <strong>Carregar projeto</strong> ou o menu <strong>Mais</strong> → <strong>Carregar evento</strong> / <strong>Exportar evento</strong> / <strong>Exportar projeto</strong>.</li>
-<li>Edite as abas: <strong>Configuração</strong>, <strong>Participação</strong>, <strong>Pódio</strong>, <strong>Prova escrita</strong>, <strong>Esgrima</strong>, <strong>Classificação</strong>, <strong>Relatórios</strong>. <strong>Relatórios</strong>.</li>
-<li><strong>Exportar projeto</strong> salva evento + dados; <strong>Exportar evento</strong> salva só a configuração. <strong>Eventos salvos</strong> (menu Mais) gerencia cópias no <code>localStorage</code>.</li>
-<li><strong>Regulamento</strong> (topbar) abre o PDF configurado em Configuração → Geral (ficheiros em <code>static/</code>).</li>
-</ol>
-<h2 id="rodar-de-pen-drive-sem-servidor">Rodar de pen-drive (sem servidor)</h2>
-<p><strong>Jeito rápido</strong> — duplo clique em <code>index.html</code>. O exemplo embarcado carrega via <code>window.ConclaveDefaultEvento</code> (sem <code>fetch()</code> em <code>file://</code>).</p>
-<p><strong>Jeito completo</strong> (PWA + cache) — <code>pen-drive/iniciar.command</code> (macOS/Linux) ou <code>pen-drive/iniciar.bat</code> (Windows).</p>
-<p>Regenere o embedded após editar o JSON fonte:</p>
-<pre><code>npm run build:embedded</code></pre>
-<p>Detalhes em <code>pen-drive/LEIA-ME.txt</code>.</p>
-<h2 id="arquitetura">Arquitetura</h2>
-<ol>
-<li><strong><code>web/engine.js</code></strong> — motor puro (<code>window.ConclaveEngine</code>), sem DOM.</li>
-<li><strong><code>web/app.js</code></strong> — UI, estado, persistência, modais, cache de <code>computeTotals</code>.</li>
-<li><strong><code>web/escrita-metrics.js</code></strong> / <strong><code>web/sorteio-esgrima.js</code></strong> — métricas da escrita e sorteio da Esgrima; não alteram a classificação.</li>
-<li><strong><code>web/styles.css</code></strong> — temas MR/ER, responsividade, impressão, apresentação.</li>
-</ol>
-<p>Esquemas em <code>schema/evento.schema.json</code> e <code>schema/projeto.schema.json</code>. Amostras em <code>eventos/conclave-2026-1.*</code>.</p>
-<h2 id="comandos">Comandos</h2>
-<p>| Tarefa             | Comando                                                  | | ------------------ | -------------------------------------------------------- | | Lint               | <code>npm run lint</code>                                           | | Testes             | <code>npm test</code>                                               | | Formatação         | <code>npm run format:check</code> / <code>npm run format</code>                | | Servir local       | <code>npm run serve</code>                                          | | Embedded pen-drive | <code>npm run build:embedded</code>                                 | | Qualidade sem npm  | <code>node scripts/quality-check.mjs</code>                         | | Publicar no GitHub | <code>.\scripts\publicar-github.ps1</code> (requer <code>gh auth login</code>) |</p>
-<p>CI (Node 22): lint + test + format:check. Checklist de release: <code>docs/operacional/release-checklist.md</code>.</p>
-<h2 id="estrutura-de-pastas">Estrutura de pastas</h2>
-<pre><code>.
+        <p>
+          Aplicação <strong>100% estática</strong> para registro e classificação de pontuação do
+          Conclave. Roda direto no navegador a partir de <code>index.html</code>, sem backend de
+          runtime. Os dados (evento + entradas) são manipulados como JSON e podem ser exportados,
+          importados e mantidos no <code>localStorage</code> do próprio navegador.
+        </p>
+        <blockquote class="docs-callout">
+          <p>
+            Este projeto migrou de uma versão Python desktop para uma aplicação web pura. Os
+            artefatos Python históricos foram removidos e
+            <strong>não devem ser reintroduzidos</strong>. Scripts legados ficam em
+            <code>referencia/scripts/</code> apenas como arquivo histórico.
+          </p>
+        </blockquote>
+        <h2 id="sumario">Sumário</h2>
+        <ul>
+          <li><a href="#como-usar">Como usar</a></li>
+          <li><a href="#rodar-de-pen-drive-sem-servidor">Rodar de pen-drive (sem servidor)</a></li>
+          <li><a href="#arquitetura">Arquitetura</a></li>
+          <li><a href="#comandos">Comandos</a></li>
+          <li><a href="#estrutura-de-pastas">Estrutura de pastas</a></li>
+          <li><a href="#modelo-de-dados">Modelo de dados</a></li>
+          <li><a href="#regras-de-pontuação-engine">Regras de pontuação (engine)</a></li>
+          <li><a href="#acessibilidade-e-ux">Acessibilidade e UX</a></li>
+          <li><a href="#pwa-e-modo-offline">PWA e modo offline</a></li>
+          <li><a href="#deploy-github-pages">Deploy (GitHub Pages)</a></li>
+          <li><a href="#convenções-de-contribuição">Convenções de contribuição</a></li>
+          <li><a href="#documentação-adicional">Documentação adicional</a></li>
+        </ul>
+        <h2 id="como-usar">Como usar</h2>
+        <ol>
+          <li>
+            Abra <code>index.html</code> em qualquer navegador moderno. Para PWA/offline, sirva via
+            <code>http(s)://</code> em vez de <code>file://</code>.
+          </li>
+          <li>
+            Na aba <strong>Início</strong>, use <strong>Novo evento</strong>,
+            <strong>Carregar projeto</strong> ou o menu <strong>Mais</strong> →
+            <strong>Carregar evento</strong> / <strong>Exportar evento</strong> /
+            <strong>Exportar projeto</strong>.
+          </li>
+          <li>
+            Edite as abas: <strong>Configuração</strong>, <strong>Participação</strong>,
+            <strong>Pódio</strong>, <strong>Prova escrita</strong>, <strong>Esgrima</strong>,
+            <strong>Classificação</strong>, <strong>Relatórios</strong>.
+            <strong>Relatórios</strong>.
+          </li>
+          <li>
+            <strong>Exportar projeto</strong> salva evento + dados;
+            <strong>Exportar evento</strong> salva só a configuração.
+            <strong>Eventos salvos</strong> (menu Mais) gerencia cópias no
+            <code>localStorage</code>.
+          </li>
+          <li>
+            <strong>Regulamento</strong> (topbar) abre o PDF configurado em Configuração → Geral
+            (ficheiros em <code>static/</code>).
+          </li>
+        </ol>
+        <h2 id="rodar-de-pen-drive-sem-servidor">Rodar de pen-drive (sem servidor)</h2>
+        <p>
+          <strong>Jeito rápido</strong> — duplo clique em <code>index.html</code>. O exemplo
+          embarcado carrega via <code>window.ConclaveDefaultEvento</code> (sem
+          <code>fetch()</code> em <code>file://</code>).
+        </p>
+        <p>
+          <strong>Jeito completo</strong> (PWA + cache) —
+          <code>pen-drive/iniciar.command</code> (macOS/Linux) ou
+          <code>pen-drive/iniciar.bat</code> (Windows).
+        </p>
+        <p>Regenere o embedded após editar o JSON fonte:</p>
+        <pre><code>npm run build:embedded</code></pre>
+        <p>Detalhes em <code>pen-drive/LEIA-ME.txt</code>.</p>
+        <h2 id="arquitetura">Arquitetura</h2>
+        <ol>
+          <li>
+            <strong><code>web/engine.js</code></strong> — motor puro
+            (<code>window.ConclaveEngine</code>), sem DOM.
+          </li>
+          <li>
+            <strong><code>web/app.js</code></strong> — UI, estado, persistência, modais, cache de
+            <code>computeTotals</code>.
+          </li>
+          <li>
+            <strong><code>web/escrita-metrics.js</code></strong> /
+            <strong><code>web/sorteio-esgrima.js</code></strong> — métricas da escrita e sorteio da
+            Esgrima; não alteram a classificação.
+          </li>
+          <li>
+            <strong><code>web/styles.css</code></strong> — temas MR/ER, responsividade, impressão,
+            apresentação.
+          </li>
+        </ol>
+        <p>
+          Esquemas em <code>schema/evento.schema.json</code> e
+          <code>schema/projeto.schema.json</code>. Amostras em
+          <code>eventos/conclave-2026-1.*</code>.
+        </p>
+        <h2 id="comandos">Comandos</h2>
+        <p>
+          | Tarefa | Comando | | ------------------ |
+          -------------------------------------------------------- | | Lint |
+          <code>npm run lint</code> | | Testes | <code>npm test</code> | | Formatação |
+          <code>npm run format:check</code> / <code>npm run format</code> | | Servir local |
+          <code>npm run serve</code> | | Embedded pen-drive | <code>npm run build:embedded</code> |
+          | Qualidade sem npm | <code>node scripts/quality-check.mjs</code> | | Publicar no GitHub |
+          <code>.\scripts\publicar-github.ps1</code> (requer <code>gh auth login</code>) |
+        </p>
+        <p>
+          CI (Node 22): lint + test + format:check. Checklist de release:
+          <code>docs/operacional/release-checklist.md</code>.
+        </p>
+        <h2 id="estrutura-de-pastas">Estrutura de pastas</h2>
+        <pre><code>.
 ├── index.html                 # Entrada (Dashboard, Config, …)
 ├── manifest.webmanifest
 ├── sw.js
@@ -88,8 +165,8 @@
 ├── scripts/                   # build-embedded.mjs, quality-check.mjs, publicar-github.ps1
 ├── tests/                     # engine, roundtrip, escape, schema, embedded, perf
 └── .github/workflows/         # ci.yml, pages.yml, lighthouse.yml</code></pre>
-<h2 id="modelo-de-dados">Modelo de dados</h2>
-<pre><code>{
+        <h2 id="modelo-de-dados">Modelo de dados</h2>
+        <pre><code>{
   &quot;evento&quot;: {
     &quot;meta&quot;: { &quot;schemaVersion&quot;: 2, &quot;nome&quot;: &quot;Conclave 2026&quot;, &quot;slug&quot;: &quot;conclave-2026-1&quot; },
     &quot;igrejas&quot;: [{ &quot;id&quot;: &quot;central&quot;, &quot;nome&quot;: &quot;Igreja Central&quot; }],
@@ -123,29 +200,68 @@
     },
   },
 }</code></pre>
-<p>Detalhes em <code>schema/*.schema.json</code>.</p>
-<h2 id="regras-de-pontuacao-engine">Regras de pontuação (engine)</h2>
-<p>API: <code>computeTotals</code>, <code>classificacaoOrdenada</code>, <code>rankList</code>, <code>validateEventoMinimal</code>, <code>emptyDadosTemplate</code>, <code>avisosPodiumDuplicado</code>, <code>contarMedalhasPorIgreja</code>.</p>
-<p><strong>Desempate:</strong> total → contagem ouro → contagem prata → pontos CG Bíblia → Debate → CG Organização → nome (collation pt).</p>
-<h2 id="acessibilidade-e-ux">Acessibilidade e UX</h2>
-<p>Sem <code>alert</code>/<code>confirm</code>; skip-link; foco visível; modo apresentação com Esc; CSP em <code>index.html</code> e <code>docs/index.html</code>.</p>
-<h2 id="pwa-e-modo-offline">PWA e modo offline</h2>
-<p><code>manifest.webmanifest</code> + <code>sw.js</code> (cache app shell). Requer <code>http(s)://</code> para registrar o service worker.</p>
-<h2 id="deploy-github-pages">Deploy (GitHub Pages)</h2>
-<p>Repositório: <a href="https://github.com/lucasregio/Pontuacao-Conclave">github.com/lucasregio/Pontuacao-Conclave</a></p>
-<p>App publicado em: <a href="https://lucasregio.github.io/Pontuacao-Conclave/">lucasregio.github.io/Pontuacao-Conclave/</a></p>
-<p><code>pages.yml</code> publica após CI passar; exclui <code>referencia/</code>, <code>tests/</code>, <code>scripts/</code>, etc. Setup inicial (remote + push + Pages): <code>.\scripts\publicar-github.ps1</code> (requer <a href="https://cli.github.com/">gh</a> autenticado).</p>
-<h2 id="convencoes-de-contribuicao">Convenções de contribuição</h2>
-<p>pt-BR na UI; vanilla JS; antes de merge: <code>npm run lint &amp;&amp; npm test &amp;&amp; npm run format:check</code>. Ver <code>CONTRIBUTING.md</code> e <code>AGENTS.md</code>.</p>
-<h2 id="documentacao-adicional">Documentação adicional</h2>
-<p><strong>Usuário:</strong> <a href="docs/index.html">docs/index.html</a> — tutorial de 5 minutos, manual, FAQ, glossário, troubleshooting, atalhos, regulamento mapeado e guia visual em <code>docs/usuario/</code>.</p>
-<p><strong>Operacional:</strong> <code>docs/operacional/metrics-baseline.md</code>, <code>performance-budget.md</code>, <code>release-checklist.md</code>.</p>
+        <p>Detalhes em <code>schema/*.schema.json</code>.</p>
+        <h2 id="regras-de-pontuacao-engine">Regras de pontuação (engine)</h2>
+        <p>
+          API: <code>computeTotals</code>, <code>classificacaoOrdenada</code>,
+          <code>rankList</code>, <code>validateEventoMinimal</code>,
+          <code>emptyDadosTemplate</code>, <code>avisosPodiumDuplicado</code>,
+          <code>contarMedalhasPorIgreja</code>.
+        </p>
+        <p>
+          <strong>Desempate:</strong> total → contagem ouro → contagem prata → pontos CG Bíblia →
+          Debate → CG Organização → nome (collation pt).
+        </p>
+        <h2 id="acessibilidade-e-ux">Acessibilidade e UX</h2>
+        <p>
+          Sem <code>alert</code>/<code>confirm</code>; skip-link; foco visível; modo apresentação
+          com Esc; CSP em <code>index.html</code> e <code>docs/index.html</code>.
+        </p>
+        <h2 id="pwa-e-modo-offline">PWA e modo offline</h2>
+        <p>
+          <code>manifest.webmanifest</code> + <code>sw.js</code> (cache app shell). Requer
+          <code>http(s)://</code> para registrar o service worker.
+        </p>
+        <h2 id="deploy-github-pages">Deploy (GitHub Pages)</h2>
+        <p>
+          Repositório:
+          <a href="https://github.com/lucasregio/Pontuacao-Conclave"
+            >github.com/lucasregio/Pontuacao-Conclave</a
+          >
+        </p>
+        <p>
+          App publicado em:
+          <a href="https://lucasregio.github.io/Pontuacao-Conclave/"
+            >lucasregio.github.io/Pontuacao-Conclave/</a
+          >
+        </p>
+        <p>
+          <code>pages.yml</code> publica após CI passar; exclui <code>referencia/</code>,
+          <code>tests/</code>, <code>scripts/</code>, etc. Setup inicial (remote + push + Pages):
+          <code>.\scripts\publicar-github.ps1</code> (requer
+          <a href="https://cli.github.com/">gh</a> autenticado).
+        </p>
+        <h2 id="convencoes-de-contribuicao">Convenções de contribuição</h2>
+        <p>
+          pt-BR na UI; vanilla JS; antes de merge:
+          <code>npm run lint &amp;&amp; npm test &amp;&amp; npm run format:check</code>. Ver
+          <code>CONTRIBUTING.md</code> e <code>AGENTS.md</code>.
+        </p>
+        <h2 id="documentacao-adicional">Documentação adicional</h2>
+        <p>
+          <strong>Usuário:</strong> <a href="docs/index.html">docs/index.html</a> — tutorial de 5
+          minutos, manual, FAQ, glossário, troubleshooting, atalhos, regulamento mapeado e guia
+          visual em <code>docs/usuario/</code>.
+        </p>
+        <p>
+          <strong>Operacional:</strong> <code>docs/operacional/metrics-baseline.md</code>,
+          <code>performance-budget.md</code>, <code>release-checklist.md</code>.
+        </p>
       </article>
     </main>
     <footer class="docs-footer">
       <p>
-        <a href="../index.html">Abrir o app</a> ·
-        <a href="index.html">Índice</a> ·
+        <a href="../index.html">Abrir o app</a> · <a href="index.html">Índice</a> ·
         <a href="changelog.html">Changelog</a>
       </p>
     </footer>

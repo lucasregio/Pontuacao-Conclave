@@ -7,12 +7,12 @@ Este documento define os indicadores de acompanhamento para a evolucao da aplica
 Ambiente de referencia: Node 22, Windows 10 / notebook comum, evento
 `eventos/conclave-2026-1.projeto.exemplo.json`.
 
-| Metrica | Meta | Medido | Metodo |
-| --- | --- | --- | --- |
-| `computeTotals` (mediana 5 runs) | <= 150 ms | **< 5 ms** | `tests/perf.test.js` (gate 180 ms) |
-| TTI local (abrir index + exemplo) | <= 2,0 s | ~0,8 s | Manual, `npm run serve`, DevTools |
-| Classificacao apos editar participacao | <= 150 ms | imperceptivel | Manual, evento exemplo |
-| Lint + test + format em CI | 100% PRs | sim | `.github/workflows/ci.yml` |
+| Metrica                                | Meta      | Medido        | Metodo                             |
+| -------------------------------------- | --------- | ------------- | ---------------------------------- |
+| `computeTotals` (mediana 5 runs)       | <= 150 ms | **< 5 ms**    | `tests/perf.test.js` (gate 180 ms) |
+| TTI local (abrir index + exemplo)      | <= 2,0 s  | ~0,8 s        | Manual, `npm run serve`, DevTools  |
+| Classificacao apos editar participacao | <= 150 ms | imperceptivel | Manual, evento exemplo             |
+| Lint + test + format em CI             | 100% PRs  | sim           | `.github/workflows/ci.yml`         |
 
 Repetir esta tabela a cada release significativa e registrar delta abaixo.
 

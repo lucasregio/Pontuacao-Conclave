@@ -4,8 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Tutorial de 5 minutos — Pontuação Conclave</title>
-    <meta name="description" content="Tutorial de 5 minutos — documentação da Pontuação Conclave." />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+    <meta
+      name="description"
+      content="Tutorial de 5 minutos — documentação da Pontuação Conclave."
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    />
     <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0d4f12" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light" />
@@ -16,89 +22,271 @@
   <body class="docs-page">
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
     <header class="docs-header">
-      <p class="docs-eyebrow"><a href="../../index.html">← Voltar ao app</a> · <a href="../index.html">Documentação</a></p>
+      <p class="docs-eyebrow">
+        <a href="../../index.html">← Voltar ao app</a> · <a href="../index.html">Documentação</a>
+      </p>
       <h1>Tutorial de 5 minutos</h1>
     </header>
     <main id="conteudo" tabindex="-1" class="docs-main docs-prose">
       <article class="docs-article docs-tutorial">
-<p>No app, clique em <strong>Tutorial na tela</strong> (Início ou rodapé). O guia destaca cada área, troca de aba e deixa você preencher participação e pódio de verdade.</p>
-<p>Esta página é a versão ilustrada, para acompanhar com capturas.</p>
-<p>Abra o <a href="../../index.html">app</a> em outra aba se quiser só ler. Melhor treino: na aba <strong>Início</strong>, clique em <strong>Carregar exemplo</strong> (o tutorial guiado também faz isso se ainda não houver evento).</p>
-<blockquote class="docs-callout"><p>No dia do evento use um notebook. O celular serve para consultar, não para lançar a apuração.</p></blockquote>
-<h2 id="mapa-das-abas">Mapa das abas</h2>
-<ul>
-<li><strong>Início</strong> — resumo do evento e atalhos.</li>
-<li><strong>Configuração</strong> — igrejas, provas e pesos. No evento oficial já vem pronta.</li>
-<li><strong>Participação</strong> — pontos de cada igreja (inscrição, pontualidade, uniforme).</li>
-<li><strong>Pódio por prova</strong> — ouro, prata e bronze. É o que soma medalha no ranking.</li>
-<li><strong>Prova escrita</strong> — acertos individuais. Opcional; <strong>não altera</strong> a classificação.</li>
-<li><strong>Esgrima</strong> — sorteio de referências para o líder ditar. Opcional; <strong>não altera</strong> a classificação.</li>
-<li><strong>Classificação</strong> — ranking automático com desempate.</li>
-<li><strong>Relatórios</strong> — PDF de divulgação ou arquivo oficial.</li>
-</ul>
-<p>A coluna da esquerda (no celular, a barra de baixo) é o mapa inteiro do sistema. O seletor <strong>MR / ER</strong> só troca as cores. Os pontos vêm do evento carregado, não do tema.</p>
-<figure class="docs-shot"><img src="guia-visual/01-inicio.png" alt="Aba Início com o evento ativo, atalhos e as sete seções à esquerda" loading="lazy" /><figcaption>Aba Início com o evento ativo, atalhos e as sete seções à esquerda</figcaption></figure>
-<h2 id="minuto-1-abra-o-evento">Minuto 1 — Abra o evento</h2>
-<p>Três caminhos na aba <strong>Início</strong>:</p>
-<ol>
-<li><strong>Carregar exemplo</strong> — treino imediato com o Conclave ER 2026/2.</li>
-<li><strong>Carregar projeto</strong> — retoma um arquivo <code>.projeto.json</code> (configuração + dados).</li>
-<li><strong>Novo evento</strong> — só se for montar do zero. Aí o minuto 2 vira cadastro.</li>
-</ol>
-<p>Confira o nome no topo. O selo <strong>Salvo localmente</strong> indica que este navegador já está guardando sozinho.</p>
-<figure class="docs-shot"><img src="guia-visual/02-menu-mais.png" alt="Menu Mais, no canto superior direito, com carregar e exportar" loading="lazy" /><figcaption>Menu Mais, no canto superior direito, com carregar e exportar</figcaption></figure>
-<p>O menu <strong>Mais</strong> concentra arquivo: carregar, exportar, eventos salvos e limpar dados. <strong>Modo apresentação</strong> e <strong>Regulamento</strong> ficam na barra de cima, fora do menu.</p>
-<blockquote class="docs-callout"><p>Exporte <strong>projeto</strong> (não só evento). O projeto leva participação e pódio; o evento leva só a configuração vazia.</p></blockquote>
-<h2 id="minuto-2-confira-igrejas-e-provas">Minuto 2 — Confira igrejas e provas</h2>
-<p>Se o exemplo ou o evento oficial já está aberto, <strong>não recadastre nada</strong>. Abra <strong>Configuração</strong>, confira a lista de igrejas e a lista de provas, e siga.</p>
-<figure class="docs-shot"><img src="guia-visual/05-config-igrejas.png" alt="Lista de igrejas na Configuração" loading="lazy" /><figcaption>Lista de igrejas na Configuração</figcaption></figure>
-<p>Só mexa aqui se faltar igreja, se o nome estiver errado ou se você criou um evento novo. Dá para colar vários nomes de uma vez (um por linha).</p>
-<figure class="docs-shot"><img src="guia-visual/08-config-provas.png" alt="Lista de provas com tipo oral ou escrita" loading="lazy" /><figcaption>Lista de provas com tipo oral ou escrita</figcaption></figure>
-<p>Cada prova tem categoria (Junior, Adolescente, Juvenil) e tipo. Tipo <strong>escrita</strong> alimenta a aba Prova escrita; tipo <strong>oral</strong> entra só no pódio. No ER, <strong>Evangelhos, Organização e Montagem bíblica</strong> são escritas; Esgrima e Debate são orais.</p>
-<h2 id="minuto-3-lance-a-participacao">Minuto 3 — Lance a Participação</h2>
-<p>Uma linha por igreja. O total à direita atualiza na hora.</p>
-<figure class="docs-shot"><img src="guia-visual/09-participacao.png" alt="Aba Participação com uma linha por igreja" loading="lazy" /><figcaption>Aba Participação com uma linha por igreja</figcaption></figure>
-<p>No ER 2026/2 o check-in começa com inscrição e pontualidade <strong>desmarcadas</strong>. Marque cada igreja na chegada; quem não vier fica em branco.</p>
-<p>O que cada coluna faz no ER:</p>
-<ul>
-<li><strong>Inscr.</strong> — inscrição no prazo.</li>
-<li><strong>Pont.</strong> — chegou no horário do evento.</li>
-<li><strong>Presentes / Camisa / Bíblia</strong> — uniforme e Bíblia só pontuam se o número for <strong>igual</strong> aos presentes. Não some visitantes nesses campos.</li>
-<li><strong>Grito</strong> — grito de guerra.</li>
-<li><strong>Mau comp.</strong> — penalidade daquela igreja.</li>
-<li><strong>Extra</strong> — CER no pré-conclave e pastor presente. Penalidade de conservação do templo, se houver, entra subtraindo de <strong>todas</strong> as igrejas.</li>
-</ul>
-<p>Se inscrição estiver desmarcada <strong>e</strong> Presentes = 0, os pontos de participação (inscrição, pontualidade, uniforme, bíblia, grito) ficam zerados. Extra (CER, pastor), medalhas e mau comportamento continuam valendo.</p>
-<h2 id="minuto-4-lance-o-podio">Minuto 4 — Lance o Pódio</h2>
-<p>Para cada prova, escolha a igreja do ouro, da prata e do bronze. A lista de igrejas aparece sozinha. O nome do competidor é opcional.</p>
-<figure class="docs-shot"><img src="guia-visual/10-podio.png" alt="Aba Pódio por prova, com ouro, prata e bronze" loading="lazy" /><figcaption>Aba Pódio por prova, com ouro, prata e bronze</figcaption></figure>
-<p>Use os filtros no topo (faixa etária, tipo, busca) quando a lista crescer. O selo <strong>Ok</strong> na categoria indica que os três lugares daquela prova estão preenchidos.</p>
-<p>A medalha lançada aqui é o que entra na classificação geral.</p>
-<blockquote class="docs-callout"><p>A aba <strong>Prova escrita</strong> registra acertos para gráfico e CSV. Ela <strong>não</strong> substitui o pódio. Sem ouro/prata/bronze no Pódio, a igreja não soma medalha. No ER, Evangelhos e Organização: medalha só com <strong>≥12 acertos em 20</strong> (60%). Montagem bíblica: <strong>mais de 10 erros desclassifica</strong>. O app avisa no topo se o pódio de Evangelhos/Organização estiver abaixo de 12/20.</p></blockquote>
-<h2 id="minuto-5-ranking-backup-e-palco">Minuto 5 — Ranking, backup e palco</h2>
-<p>A classificação soma participação + punições + medalhas + extra e desempatam sozinhas (ouro → prata → provas-chave → nome).</p>
-<figure class="docs-shot"><img src="guia-visual/12-classificacao.png" alt="Ranking geral na aba Classificação" loading="lazy" /><figcaption>Ranking geral na aba Classificação</figcaption></figure>
-<p><strong>Exportar CSV</strong> gera planilha. Antes de projetar ou encerrar, faça o backup de verdade: <strong>Mais → Exportar projeto</strong> (pen-drive e nuvem). Só o <code>.projeto.json</code> abre em outro computador.</p>
-<figure class="docs-shot"><img src="guia-visual/13-relatorios.png" alt="Aba Relatórios, para gerar o PDF" loading="lazy" /><figcaption>Aba Relatórios, para gerar o PDF</figcaption></figure>
-<p>Em <strong>Relatórios</strong>, gere o <strong>Resumo</strong> (divulgação) ou o <strong>Oficial completo</strong> (arquivo). Use a impressão do navegador e escolha Salvar como PDF.</p>
-<figure class="docs-shot"><img src="guia-visual/14-apresentacao.png" alt="Modo apresentação em tela cheia" loading="lazy" /><figcaption>Modo apresentação em tela cheia</figcaption></figure>
-<p><strong>Modo apresentação</strong> (barra de cima) é o projetor: revelação do 5.º ao 1.º lugar. Clique ou use as setas. <strong>Esc</strong> sai. A classificação fica congelada até a cerimônia terminar.</p>
-<h2 id="folha-de-cola">Folha de cola</h2>
-<ul>
-<li><strong>Tema MR/ER</strong> troca cor, não peso.</li>
-<li><strong>Pódio</strong> pontua. <strong>Prova escrita</strong> só documenta acertos. <strong>Esgrima</strong> só sorteia referências para o líder ditar.</li>
-<li>Backup = <strong>Exportar projeto</strong>. Evento sozinho não leva o lançamento.</li>
-<li>Os dados ficam neste navegador até você exportar. Trocar de Chrome para Firefox, ou abrir anônimo, parece “perda” de dados.</li>
-<li>Prefira notebook no dia do evento.</li>
-</ul>
-<p>Pronto. No dia, o fluxo cabe em uma frase: <strong>Participação → Pódio → Classificação → Exportar projeto</strong>.</p>
-<p>Quer o tour de todas as telas? Vá ao <a href="guia-visual.html">guia visual</a>. Detalhes de cada campo estão no <a href="manual-uso.html">manual de uso</a>.</p>
+        <p>
+          No app, clique em <strong>Tutorial na tela</strong> (Início ou rodapé). O guia destaca
+          cada área, troca de aba e deixa você preencher participação e pódio de verdade.
+        </p>
+        <p>Esta página é a versão ilustrada, para acompanhar com capturas.</p>
+        <p>
+          Abra o <a href="../../index.html">app</a> em outra aba se quiser só ler. Melhor treino: na
+          aba <strong>Início</strong>, clique em <strong>Carregar exemplo</strong> (o tutorial
+          guiado também faz isso se ainda não houver evento).
+        </p>
+        <blockquote class="docs-callout">
+          <p>
+            No dia do evento use um notebook. O celular serve para consultar, não para lançar a
+            apuração.
+          </p>
+        </blockquote>
+        <h2 id="mapa-das-abas">Mapa das abas</h2>
+        <ul>
+          <li><strong>Início</strong> — resumo do evento e atalhos.</li>
+          <li>
+            <strong>Configuração</strong> — igrejas, provas e pesos. No evento oficial já vem
+            pronta.
+          </li>
+          <li>
+            <strong>Participação</strong> — pontos de cada igreja (inscrição, pontualidade,
+            uniforme).
+          </li>
+          <li>
+            <strong>Pódio por prova</strong> — ouro, prata e bronze. É o que soma medalha no
+            ranking.
+          </li>
+          <li>
+            <strong>Prova escrita</strong> — acertos individuais. Opcional;
+            <strong>não altera</strong> a classificação.
+          </li>
+          <li>
+            <strong>Esgrima</strong> — sorteio de referências para o líder ditar. Opcional;
+            <strong>não altera</strong> a classificação.
+          </li>
+          <li><strong>Classificação</strong> — ranking automático com desempate.</li>
+          <li><strong>Relatórios</strong> — PDF de divulgação ou arquivo oficial.</li>
+        </ul>
+        <p>
+          A coluna da esquerda (no celular, a barra de baixo) é o mapa inteiro do sistema. O seletor
+          <strong>MR / ER</strong> só troca as cores. Os pontos vêm do evento carregado, não do
+          tema.
+        </p>
+        <figure class="docs-shot">
+          <img
+            src="guia-visual/01-inicio.png"
+            alt="Aba Início com o evento ativo, atalhos e as sete seções à esquerda"
+            loading="lazy"
+          />
+          <figcaption>
+            Aba Início com o evento ativo, atalhos e as sete seções à esquerda
+          </figcaption>
+        </figure>
+        <h2 id="minuto-1-abra-o-evento">Minuto 1 — Abra o evento</h2>
+        <p>Três caminhos na aba <strong>Início</strong>:</p>
+        <ol>
+          <li><strong>Carregar exemplo</strong> — treino imediato com o Conclave ER 2026/2.</li>
+          <li>
+            <strong>Carregar projeto</strong> — retoma um arquivo
+            <code>.projeto.json</code> (configuração + dados).
+          </li>
+          <li>
+            <strong>Novo evento</strong> — só se for montar do zero. Aí o minuto 2 vira cadastro.
+          </li>
+        </ol>
+        <p>
+          Confira o nome no topo. O selo <strong>Salvo localmente</strong> indica que este navegador
+          já está guardando sozinho.
+        </p>
+        <figure class="docs-shot">
+          <img
+            src="guia-visual/02-menu-mais.png"
+            alt="Menu Mais, no canto superior direito, com carregar e exportar"
+            loading="lazy"
+          />
+          <figcaption>Menu Mais, no canto superior direito, com carregar e exportar</figcaption>
+        </figure>
+        <p>
+          O menu <strong>Mais</strong> concentra arquivo: carregar, exportar, eventos salvos e
+          limpar dados. <strong>Modo apresentação</strong> e <strong>Regulamento</strong> ficam na
+          barra de cima, fora do menu.
+        </p>
+        <blockquote class="docs-callout">
+          <p>
+            Exporte <strong>projeto</strong> (não só evento). O projeto leva participação e pódio; o
+            evento leva só a configuração vazia.
+          </p>
+        </blockquote>
+        <h2 id="minuto-2-confira-igrejas-e-provas">Minuto 2 — Confira igrejas e provas</h2>
+        <p>
+          Se o exemplo ou o evento oficial já está aberto, <strong>não recadastre nada</strong>.
+          Abra <strong>Configuração</strong>, confira a lista de igrejas e a lista de provas, e
+          siga.
+        </p>
+        <figure class="docs-shot">
+          <img
+            src="guia-visual/05-config-igrejas.png"
+            alt="Lista de igrejas na Configuração"
+            loading="lazy"
+          />
+          <figcaption>Lista de igrejas na Configuração</figcaption>
+        </figure>
+        <p>
+          Só mexa aqui se faltar igreja, se o nome estiver errado ou se você criou um evento novo.
+          Dá para colar vários nomes de uma vez (um por linha).
+        </p>
+        <figure class="docs-shot">
+          <img
+            src="guia-visual/08-config-provas.png"
+            alt="Lista de provas com tipo oral ou escrita"
+            loading="lazy"
+          />
+          <figcaption>Lista de provas com tipo oral ou escrita</figcaption>
+        </figure>
+        <p>
+          Cada prova tem categoria (Junior, Adolescente, Juvenil) e tipo. Tipo
+          <strong>escrita</strong> alimenta a aba Prova escrita; tipo <strong>oral</strong> entra só
+          no pódio. No ER, <strong>Evangelhos, Organização e Montagem bíblica</strong> são escritas;
+          Esgrima e Debate são orais.
+        </p>
+        <h2 id="minuto-3-lance-a-participacao">Minuto 3 — Lance a Participação</h2>
+        <p>Uma linha por igreja. O total à direita atualiza na hora.</p>
+        <figure class="docs-shot">
+          <img
+            src="guia-visual/09-participacao.png"
+            alt="Aba Participação com uma linha por igreja"
+            loading="lazy"
+          />
+          <figcaption>Aba Participação com uma linha por igreja</figcaption>
+        </figure>
+        <p>
+          No ER 2026/2 o check-in começa com inscrição e pontualidade <strong>desmarcadas</strong>.
+          Marque cada igreja na chegada; quem não vier fica em branco.
+        </p>
+        <p>O que cada coluna faz no ER:</p>
+        <ul>
+          <li><strong>Inscr.</strong> — inscrição no prazo.</li>
+          <li><strong>Pont.</strong> — chegou no horário do evento.</li>
+          <li>
+            <strong>Presentes / Camisa / Bíblia</strong> — uniforme e Bíblia só pontuam se o número
+            for <strong>igual</strong> aos presentes. Não some visitantes nesses campos.
+          </li>
+          <li><strong>Grito</strong> — grito de guerra.</li>
+          <li><strong>Mau comp.</strong> — penalidade daquela igreja.</li>
+          <li>
+            <strong>Extra</strong> — CER no pré-conclave e pastor presente. Penalidade de
+            conservação do templo, se houver, entra subtraindo de <strong>todas</strong> as igrejas.
+          </li>
+        </ul>
+        <p>
+          Se inscrição estiver desmarcada <strong>e</strong> Presentes = 0, os pontos de
+          participação (inscrição, pontualidade, uniforme, bíblia, grito) ficam zerados. Extra (CER,
+          pastor), medalhas e mau comportamento continuam valendo.
+        </p>
+        <h2 id="minuto-4-lance-o-podio">Minuto 4 — Lance o Pódio</h2>
+        <p>
+          Para cada prova, escolha a igreja do ouro, da prata e do bronze. A lista de igrejas
+          aparece sozinha. O nome do competidor é opcional.
+        </p>
+        <figure class="docs-shot">
+          <img
+            src="guia-visual/10-podio.png"
+            alt="Aba Pódio por prova, com ouro, prata e bronze"
+            loading="lazy"
+          />
+          <figcaption>Aba Pódio por prova, com ouro, prata e bronze</figcaption>
+        </figure>
+        <p>
+          Use os filtros no topo (faixa etária, tipo, busca) quando a lista crescer. O selo
+          <strong>Ok</strong> na categoria indica que os três lugares daquela prova estão
+          preenchidos.
+        </p>
+        <p>A medalha lançada aqui é o que entra na classificação geral.</p>
+        <blockquote class="docs-callout">
+          <p>
+            A aba <strong>Prova escrita</strong> registra acertos para gráfico e CSV. Ela
+            <strong>não</strong> substitui o pódio. Sem ouro/prata/bronze no Pódio, a igreja não
+            soma medalha. No ER, Evangelhos e Organização: medalha só com
+            <strong>≥12 acertos em 20</strong> (60%). Montagem bíblica:
+            <strong>mais de 10 erros desclassifica</strong>. O app avisa no topo se o pódio de
+            Evangelhos/Organização estiver abaixo de 12/20.
+          </p>
+        </blockquote>
+        <h2 id="minuto-5-ranking-backup-e-palco">Minuto 5 — Ranking, backup e palco</h2>
+        <p>
+          A classificação soma participação + punições + medalhas + extra e desempatam sozinhas
+          (ouro → prata → provas-chave → nome).
+        </p>
+        <figure class="docs-shot">
+          <img
+            src="guia-visual/12-classificacao.png"
+            alt="Ranking geral na aba Classificação"
+            loading="lazy"
+          />
+          <figcaption>Ranking geral na aba Classificação</figcaption>
+        </figure>
+        <p>
+          <strong>Exportar CSV</strong> gera planilha. Antes de projetar ou encerrar, faça o backup
+          de verdade: <strong>Mais → Exportar projeto</strong> (pen-drive e nuvem). Só o
+          <code>.projeto.json</code> abre em outro computador.
+        </p>
+        <figure class="docs-shot">
+          <img
+            src="guia-visual/13-relatorios.png"
+            alt="Aba Relatórios, para gerar o PDF"
+            loading="lazy"
+          />
+          <figcaption>Aba Relatórios, para gerar o PDF</figcaption>
+        </figure>
+        <p>
+          Em <strong>Relatórios</strong>, gere o <strong>Resumo</strong> (divulgação) ou o
+          <strong>Oficial completo</strong> (arquivo). Use a impressão do navegador e escolha Salvar
+          como PDF.
+        </p>
+        <figure class="docs-shot">
+          <img
+            src="guia-visual/14-apresentacao.png"
+            alt="Modo apresentação em tela cheia"
+            loading="lazy"
+          />
+          <figcaption>Modo apresentação em tela cheia</figcaption>
+        </figure>
+        <p>
+          <strong>Modo apresentação</strong> (barra de cima) é o projetor: revelação do 5.º ao 1.º
+          lugar. Clique ou use as setas. <strong>Esc</strong> sai. A classificação fica congelada
+          até a cerimônia terminar.
+        </p>
+        <h2 id="folha-de-cola">Folha de cola</h2>
+        <ul>
+          <li><strong>Tema MR/ER</strong> troca cor, não peso.</li>
+          <li>
+            <strong>Pódio</strong> pontua. <strong>Prova escrita</strong> só documenta acertos.
+            <strong>Esgrima</strong> só sorteia referências para o líder ditar.
+          </li>
+          <li>Backup = <strong>Exportar projeto</strong>. Evento sozinho não leva o lançamento.</li>
+          <li>
+            Os dados ficam neste navegador até você exportar. Trocar de Chrome para Firefox, ou
+            abrir anônimo, parece “perda” de dados.
+          </li>
+          <li>Prefira notebook no dia do evento.</li>
+        </ul>
+        <p>
+          Pronto. No dia, o fluxo cabe em uma frase:
+          <strong>Participação → Pódio → Classificação → Exportar projeto</strong>.
+        </p>
+        <p>
+          Quer o tour de todas as telas? Vá ao <a href="guia-visual.html">guia visual</a>. Detalhes
+          de cada campo estão no <a href="manual-uso.html">manual de uso</a>.
+        </p>
       </article>
     </main>
     <footer class="docs-footer">
       <p>
-        <a href="../../index.html">Abrir o app</a> ·
-        <a href="../index.html">Índice</a> ·
+        <a href="../../index.html">Abrir o app</a> · <a href="../index.html">Índice</a> ·
         <a href="../changelog.html">Changelog</a>
       </p>
     </footer>

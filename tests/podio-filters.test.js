@@ -103,11 +103,7 @@ test("filtro por status", () => {
 });
 
 test("filtro por categoria e busca combinam", () => {
-  var out = PF.filterProvas(
-    provas,
-    { categoriaId: "junior", q: "esgrima" },
-    ctx
-  );
+  var out = PF.filterProvas(provas, { categoriaId: "junior", q: "esgrima" }, ctx);
   assert.equal(out.length, 1);
   assert.equal(out[0].id, "p1");
 });
