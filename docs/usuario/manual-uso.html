@@ -175,7 +175,10 @@
         </ol>
         <p>
           Os dados também ficam guardados automaticamente no <code>localStorage</code> deste
-          navegador, mas só o <code>.projeto.json</code> é portátil entre máquinas.
+          navegador, mas só o <code>.projeto.json</code> é portátil entre máquinas. Para não
+          depender de lembrar de exportar, ative
+          <strong>Mais → Backup e histórico → Escolher arquivo de backup…</strong> (veja
+          <a href="#backup-e-portabilidade">Backup e portabilidade</a>).
         </p>
         <h2 id="carregar-um-evento-ou-projeto-existente">
           Carregar um evento ou projeto existente
@@ -544,10 +547,31 @@
         </p>
         <h2 id="backup-e-portabilidade">Backup e portabilidade</h2>
         <p>
-          O Pontuação Conclave oferece dois mecanismos complementares de proteção contra perda de
-          dados:
+          O Pontuação Conclave oferece mecanismos complementares de proteção contra perda de dados:
         </p>
         <ul>
+          <li>
+            <strong>Backup e histórico</strong> (menu Mais): reúne as proteções automáticas.
+            <ul>
+              <li>
+                <strong>Backup automático em arquivo</strong> (Chrome ou Edge no computador): clique
+                em <strong>Escolher arquivo de backup…</strong> e salve o <code>.json</code> onde
+                quiser. A partir daí, cada alteração é gravada nesse arquivo. Salve-o numa pasta do
+                Google Drive, OneDrive ou Dropbox para ter uma cópia na nuvem. O selo da topbar
+                passa a mostrar <strong>Salvo localmente + arquivo</strong>. Ao reabrir o navegador
+                ele pode pedir autorização de novo: o selo mostra <strong>backup pausado</strong> e
+                o modal oferece <strong>Reautorizar</strong>. Para recuperar, use
+                <strong>Carregar projeto</strong> com esse arquivo.
+              </li>
+              <li>
+                <strong>Histórico de versões</strong>: o navegador guarda uma cópia a cada 3 minutos
+                com alterações e sempre antes de importar, trocar de evento, limpar dados ou
+                restaurar uma versão (as 60 mais recentes por evento). Cada versão pode ser
+                <strong>restaurada</strong> ou <strong>baixada</strong>. Restaurar guarda o estado
+                atual antes, então dá para desfazer.
+              </li>
+            </ul>
+          </li>
           <li>
             <strong>Exportar projeto</strong> (toolbar): gera um <code>.projeto.json</code> com
             <strong>tudo</strong> (configuração + Participação + Pódio + meta). É o backup canônico
@@ -564,8 +588,9 @@
           </li>
         </ul>
         <p>
-          Use os dois juntos: o <code>localStorage</code> te salva da queda do navegador e o
-          <code>.projeto.json</code> te salva da troca de máquina ou da limpeza de cache.
+          Use todos juntos: o <code>localStorage</code> e o histórico te salvam da queda do
+          navegador e de um clique errado; o arquivo de backup e o <code>.projeto.json</code> te
+          salvam da troca de máquina ou da limpeza de dados do navegador.
         </p>
         <h2 id="modo-apresentacao">Modo apresentacao</h2>
         <ul>

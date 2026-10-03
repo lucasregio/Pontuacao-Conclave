@@ -607,6 +607,12 @@ body {
   display: none;
 }
 
+.topbar .status-pill.status-pill--alerta {
+  background: var(--warn-bg);
+  color: var(--warn-on);
+  border-color: var(--warn-border);
+}
+
 .topbar-hint {
   grid-column: 1 / -1;
   margin: 0;
@@ -3963,6 +3969,52 @@ body.tour-active .bottom-nav {
   flex-wrap: wrap;
   gap: 0.4rem;
   align-items: center;
+}
+
+.backup-modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  margin: 0 0 0.85rem;
+  padding-right: 0.25rem;
+}
+
+.backup-section {
+  margin: 0 0 1rem;
+}
+
+.backup-section h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  color: var(--theme-text-main);
+}
+
+.backup-section .eventos-modal-actions {
+  margin: 0 0 0.6rem;
+}
+
+.backup-status {
+  margin: 0 0 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.backup-status--ok {
+  background: var(--success-bg);
+  color: var(--success-on);
+  border-color: var(--success-border);
+}
+
+.backup-status--alerta {
+  background: var(--warn-bg);
+  color: var(--warn-on);
+  border-color: var(--warn-border);
+}
+
+.backup-historico-list {
+  overflow-y: visible;
+  margin-top: 0.6rem;
 }
 
 @media (max-width: 480px) {

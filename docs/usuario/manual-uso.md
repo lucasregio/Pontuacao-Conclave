@@ -85,7 +85,9 @@ Siga o [tutorial de 5 minutos](tutorial-5min.md), com capturas de cada tela. Res
    configuração. **Exportar CSV** fica na aba Classificação.
 
 Os dados também ficam guardados automaticamente no `localStorage` deste navegador, mas
-só o `.projeto.json` é portátil entre máquinas.
+só o `.projeto.json` é portátil entre máquinas. Para não depender de lembrar de exportar,
+ative **Mais → Backup e histórico → Escolher arquivo de backup…** (veja
+[Backup e portabilidade](#backup-e-portabilidade)).
 
 ## Carregar um evento ou projeto existente
 
@@ -326,9 +328,21 @@ gerar um arquivo vazio.
 
 ## Backup e portabilidade
 
-O Pontuação Conclave oferece dois mecanismos complementares de proteção contra perda de
+O Pontuação Conclave oferece mecanismos complementares de proteção contra perda de
 dados:
 
+- **Backup e histórico** (menu Mais): reúne as proteções automáticas.
+  - **Backup automático em arquivo** (Chrome ou Edge no computador): clique em
+    **Escolher arquivo de backup…** e salve o `.json` onde quiser. A partir daí, cada
+    alteração é gravada nesse arquivo. Salve-o numa pasta do Google Drive, OneDrive ou
+    Dropbox para ter uma cópia na nuvem. O selo da topbar passa a mostrar **Salvo
+    localmente + arquivo**. Ao reabrir o navegador ele pode pedir autorização de novo:
+    o selo mostra **backup pausado** e o modal oferece **Reautorizar**. Para recuperar,
+    use **Carregar projeto** com esse arquivo.
+  - **Histórico de versões**: o navegador guarda uma cópia a cada 3 minutos com
+    alterações e sempre antes de importar, trocar de evento, limpar dados ou restaurar
+    uma versão (as 60 mais recentes por evento). Cada versão pode ser **restaurada** ou
+    **baixada**. Restaurar guarda o estado atual antes, então dá para desfazer.
 - **Exportar projeto** (toolbar): gera um `.projeto.json` com **tudo** (configuração +
   Participação + Pódio + meta). É o backup canônico — guarde em pendrive, e-mail,
   nuvem ou compartilhe com outro juiz. Round-trip seguro: importar de volta com
@@ -338,8 +352,9 @@ dados:
   cada projeto individualmente (com modal-confirm acessível). Útil para alternar entre
   vários conclaves sem precisar abrir cada arquivo manualmente.
 
-Use os dois juntos: o `localStorage` te salva da queda do navegador e o
-`.projeto.json` te salva da troca de máquina ou da limpeza de cache.
+Use todos juntos: o `localStorage` e o histórico te salvam da queda do navegador e de
+um clique errado; o arquivo de backup e o `.projeto.json` te salvam da troca de máquina
+ou da limpeza de dados do navegador.
 
 ## Modo apresentacao
 
