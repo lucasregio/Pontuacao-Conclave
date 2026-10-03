@@ -9,6 +9,7 @@
   var EC = window.ConclaveEscritaCharts;
   var SE = window.ConclaveSorteioEsgrima;
   var BE = window.ConclaveBibliaEstrutura;
+  var BK = window.ConclaveBackup;
   var state = {
     evento: null,
     dados: null,
@@ -64,6 +65,21 @@
     tourActive: false,
     tourStep: 0,
     tourLastFocus: null,
+    /** Backup automático (histórico em IndexedDB + arquivo escolhido). */
+    backup: {
+      slug: null,
+      pendente: null,
+      timer: null,
+      fila: null,
+      ultimoSnapshot: null,
+      arquivoHandle: null,
+      /** inativo | ativo | permissao | erro */
+      arquivoStatus: "inativo",
+      arquivoUltimo: null,
+      arquivoAvisado: false,
+      persistenciaPedida: false,
+      modalLastFocus: null,
+    },
   };
 
   var presentationCeremonyClickHandler = null;
@@ -232,11 +248,12 @@
     try {
       var key = storageKey(state.evento.meta.slug);
       var projeto = { evento: state.evento, dados: state.dados };
-      localStorage.setItem(key, JSON.stringify(projeto));
+      var texto = JSON.stringify(projeto);
+      localStorage.setItem(key, texto);
       state.lastSaved = new Date();
       state.persistFailed = false;
-      var pill = $("#status-pill");
-      if (pill) pill.textContent = "Salvo localmente";
+      renderStatusPill();
+      agendarBackup(state.evento.meta.slug, texto);
       return true;
     } catch (err) {
       console.warn(err);
@@ -249,10 +266,278 @@
           "warn"
         );
       }
-      var pill = $("#status-pill");
-      if (pill) pill.textContent = "Salvamento local indisponível";
+      renderStatusPill();
       return false;
     }
+  }
+
+  function formatHoraCurta(d) {
+    if (!(d instanceof Date) || isNaN(d.getTime())) return "";
+    return (d.getHours() < 10 ? "0" : "") + d.getHours() + ":" + ("0" + d.getMinutes()).slice(-2);
+  }
+
+  function formatDataHora(d) {
+    if (!(d instanceof Date) || isNaN(d.getTime())) return "";
+    return (
+      ("0" + d.getDate()).slice(-2) +
+      "/" +
+      ("0" + (d.getMonth() + 1)).slice(-2) +
+      "/" +
+      d.getFullYear() +
+      " " +
+      formatHoraCurta(d)
+    );
+  }
+
+  function renderStatusPill() {
+    var pill = $("#status-pill");
+    if (!pill) return;
+    var bk = state.backup;
+    var alerta = false;
+    var texto = "";
+    var detalhes = [];
+    if (state.persistFailed) {
+      texto = "Salvamento local indisponível";
+      alerta = true;
+    } else if (state.lastSaved) {
+      texto = "Salvo localmente";
+      detalhes.push("Navegador: " + formatHoraCurta(state.lastSaved));
+    }
+    if (bk.arquivoStatus === "ativo" && bk.arquivoUltimo) {
+      if (!state.persistFailed) texto = "Salvo localmente + arquivo";
+      detalhes.push("Arquivo de backup: " + formatHoraCurta(bk.arquivoUltimo));
+    } else if (bk.arquivoStatus === "permissao") {
+      if (texto) texto += " · backup pausado";
+      detalhes.push("Backup em arquivo pausado — reautorize em Mais → Backup e histórico.");
+      alerta = true;
+    } else if (bk.arquivoStatus === "erro") {
+      if (texto) texto += " · falha no backup";
+      detalhes.push("Falha ao gravar o arquivo de backup — veja Mais → Backup e histórico.");
+      alerta = true;
+    }
+    pill.textContent = texto;
+    pill.title = detalhes.join("\n");
+    pill.classList.toggle("status-pill--alerta", alerta);
+  }
+
+  // ---------------------------------------------------------------------
+  // Backup automático: histórico de versões (IndexedDB) + arquivo .json
+  // ---------------------------------------------------------------------
+
+  /** Agenda histórico/arquivo para logo depois do save local (agrupa rajadas). */
+  function agendarBackup(slug, texto) {
+    if (!BK) return;
+    var bk = state.backup;
+    bk.pendente = { slug: String(slug), texto: texto };
+    clearTimeout(bk.timer);
+    bk.timer = setTimeout(executarBackupPendente, 1500);
+    if (!bk.persistenciaPedida) {
+      bk.persistenciaPedida = true;
+      BK.pedirArmazenamentoPersistente();
+    }
+  }
+
+  /** Serializa as operações de backup para nunca haver duas escritas simultâneas. */
+  function enfileirarBackup(fn) {
+    var bk = state.backup;
+    var anterior = bk.fila || Promise.resolve();
+    bk.fila = anterior.then(fn, fn).catch(function (err) {
+      console.warn("Backup:", err);
+    });
+    return bk.fila;
+  }
+
+  function executarBackupPendente() {
+    var bk = state.backup;
+    clearTimeout(bk.timer);
+    bk.timer = null;
+    var p = bk.pendente;
+    bk.pendente = null;
+    if (!p) return Promise.resolve();
+    var handle =
+      bk.slug === p.slug && bk.arquivoStatus === "ativo" && bk.arquivoHandle
+        ? bk.arquivoHandle
+        : null;
+    return enfileirarBackup(function () {
+      return Promise.all([
+        snapshotAutomatico(p.slug, p.texto),
+        gravarArquivoBackup(handle, p.texto),
+      ]);
+    });
+  }
+
+  function snapshotAutomatico(slug, texto) {
+    if (!BK.suportaHistorico()) return Promise.resolve();
+    var bk = state.backup;
+    var ultimo = bk.slug === slug ? bk.ultimoSnapshot : null;
+    var hash = BK.hashTexto(texto);
+    if (ultimo && !BK.deveCriarSnapshotAutomatico(ultimo, Date.now(), hash)) {
+      return Promise.resolve();
+    }
+    return BK.salvarSnapshot(slug, texto, "Automático").then(function (meta) {
+      if (bk.slug === slug) bk.ultimoSnapshot = meta;
+    });
+  }
+
+  function gravarArquivoBackup(handle, texto) {
+    var bk = state.backup;
+    if (!handle) return Promise.resolve();
+    return BK.escreverArquivo(handle, texto).then(
+      function () {
+        if (bk.arquivoHandle !== handle) return;
+        bk.arquivoUltimo = new Date();
+        bk.arquivoAvisado = false;
+        renderStatusPill();
+        refreshBackupModalSeAberto();
+      },
+      function (err) {
+        console.warn("Backup em arquivo:", err);
+        return BK.verificarPermissao(handle, false).then(function (ok) {
+          if (bk.arquivoHandle !== handle) return;
+          bk.arquivoStatus = ok ? "erro" : "permissao";
+          renderStatusPill();
+          refreshBackupModalSeAberto();
+          if (!bk.arquivoAvisado) {
+            bk.arquivoAvisado = true;
+            showFeedback(
+              ok
+                ? "Não foi possível gravar o arquivo de backup. Os dados continuam salvos no navegador — confira em Mais → Backup e histórico."
+                : "O backup em arquivo foi pausado pelo navegador. Reautorize em Mais → Backup e histórico.",
+              "warn"
+            );
+          }
+        });
+      }
+    );
+  }
+
+  /**
+   * Ponto de restauração imediato do estado atual (antes de ações que
+   * substituem dados). Serializa agora; a gravação no IndexedDB é assíncrona.
+   */
+  function pontoRestauracao(motivo) {
+    if (!BK || !BK.suportaHistorico() || !state.evento || !state.dados) return Promise.resolve();
+    var slug = String(state.evento.meta.slug);
+    var texto = JSON.stringify({ evento: state.evento, dados: state.dados });
+    return enfileirarBackup(function () {
+      return BK.salvarSnapshot(slug, texto, motivo).then(function (meta) {
+        if (state.backup.slug === slug) state.backup.ultimoSnapshot = meta;
+        return meta;
+      });
+    });
+  }
+
+  /** Ao abrir/trocar de evento: carrega o arquivo memorizado e o último snapshot. */
+  function carregarBackupDoEvento(slug) {
+    if (!BK) return;
+    var bk = state.backup;
+    slug = String(slug);
+    if (bk.slug === slug) return;
+    if (bk.pendente && bk.pendente.slug === bk.slug) executarBackupPendente();
+    bk.slug = slug;
+    bk.ultimoSnapshot = null;
+    bk.arquivoHandle = null;
+    bk.arquivoStatus = "inativo";
+    bk.arquivoUltimo = null;
+    bk.arquivoAvisado = false;
+    renderStatusPill();
+    if (!BK.suportaHistorico()) return;
+    BK.ultimoSnapshot(slug)
+      .then(function (meta) {
+        if (bk.slug === slug && !bk.ultimoSnapshot) bk.ultimoSnapshot = meta;
+      })
+      .catch(function (err) {
+        console.warn("Histórico:", err);
+      });
+    BK.obterArquivo(slug)
+      .then(function (handle) {
+        if (bk.slug !== slug || !handle) return;
+        bk.arquivoHandle = handle;
+        return BK.verificarPermissao(handle, false).then(function (ok) {
+          if (bk.slug !== slug) return;
+          bk.arquivoStatus = ok ? "ativo" : "permissao";
+          renderStatusPill();
+          refreshBackupModalSeAberto();
+          if (ok) {
+            persistProjeto();
+          } else if (!bk.arquivoAvisado) {
+            bk.arquivoAvisado = true;
+            showFeedback(
+              "Backup em arquivo pausado: o navegador pede autorização a cada abertura. Use Mais → Backup e histórico → Reautorizar.",
+              "warn"
+            );
+          }
+        });
+      })
+      .catch(function (err) {
+        console.warn("Backup em arquivo:", err);
+      });
+  }
+
+  function ativarArquivoBackup() {
+    if (!state.evento) return;
+    var slug = String(state.evento.meta.slug);
+    var bk = state.backup;
+    BK.escolherArquivo(slug).then(
+      function (handle) {
+        if (bk.slug !== slug) return;
+        bk.arquivoHandle = handle;
+        bk.arquivoStatus = "ativo";
+        bk.arquivoAvisado = false;
+        BK.pedirArmazenamentoPersistente();
+        persistProjeto();
+        executarBackupPendente();
+        renderBackupModal();
+        showFeedback("Backup automático em arquivo ativado.", "info");
+      },
+      function (err) {
+        if (err && err.name === "AbortError") return;
+        console.warn(err);
+        showFeedback("Não foi possível escolher o arquivo de backup.", "error");
+      }
+    );
+  }
+
+  function reautorizarArquivoBackup() {
+    var bk = state.backup;
+    var handle = bk.arquivoHandle;
+    if (!handle) return;
+    BK.verificarPermissao(handle, true).then(
+      function (ok) {
+        if (bk.arquivoHandle !== handle) return;
+        if (!ok) {
+          showFeedback("Sem autorização, o backup em arquivo continua pausado.", "warn");
+          return;
+        }
+        bk.arquivoStatus = "ativo";
+        bk.arquivoAvisado = false;
+        persistProjeto();
+        executarBackupPendente();
+        renderBackupModal();
+        showFeedback("Backup em arquivo retomado.", "info");
+      },
+      function (err) {
+        console.warn(err);
+        showFeedback("Não foi possível reautorizar o arquivo de backup.", "error");
+      }
+    );
+  }
+
+  function desativarArquivoBackup() {
+    var bk = state.backup;
+    var slug = bk.slug;
+    bk.arquivoHandle = null;
+    bk.arquivoStatus = "inativo";
+    bk.arquivoUltimo = null;
+    renderStatusPill();
+    BK.esquecerArquivo(slug)
+      .catch(function (err) {
+        console.warn(err);
+      })
+      .then(function () {
+        renderBackupModal();
+        showFeedback("Backup em arquivo desativado. O arquivo já gravado não foi apagado.", "info");
+      });
   }
 
   function scheduleSave() {
@@ -2194,6 +2479,327 @@
     root.classList.add("open");
     setBackgroundInert(true);
     var closeBtn = document.getElementById("eventos-modal-close");
+    if (closeBtn) closeBtn.focus();
+  }
+
+  /**
+   * Modal «Backup e histórico»: arquivo de backup automático, pontos de
+   * restauração (IndexedDB) e estado do armazenamento persistente.
+   */
+  function ensureBackupModal() {
+    var root = document.getElementById("backup-modal-overlay");
+    if (root) return root;
+    root = document.createElement("div");
+    root.id = "backup-modal-overlay";
+    root.className = "confirm-overlay eventos-modal-overlay";
+    root.setAttribute("role", "presentation");
+    root.innerHTML =
+      '<div class="confirm-modal eventos-modal backup-modal" role="dialog" aria-modal="true" aria-labelledby="backup-modal-title">' +
+      '<h2 id="backup-modal-title">Backup e histórico</h2>' +
+      '<div class="backup-modal-body">' +
+      '<section class="backup-section" aria-labelledby="backup-arquivo-title">' +
+      '<h3 id="backup-arquivo-title">Backup automático em arquivo</h3>' +
+      '<p id="backup-arquivo-status" class="backup-status" role="status"></p>' +
+      '<div id="backup-arquivo-actions" class="eventos-modal-actions"></div>' +
+      '<p class="eventos-modal-hint">' +
+      "A cada alteração o app grava o projeto completo num arquivo <code>.json</code> do computador. " +
+      "Salve-o numa pasta do Google Drive, OneDrive ou Dropbox para ter uma cópia na nuvem. " +
+      "Para recuperar, use Mais → Carregar projeto." +
+      "</p>" +
+      "</section>" +
+      '<section class="backup-section" aria-labelledby="backup-historico-title">' +
+      '<h3 id="backup-historico-title">Histórico de versões</h3>' +
+      '<p class="eventos-modal-hint">' +
+      "Cópias automáticas neste navegador a cada 3 minutos com alterações e antes de ações que substituem dados " +
+      "(importar, trocar de evento, limpar, restaurar). Ficam as " +
+      (BK ? BK.MAX_SNAPSHOTS_POR_EVENTO : 60) +
+      " mais recentes de cada evento." +
+      "</p>" +
+      '<div class="eventos-modal-actions">' +
+      '<button type="button" class="pill-btn" id="backup-snapshot-agora">Criar ponto de restauração agora</button>' +
+      "</div>" +
+      '<div id="backup-historico-list" class="eventos-modal-list backup-historico-list" role="list"></div>' +
+      "</section>" +
+      '<p id="backup-armazenamento" class="eventos-modal-hint"></p>' +
+      "</div>" +
+      '<div class="confirm-actions">' +
+      '<button type="button" class="confirm-btn" id="backup-modal-close">Fechar</button>' +
+      "</div></div>";
+    document.body.appendChild(root);
+    root.addEventListener("click", function (ev) {
+      if (ev.target === root) closeBackupModal();
+    });
+    document.getElementById("backup-modal-close").addEventListener("click", closeBackupModal);
+    document.getElementById("backup-snapshot-agora").addEventListener("click", function () {
+      pontoRestauracao("Manual").then(function (meta) {
+        if (meta && meta.criado === false) {
+          showFeedback("Nada mudou desde o último ponto de restauração.", "info");
+        } else if (meta) {
+          showFeedback("Ponto de restauração criado.", "info");
+        }
+        renderBackupModal();
+      });
+    });
+    document.addEventListener(
+      "keydown",
+      function (ev) {
+        if (ev.key === "Escape" && root.classList.contains("open")) {
+          ev.stopPropagation();
+          closeBackupModal();
+        }
+      },
+      true
+    );
+    return root;
+  }
+
+  function isBackupModalOpen() {
+    var root = document.getElementById("backup-modal-overlay");
+    return !!(root && root.classList.contains("open"));
+  }
+
+  function refreshBackupModalSeAberto() {
+    if (isBackupModalOpen()) renderBackupModal();
+  }
+
+  function closeBackupModal() {
+    var root = document.getElementById("backup-modal-overlay");
+    if (!root || !root.classList.contains("open")) return;
+    root.classList.remove("open");
+    setBackgroundInert(false);
+    var lastFocus = state.backup.modalLastFocus;
+    state.backup.modalLastFocus = null;
+    if (lastFocus && typeof lastFocus.focus === "function" && document.contains(lastFocus)) {
+      try {
+        lastFocus.focus();
+      } catch (_e) {
+        /* ignore */
+      }
+    }
+  }
+
+  function backupBotao(label, onClick, extraClass) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "pill-btn" + (extraClass ? " " + extraClass : "");
+    b.textContent = label;
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  function renderBackupArquivo() {
+    var statusEl = document.getElementById("backup-arquivo-status");
+    var actions = document.getElementById("backup-arquivo-actions");
+    if (!statusEl || !actions) return;
+    actions.innerHTML = "";
+    var bk = state.backup;
+    statusEl.classList.remove("backup-status--ok", "backup-status--alerta");
+    if (!BK || !BK.suportaArquivo()) {
+      statusEl.textContent =
+        "Este navegador não permite gravar arquivos automaticamente. Use Chrome ou Edge no computador, " +
+        "ou faça Mais → Exportar projeto periodicamente.";
+      statusEl.classList.add("backup-status--alerta");
+      return;
+    }
+    var nome = bk.arquivoHandle && bk.arquivoHandle.name ? "«" + bk.arquivoHandle.name + "»" : "";
+    if (bk.arquivoStatus === "ativo") {
+      statusEl.textContent =
+        "Ativo: " +
+        nome +
+        (bk.arquivoUltimo
+          ? " — última gravação às " + formatHoraCurta(bk.arquivoUltimo) + "."
+          : " — aguardando a próxima alteração.");
+      statusEl.classList.add("backup-status--ok");
+      actions.appendChild(backupBotao("Trocar arquivo…", ativarArquivoBackup));
+      actions.appendChild(backupBotao("Desativar", desativarArquivoBackup, "pill-btn--danger"));
+    } else if (bk.arquivoStatus === "permissao") {
+      statusEl.textContent =
+        "Pausado: o navegador precisa de autorização para continuar gravando em " + nome + ".";
+      statusEl.classList.add("backup-status--alerta");
+      actions.appendChild(
+        backupBotao("Reautorizar", reautorizarArquivoBackup, "pill-btn--primary")
+      );
+      actions.appendChild(backupBotao("Trocar arquivo…", ativarArquivoBackup));
+      actions.appendChild(backupBotao("Desativar", desativarArquivoBackup, "pill-btn--danger"));
+    } else if (bk.arquivoStatus === "erro") {
+      statusEl.textContent =
+        "Falha ao gravar em " +
+        nome +
+        ". O arquivo pode ter sido movido, apagado ou estar aberto em outro programa.";
+      statusEl.classList.add("backup-status--alerta");
+      actions.appendChild(
+        backupBotao("Tentar de novo", reautorizarArquivoBackup, "pill-btn--primary")
+      );
+      actions.appendChild(backupBotao("Trocar arquivo…", ativarArquivoBackup));
+      actions.appendChild(backupBotao("Desativar", desativarArquivoBackup, "pill-btn--danger"));
+    } else {
+      statusEl.textContent = "Desativado para este evento.";
+      actions.appendChild(
+        backupBotao("Escolher arquivo de backup…", ativarArquivoBackup, "pill-btn--primary")
+      );
+    }
+  }
+
+  function baixarTexto(texto, nomeArquivo) {
+    var blob = new Blob([texto], { type: "application/json;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = nomeArquivo;
+    a.click();
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 0);
+  }
+
+  function restaurarSnapshot(meta) {
+    var quando = formatDataHora(new Date(meta.criadoEmMs));
+    closeBackupModal();
+    requestConfirmation(
+      "Restaurar a versão de " +
+        quando +
+        "? O estado atual será guardado no histórico antes, então dá para voltar atrás.",
+      function () {
+        BK.lerSnapshot(meta.id).then(
+          function (reg) {
+            var projeto = reg && BK.parseProjetoTexto(reg.texto);
+            if (!projeto) {
+              showFeedback(
+                "Esta versão do histórico está corrompida e não pôde ser lida.",
+                "error"
+              );
+              return;
+            }
+            if (
+              setEvento(projeto.evento, projeto.dados, {
+                motivoBackup: "Antes de restaurar a versão de " + quando,
+              })
+            ) {
+              showFeedback("Versão de " + quando + " restaurada.", "info");
+            }
+          },
+          function (err) {
+            console.warn(err);
+            showFeedback("Não foi possível ler o histórico deste navegador.", "error");
+          }
+        );
+      },
+      function () {
+        openBackupModal();
+      },
+      { confirmLabel: "Restaurar", title: "Restaurar versão" }
+    );
+  }
+
+  function renderBackupHistorico() {
+    var listEl = document.getElementById("backup-historico-list");
+    var btnAgora = document.getElementById("backup-snapshot-agora");
+    if (!listEl) return;
+    if (!BK || !BK.suportaHistorico() || !state.evento) {
+      listEl.innerHTML = "";
+      var indisp = document.createElement("p");
+      indisp.className = "eventos-modal-empty";
+      indisp.textContent = "Histórico indisponível neste navegador.";
+      listEl.appendChild(indisp);
+      if (btnAgora) btnAgora.disabled = true;
+      return;
+    }
+    if (btnAgora) btnAgora.disabled = false;
+    var slug = String(state.evento.meta.slug);
+    BK.listarSnapshots(slug).then(
+      function (lista) {
+        if (!isBackupModalOpen() || !state.evento || String(state.evento.meta.slug) !== slug)
+          return;
+        listEl.innerHTML = "";
+        if (!lista.length) {
+          var vazio = document.createElement("p");
+          vazio.className = "eventos-modal-empty";
+          vazio.textContent = "Nenhuma versão guardada ainda para este evento.";
+          listEl.appendChild(vazio);
+          return;
+        }
+        lista.forEach(function (meta) {
+          var item = document.createElement("div");
+          item.className = "eventos-modal-item";
+          item.setAttribute("role", "listitem");
+          var info = document.createElement("div");
+          info.className = "eventos-modal-meta";
+          var titulo = document.createElement("strong");
+          titulo.textContent = formatDataHora(new Date(meta.criadoEmMs));
+          var sub = document.createElement("span");
+          sub.className = "eventos-modal-sub";
+          sub.textContent = meta.motivo + " · " + (meta.tamanho / 1024).toFixed(1) + " KB";
+          info.appendChild(titulo);
+          info.appendChild(sub);
+          item.appendChild(info);
+          var acoes = document.createElement("div");
+          acoes.className = "eventos-modal-actions";
+          acoes.appendChild(
+            backupBotao(
+              "Restaurar",
+              function () {
+                restaurarSnapshot(meta);
+              },
+              "pill-btn--primary"
+            )
+          );
+          acoes.appendChild(
+            backupBotao("Baixar", function () {
+              BK.lerSnapshot(meta.id).then(function (reg) {
+                if (!reg) return;
+                baixarTexto(reg.texto, BK.nomeArquivoVersao(slug, new Date(meta.criadoEmMs)));
+              });
+            })
+          );
+          item.appendChild(acoes);
+          listEl.appendChild(item);
+        });
+      },
+      function (err) {
+        console.warn(err);
+        listEl.innerHTML = "";
+        var erro = document.createElement("p");
+        erro.className = "eventos-modal-empty";
+        erro.textContent = "Não foi possível ler o histórico deste navegador.";
+        listEl.appendChild(erro);
+      }
+    );
+  }
+
+  function renderBackupArmazenamento() {
+    var el = document.getElementById("backup-armazenamento");
+    if (!el || !BK) return;
+    BK.armazenamentoPersistente().then(function (persistente) {
+      if (persistente === true) {
+        el.textContent =
+          "Armazenamento persistente ativo: o navegador não apaga estes dados sozinho para liberar espaço.";
+      } else if (persistente === false) {
+        el.textContent =
+          "Armazenamento comum: em falta de espaço o navegador pode apagar dados do site. Mantenha o backup em arquivo ativo.";
+      } else {
+        el.textContent = "";
+      }
+    });
+  }
+
+  function renderBackupModal() {
+    if (!isBackupModalOpen()) return;
+    renderBackupArquivo();
+    renderBackupHistorico();
+    renderBackupArmazenamento();
+  }
+
+  function openBackupModal() {
+    if (!state.evento) {
+      showFeedback("Abra ou crie um evento para configurar o backup.", "warn");
+      return;
+    }
+    var root = ensureBackupModal();
+    state.backup.modalLastFocus = document.activeElement;
+    root.classList.add("open");
+    setBackgroundInert(true);
+    renderBackupModal();
+    var closeBtn = document.getElementById("backup-modal-close");
     if (closeBtn) closeBtn.focus();
   }
 
@@ -7078,7 +7684,7 @@
     return validateEventoSchemaLike(ev).concat(E.validateEventoMinimal(ev));
   }
 
-  function setEvento(ev, mergeDados) {
+  function setEvento(ev, mergeDados, opts) {
     var errs = eventoValidationErrors(ev);
     if (errs.length) {
       showFeedback(formatEventoValidationFeedback(errs), "error");
@@ -7087,6 +7693,7 @@
     // Garante que qualquer save pendente do evento atual seja gravado antes
     // de trocar o slug — evita corrida com o debounce de scheduleSave.
     flushScheduledSave();
+    pontoRestauracao((opts && opts.motivoBackup) || "Antes de carregar outro projeto");
     revokeRegulamentoBlobUrl();
     state.persistFailed = false;
     state.evento = ev;
@@ -7120,6 +7727,7 @@
     resetEsgrimaTimer();
     var cerIds = applyCerPreConclaveExtraOnce(state.evento, state.dados);
     var checkinReset = applyErCheckinDefaultsOnce(state.evento, state.dados);
+    carregarBackupDoEvento(state.evento.meta.slug);
     validate();
     scheduleSave();
     render();
@@ -7279,8 +7887,10 @@
   function novoProjetoDados() {
     if (!state.evento) return;
     requestConfirmation(
-      "Limpar todos os dados preenchidos deste evento?",
+      "Limpar todos os dados preenchidos deste evento? Uma cópia fica em Mais → Backup e histórico.",
       function () {
+        flushScheduledSave();
+        pontoRestauracao("Antes de limpar os dados");
         var ids = state.evento.igrejas.map(function (g) {
           return g.id;
         });
@@ -7639,6 +8249,7 @@
     $("#btn-novo-dados") && $("#btn-novo-dados").addEventListener("click", novoProjetoDados);
     $("#btn-eventos-salvos") &&
       $("#btn-eventos-salvos").addEventListener("click", openEventosSalvosModal);
+    $("#btn-backup") && $("#btn-backup").addEventListener("click", openBackupModal);
     $("#btn-exit-presentation") &&
       $("#btn-exit-presentation").addEventListener("click", function () {
         setPresentationMode(false);
@@ -7682,9 +8293,14 @@
       });
     initMoreMenu();
     initFileProtocolHint();
-    window.addEventListener("pagehide", flushScheduledSave);
+    window.addEventListener("pagehide", function () {
+      flushScheduledSave();
+      executarBackupPendente();
+    });
     document.addEventListener("visibilitychange", function () {
-      if (document.visibilityState === "hidden") flushScheduledSave();
+      if (document.visibilityState !== "hidden") return;
+      flushScheduledSave();
+      executarBackupPendente();
     });
   }
 

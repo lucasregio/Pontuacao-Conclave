@@ -11,6 +11,22 @@ GitHub Pages.
 
 ## [Unreleased]
 
+### Adicionado
+
+- **Backup e histórico** (menu Mais), sem backend:
+  - **Backup automático em arquivo** (Chrome/Edge): o usuário escolhe um
+    `.json` uma vez e o app grava o projeto completo a cada alteração
+    (escrita atômica). Numa pasta do Google Drive/OneDrive/Dropbox, vira
+    cópia na nuvem. Se o navegador pedir nova autorização, o selo da topbar
+    avisa «backup pausado» e o modal oferece «Reautorizar».
+  - **Histórico de versões** em IndexedDB: cópia automática a cada 3 min com
+    alterações e antes de importar, trocar de evento, limpar dados ou
+    restaurar. Guarda as 60 mais recentes por evento; cada versão pode ser
+    restaurada ou baixada como `.projeto.json`.
+  - Pedido de **armazenamento persistente** ao navegador.
+  - Novo módulo `web/backup.js` (`window.ConclaveBackup`) com testes em
+    `tests/backup.test.js`. Service worker `pontuacao-conclave-v26`.
+
 ### Corrigido
 
 - **MR 2026/2 no dia**: inscrição e pontualidade começam desmarcadas (check-in),

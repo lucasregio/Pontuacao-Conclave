@@ -86,6 +86,14 @@
           gera um arquivo <code>.projeto.json</code> com tudo (configuração + Participação + Pódio).
           Para retomar em outro navegador, abra com <strong>Carregar projeto</strong>.
         </p>
+        <p>
+          Para não depender de lembrar de exportar, use <strong>Mais → Backup e histórico</strong>.
+          No Chrome ou Edge, <strong>Escolher arquivo de backup…</strong> faz o app gravar o projeto
+          num <code>.json</code> a cada alteração — salve-o numa pasta do Google Drive ou OneDrive e
+          ele fica disponível em outro computador. O mesmo modal tem o
+          <strong>Histórico de versões</strong>, para voltar a um ponto anterior neste navegador
+          (por exemplo, depois de importar o arquivo errado).
+        </p>
         <h2 id="posso-usar-offline">Posso usar offline</h2>
         <p>
           Sim. O app é uma PWA com service worker (<code>sw.js</code>). Após a primeira visita
@@ -130,8 +138,10 @@
         <p>
           Não. A Pontuação Conclave é uma aplicação <strong>100% estática</strong>, sem backend, sem
           analytics e sem chamadas de rede além das necessárias para o app shell. Tudo o que você
-          digita vive apenas no <code>localStorage</code> do seu navegador. Os dados só saem do
-          dispositivo se <strong>você</strong> exportar e enviar o <code>.projeto.json</code>.
+          digita vive apenas no navegador (<code>localStorage</code> e o histórico em IndexedDB). Os
+          dados só saem do dispositivo se <strong>você</strong> exportar e enviar o
+          <code>.projeto.json</code> ou escolher um arquivo de backup numa pasta sincronizada com a
+          nuvem.
         </p>
         <h2 id="posso-editar-o-json-manualmente">Posso editar o JSON manualmente</h2>
         <p>

@@ -14,6 +14,7 @@ A **100% static web application** for Conclave scoring (**Pontuação Conclave**
 - `web/engine.js` — **pure scoring engine** (`window.ConclaveEngine`). No DOM.
 - `web/escrita-metrics.js` — métricas da prova escrita (`window.ConclaveEscritaMetrics`); não altera totais.
 - `web/biblia-estrutura.js` / `web/sorteio-esgrima.js` — catálogo de referências e sorteio da Esgrima (`window.ConclaveSorteioEsgrima`); não altera totais.
+- `web/backup.js` — backup automático (`window.ConclaveBackup`): histórico em IndexedDB e arquivo `.json` via File System Access API; não altera totais.
 - `web/app.js` — UI / DOM / state / persistence.
 - `web/styles.css` — MR/ER themes, presentation mode, print.
 - `schema/evento.schema.json` / `schema/projeto.schema.json` — canonical JSON contracts.

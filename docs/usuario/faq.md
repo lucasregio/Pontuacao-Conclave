@@ -29,6 +29,12 @@ O backup canônico, portátil entre máquinas, é o **Exportar projeto**. Ele ge
 arquivo `.projeto.json` com tudo (configuração + Participação + Pódio). Para retomar
 em outro navegador, abra com **Carregar projeto**.
 
+Para não depender de lembrar de exportar, use **Mais → Backup e histórico**. No Chrome
+ou Edge, **Escolher arquivo de backup…** faz o app gravar o projeto num `.json` a cada
+alteração — salve-o numa pasta do Google Drive ou OneDrive e ele fica disponível em
+outro computador. O mesmo modal tem o **Histórico de versões**, para voltar a um ponto
+anterior neste navegador (por exemplo, depois de importar o arquivo errado).
+
 ## Posso usar offline
 
 Sim. O app é uma PWA com service worker (`sw.js`). Após a primeira visita online ele
@@ -65,8 +71,9 @@ remover, considere **Exportar** o projeto para preservar uma cópia em arquivo.
 
 Não. A Pontuação Conclave é uma aplicação **100% estática**, sem backend, sem analytics e
 sem chamadas de rede além das necessárias para o app shell. Tudo o que você digita
-vive apenas no `localStorage` do seu navegador. Os dados só saem do dispositivo se
-**você** exportar e enviar o `.projeto.json`.
+vive apenas no navegador (`localStorage` e o histórico em IndexedDB). Os dados só saem
+do dispositivo se **você** exportar e enviar o `.projeto.json` ou escolher um arquivo de
+backup numa pasta sincronizada com a nuvem.
 
 ## Posso editar o JSON manualmente
 

@@ -12,7 +12,7 @@
  * caches antigos automaticamente.
  */
 
-const CACHE_VERSION = "pontuacao-conclave-v25";
+const CACHE_VERSION = "pontuacao-conclave-v26";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -35,6 +35,7 @@ const APP_SHELL = [
   "./web/sorteio-esgrima.js",
   "./web/podio-filters.js",
   "./web/relatorio.js",
+  "./web/backup.js",
   "./web/app.js",
   "./eventos/conclave-mr-2026-2.evento.embedded.js",
   "./manifest.webmanifest",
