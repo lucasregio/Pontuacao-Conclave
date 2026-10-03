@@ -17,6 +17,9 @@ GitHub Pages.
   como no ER. Antes, igrejas ausentes recebiam 300 pontos.
 - **Pódio com igreja fora da lista** (ex.: nome digitado errado) passa a gerar
   aviso na faixa de avisos e no relatório oficial — a medalha não pontua.
+- **Participação**: membros, camisa, Bíblia e visitantes aceitam só inteiros
+  ≥ 0 (visitante negativo tirava pontos). Aviso quando camisa ou Bíblia passa
+  do total de membros. Service worker `pontuacao-conclave-v25`.
 - Lista de igrejas do MR 2026/2 atualizada (16 igrejas). Service worker
   `pontuacao-conclave-v24`, para que máquinas que já abriram o app recebam a
   lista nova.
